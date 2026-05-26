@@ -227,6 +227,12 @@ Collect these metrics for every evaluation run:
 Do not use global mutation score as the primary success criterion. It is a
 supporting metric, not the decision rule.
 
+`cervomut eval` writes `evaluation.json`, `evaluation.md`, and
+`evaluation.schema.json` with objective metrics and scorecard fields that can be
+computed automatically. Manual criteria are marked as requiring review. Use
+`docs/evaluation-template.md` when the evaluation includes human or agent
+survivor triage.
+
 ## Empirical Protocol
 
 Use two evaluation levels.

@@ -62,3 +62,10 @@ go run ./cmd/cervomut list-mutators
 Use [docs/evaluation-framework.md](docs/evaluation-framework.md) to compare
 mutation testing tools and decide whether `cervo-mutant` should be the default
 for CervoClaw and CervoSoft projects.
+
+Use [docs/evaluation-template.md](docs/evaluation-template.md) for manual
+reviews, or run:
+
+```powershell
+cervomut eval ./... --out .cervomut/evaluation
+```

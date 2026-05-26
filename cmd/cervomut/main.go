@@ -15,6 +15,7 @@ import (
 	"gitea.cervbox.synology.me/CervoSoft/cervo-mutant/pkg/daemon"
 	"gitea.cervbox.synology.me/CervoSoft/cervo-mutant/pkg/doctor"
 	"gitea.cervbox.synology.me/CervoSoft/cervo-mutant/pkg/engine"
+	evalpkg "gitea.cervbox.synology.me/CervoSoft/cervo-mutant/pkg/eval"
 	"gitea.cervbox.synology.me/CervoSoft/cervo-mutant/pkg/mutator"
 	"gitea.cervbox.synology.me/CervoSoft/cervo-mutant/pkg/report"
 )
@@ -40,6 +41,8 @@ func run(args []string) error {
 		return cmdAffected(args[1:])
 	case "run":
 		return cmdRun(args[1:])
+	case "eval":
+		return cmdEval(args[1:])
 	case "baseline":
 		return cmdBaseline(args[1:])
 	case "report":
@@ -59,7 +62,7 @@ func run(args []string) error {
 }
 
 func usage() {
-	fmt.Println("usage: cervomut <init|doctor|affected|run|baseline|report|show|explain|list-mutators|daemon|worker>")
+	fmt.Println("usage: cervomut <init|doctor|affected|run|eval|baseline|report|show|explain|list-mutators|daemon|worker>")
 }
 
 func cmdInit() error {
@@ -158,6 +161,56 @@ func cmdRun(args []string) error {
 	if cfg.CI.FailUnder > 0 && int(result.Summary.Score) < cfg.CI.FailUnder {
 		return fmt.Errorf("mutation score %.2f below threshold %d", result.Summary.Score, cfg.CI.FailUnder)
 	}
+	return nil
+}
+
+func cmdEval(args []string) error {
+	fs := flag.NewFlagSet("eval", flag.ContinueOnError)
+	out := fs.String("out", ".cervomut/evaluation", "evaluation output directory")
+	framework := fs.String("framework", "cervosoft", "evaluation framework")
+	budget := fs.Duration("budget", 0, "run budget")
+	maxMutants := fs.Int("max-mutants", 0, "max mutants")
+	sample := fs.String("sample", "", "sampling mode")
+	if err := fs.Parse(reorderFlags(args, map[string]bool{
+		"out": true, "framework": true, "budget": true, "max-mutants": true, "sample": true,
+	})); err != nil {
+		return err
+	}
+	cfg := loadConfigIfPresent()
+	cfg.Reports.Output = *out
+	cfg.Cache.Path = filepath.Join(*out, "cache")
+	cfg.Selection.CoverageProfile = filepath.Join(*out, "coverage.out")
+	cfg.Selection.TimingsPath = filepath.Join(*out, "timings.json")
+	if *budget > 0 {
+		cfg.Execution.Budget = *budget
+	}
+	if *maxMutants > 0 {
+		cfg.Limits.MaxMutants = *maxMutants
+	}
+	if *sample != "" {
+		cfg.Limits.Sample = *sample
+	}
+	targets := fs.Args()
+	runResult, err := engine.New(cfg).Run(context.Background(), engine.RunRequest{Targets: targets})
+	if err != nil {
+		return err
+	}
+	if err := report.WriteAll(cfg.Reports.Output, runResult); err != nil {
+		return err
+	}
+	evaluation := evalpkg.Build(evalpkg.BuildRequest{
+		Tool:       "cervo-mutant",
+		Target:     strings.Join(targets, " "),
+		Commit:     currentCommit(),
+		Command:    append([]string{"cervomut", "eval"}, args...),
+		Framework:  *framework,
+		Run:        runResult,
+		ManualMode: true,
+	})
+	if err := evalpkg.Write(*out, evaluation); err != nil {
+		return err
+	}
+	fmt.Printf("Evaluation written to %s\n", *out)
 	return nil
 }
 
@@ -356,6 +409,15 @@ reports:
   include_test_output: failed-only
   max_output_bytes: 12000
 `
+}
+
+func currentCommit() string {
+	cmd := exec.Command("git", "rev-parse", "HEAD")
+	out, err := cmd.Output()
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(out))
 }
 
 func exitCode(err error) int {

@@ -87,6 +87,8 @@ go-mutesting /noop /quiet /no-diffs /logger-summary-json /logger-agentic-json /c
 
 ## Normalized Results
 
+### Windows Native
+
 | Tool | Completed? | Mutants attempted | Killed | Survived/lived | Other statuses | Time | Notes |
 | --- | ---: | ---: | ---: | ---: | --- | ---: | --- |
 | CervoMutant | Yes | 20 | 13 | 7 | 0 timed out, 0 compile errors | 47.26s | Limited by `--max-mutants 20`; produced summary, JSON, JUnit, HTML, survivor data, and evaluation scorecard. |
@@ -100,6 +102,21 @@ Patched local validation:
 | --- | --- | ---: | ---: | ---: | ---: | --- | ---: | --- |
 | gomu v0.2.0 | [windows paths](../external-patches/gomu-v0.2.0-windows-paths.patch) | Yes | 390 | 64 | 99 survived | 176 errors, 51 not viable | 98s | The `mutant_C:` preparation failure is fixed. Remaining errors are mutation/compile outcomes from gomu's generated mutants, not temp path creation failures. |
 | go-mutesting v2.6.13 | [windows paths](../external-patches/go-mutesting-v2.6.13-windows-paths.patch) | Yes | 361 | 170 | 191 escaped | 0 errored, 0 not covered, 0 skipped | 129s | The `C:` temp path panic and missing Unix `diff` executable failure are fixed for the non-coverage run. |
+
+### WSL/Linux Baseline
+
+The comparison was repeated in WSL Ubuntu 24.04 on the Linux filesystem under
+`/tmp/cervomut-study-cobra-wsl`, using unpatched upstream tools and GNU `diff`.
+This is the preferred baseline for comparing CervoMutant against the Go
+ecosystem because it avoids Windows-only failures in tools that assume Unix
+paths or Unix command-line utilities.
+
+| Tool | Completed? | Mutants attempted | Killed | Survived/lived/escaped | Other statuses | Time | Notes |
+| --- | ---: | ---: | ---: | ---: | --- | ---: | --- |
+| CervoMutant | Yes | 20 | 13 | 7 survived | 0 not covered, 0 timed out, 0 compile errors | within 2m budget | Same bounded `eval` run as Windows; score 65%, test efficacy 65%, mutation coverage 100%. |
+| Gremlins | Yes | 87 | 58 | 29 lived | 5 not covered, 0 not viable | 6.78s | Same outcome as Windows, much faster on WSL/Linux filesystem. |
+| gomu v0.2.0 | Yes | 413 | 64 | 101 survived | 197 errors, 51 not viable | 21.82s | Unpatched upstream works in WSL; Windows native failure was path-name preparation, not a general inability to run. |
+| go-mutesting v2.6.13 | Yes | 361 | 170 | 191 escaped | 0 errored, 0 not covered, 0 skipped | 20.8s | Unpatched upstream works in WSL with GNU `diff`; MSI 47.09%. |
 
 Gremlins reported:
 

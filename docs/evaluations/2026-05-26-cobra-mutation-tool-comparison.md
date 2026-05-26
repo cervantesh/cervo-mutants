@@ -457,6 +457,50 @@ than CervoMutant's original serial temp-workdir run. The mutation score did not
 increase; the gain came from executing real mutant test jobs concurrently and
 using Go overlay isolation to avoid full module copies.
 
+## Apples-To-Apples Worker Comparison
+
+The previous `9.12s` versus `32.20s` comparison was not worker-equivalent:
+CervoMutant used 16 workers while Gremlins used 4. The study was rerun with
+matching worker counts for all three external comparison tools.
+
+Scope and controls:
+
+- Subject: Cobra `./doc`
+- Commit: `ad460ea8f249db69c943a365fb84f3a59042d54e`
+- Baseline: `go test ./doc` passed
+- CervoMutant mode: `--isolation overlay`
+- gomu and go-mutesting: patched Windows binaries from this study
+- Gremlins timeout coefficient was raised where needed to avoid false timeout
+  classifications during high-worker runs.
+
+Important interpretation limit: these tools do not run identical mutator sets.
+The table compares each tool's real throughput and classification behavior at
+the same worker count, not the same exact mutant list.
+
+| Workers | Tool | Mutants | Killed | Survived/Escaped | Not covered | Errors | Not viable | Timed out | Score | Time |
+| ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 4 | CervoMutant overlay | 99 | 58 | 41 | 0 | 0 | 0 | 0 | 58.59% | 16.73s |
+| 4 | Gremlins | 87 | 58 | 29 | 5 | 0 | 0 | 0 | 66.67% | 24.66s |
+| 4 | gomu patched | 390 | 64 | 99 | 0 | 176 | 51 | 0 | 39.26% | 43.13s |
+| 4 | go-mutesting patched | 361 | 170 | 191 | 0 | 0 | 0 | 0 | 47.09% | 61.52s |
+| 16 | CervoMutant overlay | 99 | 58 | 41 | 0 | 0 | 0 | 0 | 58.59% | 9.53s |
+| 16 | Gremlins | 87 | 58 | 29 | 5 | 0 | 0 | 0 | 66.67% | 13.78s |
+| 16 | gomu patched | 390 | 64 | 99 | 0 | 176 | 51 | 0 | 39.26% | 28.81s |
+| 16 | go-mutesting patched | 361 | 170 | 191 | 0 | 0 | 0 | 0 | 47.09% | 33.53s |
+
+Findings:
+
+- CervoMutant is the fastest tool in both equal-worker cuts.
+- CervoMutant does not yet meet the stricter "half of Gremlins" target when
+  Gremlins is given the same worker count.
+- gomu remains noisy on this subject: 176 errors and 51 not viable mutants at
+  both worker counts.
+- go-mutesting has the broadest useful operator surface in this run, but remains
+  slower than CervoMutant and Gremlins at both worker counts.
+- Gremlins is still the strongest direct reference for concise package-level
+  semantics, while CervoMutant now has the best measured throughput in this
+  Windows/OneDrive apples-to-apples run.
+
 ## Windows Path Hardening Follow-Up
 
 The gomu and go-mutesting failures were converted into executable CervoMutant safeguards:

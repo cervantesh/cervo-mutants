@@ -56,3 +56,9 @@ The default policy is baseline-first adoption:
 go test ./...
 go run ./cmd/cervomut list-mutators
 ```
+
+## Evaluation
+
+Use [docs/evaluation-framework.md](docs/evaluation-framework.md) to compare
+mutation testing tools and decide whether `cervo-mutant` should be the default
+for CervoClaw and CervoSoft projects.

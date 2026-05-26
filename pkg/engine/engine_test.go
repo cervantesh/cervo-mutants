@@ -344,3 +344,76 @@ func TestCoverageSelectionCanClassifyUncoveredMutantWithoutRunningAllTests(t *te
 		t.Fatalf("status reason should mention coverage profile: %q", result.StatusReason)
 	}
 }
+
+func TestPackageSelectionCanPrefilterUncoveredMutants(t *testing.T) {
+	dir := writeFixture(t)
+	cfg := config.Defaults()
+	cfg.Tests.Command = []string{"go", "test", "./..."}
+	cfg.Selection.Mode = "package"
+	cfg.Selection.Prefilter = true
+	isolateArtifacts(&cfg, dir)
+	if err := os.MkdirAll(filepath.Dir(cfg.Selection.CoverageProfile), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(cfg.Selection.CoverageProfile, []byte("mode: set\nother.go:1.1,1.2 1 1\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := New(cfg).runMutant(context.Background(), Mutant{
+		ID:          "m-package-prefilter",
+		Module:      dir,
+		Package:     ".",
+		File:        filepath.Join(dir, "calc.go"),
+		Line:        3,
+		Operator:    "conditionals-boundary",
+		Original:    ">=",
+		Mutated:     ">",
+		StartOffset: 0,
+		EndOffset:   1,
+	})
+	if err != nil {
+		t.Fatalf("runMutant returned error: %v", err)
+	}
+	if result.Status != StatusNotCovered {
+		t.Fatalf("status = %q, want %q", result.Status, StatusNotCovered)
+	}
+	if !strings.Contains(result.StatusReason, "coverage profile") {
+		t.Fatalf("status reason should mention coverage profile: %q", result.StatusReason)
+	}
+}
+
+func TestBudgetSchedulingPrioritizesFastOperators(t *testing.T) {
+	cfg := config.Defaults()
+	cfg.Execution.Budget = 1
+	e := New(cfg)
+	mutants := []Mutant{
+		{ID: "z", Recommendation: "aggressive"},
+		{ID: "b", Recommendation: "fast-ci"},
+		{ID: "a", Recommendation: "default"},
+	}
+
+	e.scheduleMutants(mutants)
+
+	got := []string{mutants[0].ID, mutants[1].ID, mutants[2].ID}
+	want := []string{"b", "a", "z"}
+	if strings.Join(got, ",") != strings.Join(want, ",") {
+		t.Fatalf("scheduled IDs = %v, want %v", got, want)
+	}
+}
+
+func TestRankSurvivorsPrioritizesLowerEquivalentRisk(t *testing.T) {
+	results := []MutantResult{
+		{MutantID: "high", Status: StatusSurvived, Mutant: Mutant{EquivalentRisk: "high", Recommendation: "fast-ci"}},
+		{MutantID: "low", Status: StatusSurvived, Mutant: Mutant{EquivalentRisk: "low", Recommendation: "conservative", NearbyTests: []string{"x_test.go"}}},
+		{MutantID: "killed", Status: StatusKilled, Mutant: Mutant{EquivalentRisk: "low"}},
+	}
+
+	rankSurvivors(results)
+
+	if results[1].SurvivorRank != 1 || results[0].SurvivorRank != 2 {
+		t.Fatalf("unexpected survivor ranks: %+v", results)
+	}
+	if results[2].SurvivorRank != 0 {
+		t.Fatalf("killed mutant should not be ranked: %+v", results[2])
+	}
+}

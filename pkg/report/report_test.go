@@ -40,7 +40,14 @@ func TestJSONReportSchemaV1IncludesActionableFields(t *testing.T) {
 				NearbyTests:    []string{"pkg/foo_test.go"},
 				EquivalentRisk: "medium",
 				Recommendation: "fast-ci",
+				SuppressionAudit: []engine.SuppressionAudit{{
+					Name:   "audit-high-equivalent-risk",
+					Action: "report-only",
+					Reason: "visible audit",
+				}},
 			},
+			SurvivorRank: 1,
+			RankReason:   "risk=medium recommendation=fast-ci nearby_tests=1",
 		}},
 	}
 
@@ -56,7 +63,7 @@ func TestJSONReportSchemaV1IncludesActionableFields(t *testing.T) {
 		t.Fatalf("schema_version = %v", decoded["schema_version"])
 	}
 	text := string(data)
-	for _, want := range []string{"baseline", "cache", "quarantine", "unified_diff", "status_reason", "selected_tests", "description", "nearby_tests", "equivalent_risk", "recommendation"} {
+	for _, want := range []string{"baseline", "cache", "quarantine", "unified_diff", "status_reason", "selected_tests", "description", "nearby_tests", "equivalent_risk", "recommendation", "suppression_audit", "survivor_rank", "rank_reason"} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("JSON report missing %q: %s", want, text)
 		}
@@ -93,5 +100,19 @@ func TestSummaryIncludesGremlinsStyleCoverageMetricsAndMutatorStats(t *testing.T
 		if !strings.Contains(text, want) {
 			t.Fatalf("summary missing %q:\n%s", want, text)
 		}
+	}
+}
+
+func TestSurvivorsReportIsRanked(t *testing.T) {
+	run := engine.RunResult{
+		Mutants: []engine.MutantResult{
+			{MutantID: "later", Status: engine.StatusSurvived, SurvivorRank: 2, RankReason: "risk=high", Mutant: engine.Mutant{File: "a.go", Line: 2, Operator: "returns", Original: "x", Mutated: "y"}},
+			{MutantID: "first", Status: engine.StatusSurvived, SurvivorRank: 1, RankReason: "risk=low", Mutant: engine.Mutant{File: "b.go", Line: 1, Operator: "boolean", Original: "true", Mutated: "false"}},
+		},
+	}
+
+	text := Survivors(run)
+	if !strings.Contains(text, "#1 first") || strings.Index(text, "#1 first") > strings.Index(text, "#2 later") {
+		t.Fatalf("survivors were not ranked:\n%s", text)
 	}
 }

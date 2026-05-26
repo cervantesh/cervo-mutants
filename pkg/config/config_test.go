@@ -111,3 +111,57 @@ func TestValidateAllowsConservativeFastProfile(t *testing.T) {
 		t.Fatalf("Validate rejected gremlins-compatible profile: %v", err)
 	}
 }
+
+func TestPolicyPresetsTuneMutationRuns(t *testing.T) {
+	cfg := Defaults()
+	cfg.Policy = "ci-fast"
+	cfg = ApplyPolicy(cfg)
+
+	if cfg.Mutators.Profile != "conservative-fast" {
+		t.Fatalf("ci-fast profile = %q, want conservative-fast", cfg.Mutators.Profile)
+	}
+	if cfg.Selection.Mode != "coverage" || !cfg.Selection.Prefilter {
+		t.Fatalf("ci-fast selection not coverage-prefiltered: %+v", cfg.Selection)
+	}
+	if cfg.Execution.Isolation != "overlay" {
+		t.Fatalf("ci-fast isolation = %q, want overlay", cfg.Execution.Isolation)
+	}
+
+	cfg = Defaults()
+	cfg.Policy = "campaign"
+	cfg = ApplyPolicy(cfg)
+	if cfg.Mutators.Profile != "aggressive" || cfg.Selection.Mode != "package" || cfg.Selection.Prefilter {
+		t.Fatalf("campaign preset not exhaustive package mode: %+v", cfg)
+	}
+}
+
+func TestLoadPolicyPresetKeepsExplicitOverrides(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "cervomut.yaml")
+	if err := os.WriteFile(path, []byte(`version: 1
+policy: ci-fast
+mutators:
+  profile: conservative
+execution:
+  isolation: temp-workdir
+`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatalf("Load returned error: %v", err)
+	}
+	if cfg.Policy != "ci-fast" {
+		t.Fatalf("policy = %q, want ci-fast", cfg.Policy)
+	}
+	if cfg.Selection.Mode != "coverage" || !cfg.Selection.Prefilter {
+		t.Fatalf("preset selection was not applied: %+v", cfg.Selection)
+	}
+	if cfg.Mutators.Profile != "conservative" {
+		t.Fatalf("explicit profile override lost: %+v", cfg.Mutators)
+	}
+	if cfg.Execution.Isolation != "temp-workdir" {
+		t.Fatalf("explicit isolation override lost: %+v", cfg.Execution)
+	}
+}

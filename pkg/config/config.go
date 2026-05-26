@@ -10,19 +10,21 @@ import (
 )
 
 type Config struct {
-	Version    int        `yaml:"version" json:"version"`
-	Scope      Scope      `yaml:"scope" json:"scope"`
-	Tests      Tests      `yaml:"tests" json:"tests"`
-	Mutators   Mutators   `yaml:"mutators" json:"mutators"`
-	Execution  Execution  `yaml:"execution" json:"execution"`
-	Selection  Selection  `yaml:"selection" json:"selection"`
-	Cache      Cache      `yaml:"cache" json:"cache"`
-	Baseline   Baseline   `yaml:"baseline" json:"baseline"`
-	Limits     Limits     `yaml:"limits" json:"limits"`
-	CI         CI         `yaml:"ci" json:"ci"`
-	Ignore     Ignore     `yaml:"ignore" json:"ignore"`
-	Quarantine Quarantine `yaml:"quarantine" json:"quarantine"`
-	Reports    Reports    `yaml:"reports" json:"reports"`
+	Version     int         `yaml:"version" json:"version"`
+	Policy      string      `yaml:"policy" json:"policy"`
+	Scope       Scope       `yaml:"scope" json:"scope"`
+	Tests       Tests       `yaml:"tests" json:"tests"`
+	Mutators    Mutators    `yaml:"mutators" json:"mutators"`
+	Execution   Execution   `yaml:"execution" json:"execution"`
+	Selection   Selection   `yaml:"selection" json:"selection"`
+	Suppression Suppression `yaml:"suppression" json:"suppression"`
+	Cache       Cache       `yaml:"cache" json:"cache"`
+	Baseline    Baseline    `yaml:"baseline" json:"baseline"`
+	Limits      Limits      `yaml:"limits" json:"limits"`
+	CI          CI          `yaml:"ci" json:"ci"`
+	Ignore      Ignore      `yaml:"ignore" json:"ignore"`
+	Quarantine  Quarantine  `yaml:"quarantine" json:"quarantine"`
+	Reports     Reports     `yaml:"reports" json:"reports"`
 }
 
 type Scope struct {
@@ -54,9 +56,23 @@ type Execution struct {
 
 type Selection struct {
 	Mode            string `yaml:"mode" json:"mode"`
+	Prefilter       bool   `yaml:"prefilter" json:"prefilter"`
 	UseTimings      bool   `yaml:"use_timings" json:"use_timings"`
 	CoverageProfile string `yaml:"coverage_profile" json:"coverage_profile"`
 	TimingsPath     string `yaml:"timings_path" json:"timings_path"`
+}
+
+type Suppression struct {
+	Enabled bool              `yaml:"enabled" json:"enabled"`
+	Rules   []SuppressionRule `yaml:"rules" json:"rules"`
+}
+
+type SuppressionRule struct {
+	Name           string `yaml:"name" json:"name"`
+	Operator       string `yaml:"operator" json:"operator"`
+	EquivalentRisk string `yaml:"equivalent_risk" json:"equivalent_risk"`
+	Action         string `yaml:"action" json:"action"`
+	Reason         string `yaml:"reason" json:"reason"`
 }
 
 type Cache struct {
@@ -137,10 +153,14 @@ func Defaults() Config {
 		Mutators:  Mutators{Profile: "conservative"},
 		Execution: Execution{Workers: workers, Isolation: "temp-workdir"},
 		Selection: Selection{Mode: "package", UseTimings: true, CoverageProfile: ".cervomut/coverage.out", TimingsPath: ".cervomut/timings.json"},
-		Cache:     Cache{Enabled: true, Path: ".cervomut/cache", Mode: "incremental"},
-		Baseline:  Baseline{Enabled: true, Path: ".cervomut/baseline.json", FailOnRegression: true, FailOnNewSurvivors: true},
-		Limits:    Limits{Sample: "none"},
-		CI:        CI{FailUnder: 0, FailOnTimeout: true},
+		Suppression: Suppression{Enabled: true, Rules: []SuppressionRule{
+			{Name: "audit-high-equivalent-risk", EquivalentRisk: "high", Action: "report-only", Reason: "High equivalent-mutant risk must be visible before suppression is allowed."},
+			{Name: "audit-loop-return-literal-risk", Operator: "loop-control", Action: "report-only", Reason: "Loop-control mutants are high-signal but often require manual review."},
+		}},
+		Cache:    Cache{Enabled: true, Path: ".cervomut/cache", Mode: "incremental"},
+		Baseline: Baseline{Enabled: true, Path: ".cervomut/baseline.json", FailOnRegression: true, FailOnNewSurvivors: true},
+		Limits:   Limits{Sample: "none"},
+		CI:       CI{FailUnder: 0, FailOnTimeout: true},
 		Quarantine: Quarantine{
 			Enabled:       true,
 			Path:          ".cervomut/quarantine.json",
@@ -167,10 +187,20 @@ func Defaults() Config {
 }
 
 func Load(path string) (Config, error) {
-	cfg := Defaults()
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return Config{}, err
+	}
+	cfg := Defaults()
+	var header struct {
+		Policy string `yaml:"policy"`
+	}
+	if err := yaml.Unmarshal(data, &header); err != nil {
+		return Config{}, err
+	}
+	if header.Policy != "" {
+		cfg.Policy = header.Policy
+		cfg = ApplyPolicy(cfg)
 	}
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		return Config{}, err
@@ -182,6 +212,9 @@ func Load(path string) (Config, error) {
 }
 
 func (cfg Config) Validate() error {
+	if cfg.Policy != "" && !oneOf(cfg.Policy, "ci-fast", "ci-balanced", "nightly", "campaign") {
+		return errors.New("policy must be ci-fast, ci-balanced, nightly, or campaign")
+	}
 	if !oneOf(cfg.Scope.Mode, "all", "changed", "packages") {
 		return errors.New("scope.mode must be all, changed, or packages")
 	}
@@ -201,6 +234,36 @@ func (cfg Config) Validate() error {
 		return errors.New("limits.sample must be none, random, or deterministic")
 	}
 	return nil
+}
+
+func ApplyPolicy(cfg Config) Config {
+	switch cfg.Policy {
+	case "ci-fast":
+		cfg.Mutators.Profile = "conservative-fast"
+		cfg.Selection.Mode = "coverage"
+		cfg.Selection.Prefilter = true
+		cfg.Execution.Isolation = "overlay"
+		cfg.Tests.Timeout = 20 * time.Second
+	case "ci-balanced":
+		cfg.Mutators.Profile = "conservative"
+		cfg.Selection.Mode = "coverage"
+		cfg.Selection.Prefilter = true
+		cfg.Execution.Isolation = "overlay"
+		cfg.Tests.Timeout = 45 * time.Second
+	case "nightly":
+		cfg.Mutators.Profile = "default"
+		cfg.Selection.Mode = "coverage"
+		cfg.Selection.Prefilter = true
+		cfg.Execution.Isolation = "overlay"
+		cfg.Tests.Timeout = 90 * time.Second
+	case "campaign":
+		cfg.Mutators.Profile = "aggressive"
+		cfg.Selection.Mode = "package"
+		cfg.Selection.Prefilter = false
+		cfg.Execution.Isolation = "temp-workdir"
+		cfg.Tests.Timeout = 2 * time.Minute
+	}
+	return cfg
 }
 
 func oneOf(value string, allowed ...string) bool {

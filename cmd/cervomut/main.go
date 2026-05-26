@@ -125,15 +125,28 @@ func cmdRun(args []string) error {
 	out := fs.String("out", "", "report output directory")
 	workers := fs.Int("workers", 0, "parallel mutation workers")
 	isolation := fs.String("isolation", "", "isolation backend: temp-workdir or overlay")
+	policy := fs.String("policy", "", "policy preset: ci-fast, ci-balanced, nightly, or campaign")
+	profile := fs.String("profile", "", "mutator profile")
+	prefilter := fs.Bool("coverage-prefilter", false, "use coverage profile as a prefilter")
 	if err := fs.Parse(reorderFlags(args, map[string]bool{
-		"scope": true, "since": true, "budget": true, "max-mutants": true, "sample": true, "report": true, "out": true, "workers": true, "isolation": true,
+		"scope": true, "since": true, "budget": true, "max-mutants": true, "sample": true, "report": true, "out": true, "workers": true, "isolation": true, "policy": true, "profile": true,
 	})); err != nil {
 		return err
 	}
 	_ = since
 	cfg := loadConfigIfPresent()
+	if *policy != "" {
+		cfg.Policy = *policy
+		cfg = config.ApplyPolicy(cfg)
+	}
 	if *scope != "" {
 		cfg.Scope.Mode = *scope
+	}
+	if *profile != "" {
+		cfg.Mutators.Profile = *profile
+	}
+	if *prefilter {
+		cfg.Selection.Prefilter = true
 	}
 	if *budget > 0 {
 		cfg.Execution.Budget = *budget
@@ -158,6 +171,9 @@ func cmdRun(args []string) error {
 		cfg.Cache.Path = filepath.Join(*out, "cache")
 		cfg.Selection.CoverageProfile = filepath.Join(*out, "coverage.out")
 		cfg.Selection.TimingsPath = filepath.Join(*out, "timings.json")
+	}
+	if err := cfg.Validate(); err != nil {
+		return err
 	}
 	result, err := engine.New(cfg).Run(context.Background(), engine.RunRequest{Targets: fs.Args(), DryRun: *dryRun})
 	if err != nil {
@@ -187,12 +203,17 @@ func cmdEval(args []string) error {
 	sample := fs.String("sample", "", "sampling mode")
 	workers := fs.Int("workers", 0, "parallel mutation workers")
 	isolation := fs.String("isolation", "", "isolation backend: temp-workdir or overlay")
+	policy := fs.String("policy", "", "policy preset: ci-fast, ci-balanced, nightly, or campaign")
 	if err := fs.Parse(reorderFlags(args, map[string]bool{
-		"out": true, "framework": true, "budget": true, "max-mutants": true, "sample": true, "workers": true, "isolation": true,
+		"out": true, "framework": true, "budget": true, "max-mutants": true, "sample": true, "workers": true, "isolation": true, "policy": true,
 	})); err != nil {
 		return err
 	}
 	cfg := loadConfigIfPresent()
+	if *policy != "" {
+		cfg.Policy = *policy
+		cfg = config.ApplyPolicy(cfg)
+	}
 	cfg.Reports.Output = *out
 	cfg.Cache.Path = filepath.Join(*out, "cache")
 	cfg.Selection.CoverageProfile = filepath.Join(*out, "coverage.out")
@@ -211,6 +232,9 @@ func cmdEval(args []string) error {
 	}
 	if *isolation != "" {
 		cfg.Execution.Isolation = *isolation
+	}
+	if err := cfg.Validate(); err != nil {
+		return err
 	}
 	targets := fs.Args()
 	runResult, err := engine.New(cfg).Run(context.Background(), engine.RunRequest{Targets: targets})
@@ -437,6 +461,7 @@ func loadLastRun(cfg config.Config) (engine.RunResult, error) {
 
 func defaultConfigYAML() string {
 	return `version: 1
+policy: ""
 scope:
   mode: all
   since: origin/main
@@ -456,9 +481,21 @@ execution:
   fail_fast: false
 selection:
   mode: package
+  prefilter: false
   use_timings: true
   coverage_profile: .cervomut/coverage.out
   timings_path: .cervomut/timings.json
+suppression:
+  enabled: true
+  rules:
+    - name: audit-high-equivalent-risk
+      equivalent_risk: high
+      action: report-only
+      reason: High equivalent-mutant risk must be visible before suppression is allowed.
+    - name: audit-loop-return-literal-risk
+      operator: loop-control
+      action: report-only
+      reason: Loop-control mutants are high-signal but often require manual review.
 cache:
   enabled: true
   path: .cervomut/cache

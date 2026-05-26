@@ -14,6 +14,7 @@ go install gitea.cervbox.synology.me/CervoSoft/cervo-mutant/cmd/cervomut@latest
 cervomut init
 cervomut doctor
 cervomut run ./... --budget 10m --sample deterministic
+cervomut run ./... --policy ci-fast --budget 10m
 ```
 
 ## Commands
@@ -23,6 +24,7 @@ cervomut run ./... --budget 10m --sample deterministic
 - `cervomut affected ./...`
 - `cervomut run ./...`
 - `cervomut run ./... --dry-run`
+- `cervomut run ./... --policy ci-fast --coverage-prefilter`
 - `cervomut run ./... --workers 16 --isolation overlay`
 - `cervomut eval ./... --out .cervomut/evaluation`
 - `cervomut compare --cervomut .cervomut/reports/mutation-report.json --gremlins gremlins.json --gomu gomu.txt --go-mutesting go-mutesting.txt`
@@ -50,10 +52,18 @@ The default policy is baseline-first adoption:
   runs that avoid copying the full module.
 - coverage mode records a Go coverage profile during baseline and uses it to
   pick package-scoped test commands when the mutated file is covered.
+- package mode can use `selection.prefilter: true` to report obvious
+  `not_covered` mutants from the baseline coverage profile before spending
+  mutation budget.
+- budgeted runs schedule fast/recommended operators before broader campaign
+  operators.
 - mutator profiles are tiered: `gremlins-compatible`, `conservative-fast`,
   `conservative`, `default`, and `aggressive`.
+- policy presets are available: `ci-fast`, `ci-balanced`, `nightly`, and
+  `campaign`.
 - JSON reports include mutation descriptions, nearby package tests, selected
-  test commands, status reasons, diffs, hints, and per-mutator statistics.
+  test commands, status reasons, diffs, hints, survivor ranks, suppression
+  audit hits, and per-mutator statistics.
 - worker mode applies jobs in isolated temp workdirs and returns the same JSON
   result schema as local execution.
 - cache fingerprints include the mutant patch, source file, relevant tests,
@@ -76,6 +86,10 @@ Use [docs/signal-first-mutation-testing.md](docs/signal-first-mutation-testing.m
 for the product framework behind CervoMutant defaults: coverage semantics,
 score decomposition, CI relevance, history-aware scheduling, equivalence
 governance, and agent actionability.
+
+Use [docs/evaluations/multi-repo-calibration.md](docs/evaluations/multi-repo-calibration.md)
+to run the Cobra, CervoClaw, CervoRetry, and external Go repository calibration
+before promoting operators or changing policy defaults.
 
 Use [docs/evaluation-template.md](docs/evaluation-template.md) for manual
 reviews, or run:

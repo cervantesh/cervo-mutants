@@ -20,24 +20,31 @@ const (
 )
 
 type Mutant struct {
-	ID             string   `json:"id"`
-	Module         string   `json:"module"`
-	Package        string   `json:"package"`
-	File           string   `json:"file"`
-	Line           int      `json:"line"`
-	Function       string   `json:"function"`
-	Operator       string   `json:"operator"`
-	Original       string   `json:"original"`
-	Mutated        string   `json:"mutated"`
-	StartOffset    int      `json:"start_offset"`
-	EndOffset      int      `json:"end_offset"`
-	Diff           string   `json:"unified_diff"`
-	Fingerprint    string   `json:"fingerprint"`
-	Hint           string   `json:"hint"`
-	Description    string   `json:"description"`
-	NearbyTests    []string `json:"nearby_tests,omitempty"`
-	EquivalentRisk string   `json:"equivalent_risk"`
-	Recommendation string   `json:"recommendation"`
+	ID               string             `json:"id"`
+	Module           string             `json:"module"`
+	Package          string             `json:"package"`
+	File             string             `json:"file"`
+	Line             int                `json:"line"`
+	Function         string             `json:"function"`
+	Operator         string             `json:"operator"`
+	Original         string             `json:"original"`
+	Mutated          string             `json:"mutated"`
+	StartOffset      int                `json:"start_offset"`
+	EndOffset        int                `json:"end_offset"`
+	Diff             string             `json:"unified_diff"`
+	Fingerprint      string             `json:"fingerprint"`
+	Hint             string             `json:"hint"`
+	Description      string             `json:"description"`
+	NearbyTests      []string           `json:"nearby_tests,omitempty"`
+	EquivalentRisk   string             `json:"equivalent_risk"`
+	Recommendation   string             `json:"recommendation"`
+	SuppressionAudit []SuppressionAudit `json:"suppression_audit,omitempty"`
+}
+
+type SuppressionAudit struct {
+	Name   string `json:"name"`
+	Action string `json:"action"`
+	Reason string `json:"reason"`
 }
 
 type MutantJob struct {
@@ -56,6 +63,8 @@ type MutantResult struct {
 	StatusReason string        `json:"status_reason"`
 	Output       string        `json:"output"`
 	Mutant       Mutant        `json:"mutant"`
+	SurvivorRank int           `json:"survivor_rank,omitempty"`
+	RankReason   string        `json:"rank_reason,omitempty"`
 }
 
 type Summary struct {

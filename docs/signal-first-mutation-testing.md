@@ -60,6 +60,9 @@ Design implications:
   optimization.
 - When coverage data exists, package mode should still be able to mark obvious
   `not_covered` mutants.
+- `ci-fast` and `ci-balanced` should run the coverage baseline first and use it
+  as a prefilter, so the fast path spends budget on covered, executable mutants
+  instead of charging uncovered code as weak tests.
 - Mutation coverage and test efficacy must stay separate:
 
 ```text
@@ -109,6 +112,7 @@ Each survivor should answer:
 - What nearby tests exist?
 - What assertion would likely kill this mutant?
 - Is this survivor new, old, quarantined, or already known?
+- How high should this survivor be reviewed relative to the rest?
 
 Minimum JSON fields for actionability:
 
@@ -275,6 +279,7 @@ Required controls:
 - cache state
 - coverage mode
 - operator profile
+- policy preset
 - generated artifact paths
 - known non-equivalence of mutator sets across tools
 
@@ -293,8 +298,8 @@ more operators.
 | Area | Improvement |
 | --- | --- |
 | Coverage | Make coverage prefilter available in fast CI and report `not_covered` even outside strict coverage mode when baseline coverage exists. |
-| Reporting | Add score decomposition blocks to summary, HTML, and JSON: efficacy, mutation coverage, operator profile, equivalent-risk, and suppression counts. |
-| Scheduling | Use history and timings to prioritize mutants inside `--budget`. |
+| Reporting | Add score decomposition blocks to summary, HTML, and JSON: efficacy, mutation coverage, operator profile, equivalent-risk, suppression audits, and ranked survivors. |
+| Scheduling | Use operator recommendation, history, and timings to prioritize mutants inside `--budget`. |
 | Baseline | Track survivor age, first seen commit, last seen commit, and whether the survivor is new in changed code. |
 | Equivalence | Add auditable suppression rules and evidence levels. |
 | CI | Add policy presets: `ci-fast`, `ci-balanced`, `nightly`, and `campaign`. |
@@ -319,7 +324,11 @@ mutators:
 
 Candidate policy:
 
-- `conservative-fast` for PR CI.
+- `ci-fast`: `conservative-fast`, coverage mode, coverage prefilter, overlay isolation, short timeout.
+- `ci-balanced`: `conservative`, coverage mode, coverage prefilter, overlay isolation.
+- `nightly`: `default`, coverage mode, coverage prefilter, longer timeout.
+- `campaign`: `aggressive`, package mode, temp-workdir isolation, longest timeout.
+- `conservative-fast` for PR CI when no named policy is used.
 - `gremlins-compatible` for apples-to-apples Go-tool benchmarking.
 - `conservative` for local developer runs.
 - `default` for nightly.

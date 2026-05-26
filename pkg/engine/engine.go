@@ -48,7 +48,7 @@ func (e *Engine) Run(ctx context.Context, req RunRequest) (RunResult, error) {
 	if err != nil {
 		return RunResult{}, err
 	}
-	sort.Slice(mutants, func(i, j int) bool { return mutants[i].ID < mutants[j].ID })
+	e.scheduleMutants(mutants)
 	if e.cfg.Limits.MaxMutants > 0 && len(mutants) > e.cfg.Limits.MaxMutants {
 		mutants = mutants[:e.cfg.Limits.MaxMutants]
 	}
@@ -66,6 +66,7 @@ func (e *Engine) Run(ctx context.Context, req RunRequest) (RunResult, error) {
 		for _, mutant := range mutants {
 			result.Mutants = append(result.Mutants, MutantResult{MutantID: mutant.ID, Status: StatusSkipped, StatusReason: "dry-run", Mutant: mutant})
 		}
+		rankSurvivors(result.Mutants)
 		result.Summary = summarize(result.Mutants)
 		return result, nil
 	}
@@ -79,6 +80,7 @@ func (e *Engine) Run(ctx context.Context, req RunRequest) (RunResult, error) {
 		return RunResult{}, err
 	}
 	result.Mutants = mutantResults
+	rankSurvivors(result.Mutants)
 	result.Summary = summarize(result.Mutants)
 	if e.cfg.Baseline.Enabled {
 		if prev, ok, err := e.loadBaseline(); err == nil && ok {
@@ -267,28 +269,74 @@ func (e *Engine) generateMutants(discovered discover.Result) ([]Mutant, error) {
 			generated[i].Package = file.Package
 			id, fingerprint := e.stableMutantIdentity(generated[i])
 			mutants = append(mutants, Mutant{
-				ID:             id,
-				Module:         generated[i].Module,
-				Package:        generated[i].Package,
-				File:           generated[i].File,
-				Line:           generated[i].Line,
-				Function:       generated[i].Function,
-				Operator:       generated[i].Operator,
-				Original:       generated[i].Original,
-				Mutated:        generated[i].Mutated,
-				StartOffset:    generated[i].StartOffset,
-				EndOffset:      generated[i].EndOffset,
-				Diff:           generated[i].Diff,
-				Fingerprint:    fingerprint,
-				Hint:           generated[i].Hint,
-				Description:    generated[i].Description,
-				NearbyTests:    nearbyTests(file.ModuleDir, file.Path),
-				EquivalentRisk: generated[i].EquivalentRisk,
-				Recommendation: generated[i].Recommendation,
+				ID:               id,
+				Module:           generated[i].Module,
+				Package:          generated[i].Package,
+				File:             generated[i].File,
+				Line:             generated[i].Line,
+				Function:         generated[i].Function,
+				Operator:         generated[i].Operator,
+				Original:         generated[i].Original,
+				Mutated:          generated[i].Mutated,
+				StartOffset:      generated[i].StartOffset,
+				EndOffset:        generated[i].EndOffset,
+				Diff:             generated[i].Diff,
+				Fingerprint:      fingerprint,
+				Hint:             generated[i].Hint,
+				Description:      generated[i].Description,
+				NearbyTests:      nearbyTests(file.ModuleDir, file.Path),
+				EquivalentRisk:   generated[i].EquivalentRisk,
+				Recommendation:   generated[i].Recommendation,
+				SuppressionAudit: e.suppressionAudit(generated[i].Operator, generated[i].EquivalentRisk),
 			})
 		}
 	}
 	return mutants, nil
+}
+
+func (e *Engine) scheduleMutants(mutants []Mutant) {
+	sort.SliceStable(mutants, func(i, j int) bool {
+		if e.cfg.Execution.Budget > 0 {
+			left := recommendationPriority(mutants[i].Recommendation)
+			right := recommendationPriority(mutants[j].Recommendation)
+			if left != right {
+				return left < right
+			}
+		}
+		return mutants[i].ID < mutants[j].ID
+	})
+}
+
+func recommendationPriority(recommendation string) int {
+	switch recommendation {
+	case "fast-ci":
+		return 0
+	case "conservative":
+		return 1
+	case "default":
+		return 2
+	case "aggressive":
+		return 3
+	default:
+		return 4
+	}
+}
+
+func (e *Engine) suppressionAudit(operator, equivalentRisk string) []SuppressionAudit {
+	if !e.cfg.Suppression.Enabled {
+		return nil
+	}
+	var audits []SuppressionAudit
+	for _, rule := range e.cfg.Suppression.Rules {
+		if rule.Operator != "" && rule.Operator != operator {
+			continue
+		}
+		if rule.EquivalentRisk != "" && rule.EquivalentRisk != equivalentRisk {
+			continue
+		}
+		audits = append(audits, SuppressionAudit{Name: rule.Name, Action: rule.Action, Reason: rule.Reason})
+	}
+	return audits
 }
 
 func nearbyTests(moduleDir, sourceFile string) []string {
@@ -338,7 +386,7 @@ func (e *Engine) runBaseline(ctx context.Context, targets []string) (MutantResul
 		return MutantResult{}, err
 	}
 	command := append([]string{}, e.cfg.Tests.Command...)
-	if e.cfg.Selection.Mode == "coverage" {
+	if e.cfg.Selection.Mode == "coverage" || e.cfg.Selection.Prefilter {
 		profile := e.cfg.Selection.CoverageProfile
 		if !filepath.IsAbs(profile) {
 			profile = filepath.Join(moduleDir, profile)
@@ -359,7 +407,7 @@ func (e *Engine) runBaseline(ctx context.Context, targets []string) (MutantResul
 
 func (e *Engine) runMutant(ctx context.Context, mutant Mutant) (MutantResult, error) {
 	plan := e.selectTests(mutant)
-	if e.cfg.Selection.Mode == "coverage" && !plan.CoversMutant {
+	if !plan.CoversMutant {
 		return MutantResult{
 			MutantID:     mutant.ID,
 			Status:       StatusNotCovered,
@@ -471,6 +519,9 @@ func (e *Engine) selectTests(mutant Mutant) TestPlan {
 	command := append([]string{}, e.cfg.Tests.Command...)
 	if len(command) == 0 {
 		command = []string{"go", "test", "./..."}
+	}
+	if e.cfg.Selection.Prefilter && !e.coverageMentions(mutant) {
+		return TestPlan{Command: command, Reason: "coverage prefilter did not match mutant file", CoversMutant: false}
 	}
 	if e.cfg.Selection.Mode == "package" && len(command) >= 3 && command[0] == "go" && command[1] == "test" && mutant.Package != "" {
 		command[2] = mutant.Package
@@ -625,6 +676,46 @@ func summarize(results []MutantResult) Summary {
 		s.MutationCoverage = float64(coverable-s.NotCovered) / float64(coverable) * 100
 	}
 	return s
+}
+
+func rankSurvivors(results []MutantResult) {
+	survivors := make([]int, 0)
+	for i := range results {
+		if results[i].Status == StatusSurvived {
+			survivors = append(survivors, i)
+		}
+	}
+	sort.SliceStable(survivors, func(i, j int) bool {
+		left := results[survivors[i]]
+		right := results[survivors[j]]
+		if riskPriority(left.Mutant.EquivalentRisk) != riskPriority(right.Mutant.EquivalentRisk) {
+			return riskPriority(left.Mutant.EquivalentRisk) < riskPriority(right.Mutant.EquivalentRisk)
+		}
+		if recommendationPriority(left.Mutant.Recommendation) != recommendationPriority(right.Mutant.Recommendation) {
+			return recommendationPriority(left.Mutant.Recommendation) < recommendationPriority(right.Mutant.Recommendation)
+		}
+		if len(left.Mutant.NearbyTests) != len(right.Mutant.NearbyTests) {
+			return len(left.Mutant.NearbyTests) > len(right.Mutant.NearbyTests)
+		}
+		return left.MutantID < right.MutantID
+	})
+	for rank, index := range survivors {
+		results[index].SurvivorRank = rank + 1
+		results[index].RankReason = fmt.Sprintf("risk=%s recommendation=%s nearby_tests=%d", results[index].Mutant.EquivalentRisk, results[index].Mutant.Recommendation, len(results[index].Mutant.NearbyTests))
+	}
+}
+
+func riskPriority(risk string) int {
+	switch risk {
+	case "low":
+		return 0
+	case "medium":
+		return 1
+	case "high":
+		return 2
+	default:
+		return 3
+	}
 }
 
 func (e *Engine) writeReports(result RunResult) error {

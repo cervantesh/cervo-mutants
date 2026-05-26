@@ -66,11 +66,24 @@ func Summary(result engine.RunResult) string {
 
 func Survivors(result engine.RunResult) string {
 	var b strings.Builder
-	for _, mutant := range result.Mutants {
-		if mutant.Status != engine.StatusSurvived {
+	survivors := make([]engine.MutantResult, 0)
+	for _, item := range result.Mutants {
+		if item.Status != engine.StatusSurvived {
 			continue
 		}
-		fmt.Fprintf(&b, "%s %s:%d %s %s -> %s\n", mutant.MutantID, mutant.Mutant.File, mutant.Mutant.Line, mutant.Mutant.Operator, mutant.Mutant.Original, mutant.Mutant.Mutated)
+		survivors = append(survivors, item)
+	}
+	sort.SliceStable(survivors, func(i, j int) bool {
+		if survivors[i].SurvivorRank == 0 {
+			return false
+		}
+		if survivors[j].SurvivorRank == 0 {
+			return true
+		}
+		return survivors[i].SurvivorRank < survivors[j].SurvivorRank
+	})
+	for _, mutant := range survivors {
+		fmt.Fprintf(&b, "#%d %s %s:%d %s %s -> %s (%s)\n", mutant.SurvivorRank, mutant.MutantID, mutant.Mutant.File, mutant.Mutant.Line, mutant.Mutant.Operator, mutant.Mutant.Original, mutant.Mutant.Mutated, mutant.RankReason)
 	}
 	return b.String()
 }

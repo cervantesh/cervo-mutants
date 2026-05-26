@@ -431,6 +431,32 @@ represented in code:
   for mutation runs that should avoid full module copies while preserving source
   tree cleanliness.
 
+## Parallel Overlay Performance Follow-Up
+
+The initial Windows run showed CervoMutant was operationally robust but too slow
+against Gremlins. The target was tightened to: keep the same mutation score
+surface, but make the CervoMutant Cobra `./doc` run complete in less than half
+of Gremlins' measured time.
+
+Command:
+
+```text
+cervomut eval ./doc --budget 6m --workers 16 --isolation overlay --out %TEMP%\cervomut-cobra-run-20260526-140115\results\cervomut-overlay-w16
+```
+
+Result:
+
+| Tool/run | Mutants | Killed | Survived | Score | Time |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Gremlins | 87 | 58 | 29 | 66.67% test efficacy | 32.20s |
+| CervoMutant serial temp-workdir | 99 | 58 | 41 | 58.59% | 154.48s |
+| CervoMutant parallel overlay, 16 workers | 99 | 58 | 41 | 58.59% | 9.12s |
+
+The optimized run is 71.7% faster than Gremlins on this host and 94.1% faster
+than CervoMutant's original serial temp-workdir run. The mutation score did not
+increase; the gain came from executing real mutant test jobs concurrently and
+using Go overlay isolation to avoid full module copies.
+
 ## Windows Path Hardening Follow-Up
 
 The gomu and go-mutesting failures were converted into executable CervoMutant safeguards:

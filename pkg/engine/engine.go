@@ -16,6 +16,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"gitea.cervbox.synology.me/CervoSoft/cervo-mutant/pkg/config"
@@ -26,7 +27,8 @@ import (
 )
 
 type Engine struct {
-	cfg config.Config
+	cfg      config.Config
+	timingMu sync.Mutex
 }
 
 func New(cfg config.Config) *Engine {
@@ -72,22 +74,11 @@ func (e *Engine) Run(ctx context.Context, req RunRequest) (RunResult, error) {
 		return RunResult{}, err
 	}
 	_ = baselineResult
-	start := time.Now()
-	for _, mutant := range mutants {
-		if quarantined[mutant.ID] {
-			result.Mutants = append(result.Mutants, MutantResult{MutantID: mutant.ID, Status: StatusQuarantined, StatusReason: "mutant is in active quarantine", Mutant: mutant})
-			continue
-		}
-		if e.cfg.Execution.Budget > 0 && time.Since(start) >= e.cfg.Execution.Budget {
-			result.Mutants = append(result.Mutants, MutantResult{MutantID: mutant.ID, Status: StatusSkipped, StatusReason: "budget exhausted", Mutant: mutant})
-			continue
-		}
-		mutantResult, err := e.runMutant(ctx, mutant)
-		if err != nil {
-			return RunResult{}, err
-		}
-		result.Mutants = append(result.Mutants, mutantResult)
+	mutantResults, err := e.runMutants(ctx, mutants, quarantined)
+	if err != nil {
+		return RunResult{}, err
 	}
+	result.Mutants = mutantResults
 	result.Summary = summarize(result.Mutants)
 	if e.cfg.Baseline.Enabled {
 		if prev, ok, err := e.loadBaseline(); err == nil && ok {
@@ -100,6 +91,122 @@ func (e *Engine) Run(ctx context.Context, req RunRequest) (RunResult, error) {
 		return RunResult{}, err
 	}
 	return result, nil
+}
+
+func (e *Engine) runMutants(ctx context.Context, mutants []Mutant, quarantined map[string]bool) ([]MutantResult, error) {
+	workers := e.workerCount(len(mutants))
+	if workers <= 1 {
+		return e.runMutantsSerial(ctx, mutants, quarantined)
+	}
+	return e.runMutantsParallel(ctx, mutants, quarantined, workers)
+}
+
+func (e *Engine) runMutantsSerial(ctx context.Context, mutants []Mutant, quarantined map[string]bool) ([]MutantResult, error) {
+	results := make([]MutantResult, 0, len(mutants))
+	start := time.Now()
+	for _, mutant := range mutants {
+		if quarantined[mutant.ID] {
+			results = append(results, MutantResult{MutantID: mutant.ID, Status: StatusQuarantined, StatusReason: "mutant is in active quarantine", Mutant: mutant})
+			continue
+		}
+		if e.budgetExhausted(start) {
+			results = append(results, MutantResult{MutantID: mutant.ID, Status: StatusSkipped, StatusReason: "budget exhausted", Mutant: mutant})
+			continue
+		}
+		mutantResult, err := e.runMutant(ctx, mutant)
+		if err != nil {
+			return nil, err
+		}
+		results = append(results, mutantResult)
+	}
+	return results, nil
+}
+
+type indexedMutant struct {
+	index  int
+	mutant Mutant
+}
+
+type indexedResult struct {
+	index  int
+	result MutantResult
+	err    error
+}
+
+func (e *Engine) runMutantsParallel(ctx context.Context, mutants []Mutant, quarantined map[string]bool, workers int) ([]MutantResult, error) {
+	results := make([]MutantResult, len(mutants))
+	jobs := make(chan indexedMutant, len(mutants))
+	done := make(chan indexedResult, len(mutants))
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	var wg sync.WaitGroup
+	for i := 0; i < workers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for job := range jobs {
+				if ctx.Err() != nil {
+					done <- indexedResult{index: job.index, err: ctx.Err()}
+					continue
+				}
+				result, err := e.runMutant(ctx, job.mutant)
+				done <- indexedResult{index: job.index, result: result, err: err}
+			}
+		}()
+	}
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+
+	dispatched := 0
+	start := time.Now()
+	for i, mutant := range mutants {
+		if quarantined[mutant.ID] {
+			results[i] = MutantResult{MutantID: mutant.ID, Status: StatusQuarantined, StatusReason: "mutant is in active quarantine", Mutant: mutant}
+			continue
+		}
+		if e.budgetExhausted(start) {
+			results[i] = MutantResult{MutantID: mutant.ID, Status: StatusSkipped, StatusReason: "budget exhausted", Mutant: mutant}
+			continue
+		}
+		dispatched++
+		jobs <- indexedMutant{index: i, mutant: mutant}
+	}
+	close(jobs)
+
+	var firstErr error
+	for item := range done {
+		dispatched--
+		if item.err != nil && firstErr == nil {
+			firstErr = item.err
+			cancel()
+		}
+		results[item.index] = item.result
+	}
+	if firstErr != nil {
+		return nil, firstErr
+	}
+	return results, nil
+}
+
+func (e *Engine) budgetExhausted(start time.Time) bool {
+	return e.cfg.Execution.Budget > 0 && time.Since(start) >= e.cfg.Execution.Budget
+}
+
+func (e *Engine) workerCount(mutants int) int {
+	workers := e.cfg.Execution.Workers
+	if workers <= 0 {
+		workers = runtime.NumCPU()
+	}
+	if workers > mutants && mutants > 0 {
+		workers = mutants
+	}
+	if workers < 1 {
+		workers = 1
+	}
+	return workers
 }
 
 func (e *Engine) Affected(ctx context.Context, req AffectedRequest) (AffectedResult, error) {
@@ -732,6 +839,8 @@ func (e *Engine) recordTiming(mutantID string, duration time.Duration) {
 	if !e.cfg.Selection.UseTimings || e.cfg.Selection.TimingsPath == "" || mutantID == "" {
 		return
 	}
+	e.timingMu.Lock()
+	defer e.timingMu.Unlock()
 	path := e.cfg.Selection.TimingsPath
 	if !filepath.IsAbs(path) {
 		moduleDir := "."

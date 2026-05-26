@@ -53,6 +53,14 @@ func TestReportAndShowAcceptOutputDirectory(t *testing.T) {
 	}
 }
 
+func TestRunAcceptsWorkerAndIsolationFlags(t *testing.T) {
+	dir := writeCLIFixture(t)
+	out := filepath.Join(dir, "parallel-out")
+	if err := run([]string{"run", dir, "--max-mutants", "1", "--workers", "2", "--isolation", "overlay", "--out", out}); err != nil {
+		t.Fatalf("run with workers and isolation returned error: %v", err)
+	}
+}
+
 func TestCompareCommandNormalizesExternalToolReports(t *testing.T) {
 	dir := t.TempDir()
 	cervo := filepath.Join(dir, "cervo.json")

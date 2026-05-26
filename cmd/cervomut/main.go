@@ -123,8 +123,10 @@ func cmdRun(args []string) error {
 	sample := fs.String("sample", "", "sampling mode")
 	reportFormats := fs.String("report", "", "comma-separated report formats")
 	out := fs.String("out", "", "report output directory")
+	workers := fs.Int("workers", 0, "parallel mutation workers")
+	isolation := fs.String("isolation", "", "isolation backend: temp-workdir or overlay")
 	if err := fs.Parse(reorderFlags(args, map[string]bool{
-		"scope": true, "since": true, "budget": true, "max-mutants": true, "sample": true, "report": true, "out": true,
+		"scope": true, "since": true, "budget": true, "max-mutants": true, "sample": true, "report": true, "out": true, "workers": true, "isolation": true,
 	})); err != nil {
 		return err
 	}
@@ -141,6 +143,12 @@ func cmdRun(args []string) error {
 	}
 	if *sample != "" {
 		cfg.Limits.Sample = *sample
+	}
+	if *workers > 0 {
+		cfg.Execution.Workers = *workers
+	}
+	if *isolation != "" {
+		cfg.Execution.Isolation = *isolation
 	}
 	if *reportFormats != "" {
 		cfg.Reports.Formats = strings.Split(*reportFormats, ",")
@@ -177,8 +185,10 @@ func cmdEval(args []string) error {
 	budget := fs.Duration("budget", 0, "run budget")
 	maxMutants := fs.Int("max-mutants", 0, "max mutants")
 	sample := fs.String("sample", "", "sampling mode")
+	workers := fs.Int("workers", 0, "parallel mutation workers")
+	isolation := fs.String("isolation", "", "isolation backend: temp-workdir or overlay")
 	if err := fs.Parse(reorderFlags(args, map[string]bool{
-		"out": true, "framework": true, "budget": true, "max-mutants": true, "sample": true,
+		"out": true, "framework": true, "budget": true, "max-mutants": true, "sample": true, "workers": true, "isolation": true,
 	})); err != nil {
 		return err
 	}
@@ -195,6 +205,12 @@ func cmdEval(args []string) error {
 	}
 	if *sample != "" {
 		cfg.Limits.Sample = *sample
+	}
+	if *workers > 0 {
+		cfg.Execution.Workers = *workers
+	}
+	if *isolation != "" {
+		cfg.Execution.Isolation = *isolation
 	}
 	targets := fs.Args()
 	runResult, err := engine.New(cfg).Run(context.Background(), engine.RunRequest{Targets: targets})

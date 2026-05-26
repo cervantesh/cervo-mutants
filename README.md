@@ -23,6 +23,7 @@ cervomut run ./... --budget 10m --sample deterministic
 - `cervomut affected ./...`
 - `cervomut run ./...`
 - `cervomut run ./... --dry-run`
+- `cervomut run ./... --workers 16 --isolation overlay`
 - `cervomut eval ./... --out .cervomut/evaluation`
 - `cervomut compare --cervomut .cervomut/reports/mutation-report.json --gremlins gremlins.json --gomu gomu.txt --go-mutesting go-mutesting.txt`
 - `cervomut baseline update`

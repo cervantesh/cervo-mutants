@@ -7,6 +7,11 @@ Gremlins, recent mutation-testing research, and the Cobra comparison study.
 Operator selection matters, but it is only one part of making mutation testing
 useful in CI and useful for coding agents.
 
+Every major design rule below lists its supporting references explicitly. The
+goal is to make future implementation work auditable: if a behavior is adopted
+because of research, the relevant source should be visible near the decision,
+not only in a bibliography at the end.
+
 The central product rule is:
 
 > Optimize for actionable signal per minute of CI and per minute of human or
@@ -30,6 +35,9 @@ The central product rule is:
 ## Pillars
 
 ### 1. Coverage-Gated Semantics
+
+References: Gremlins features and limitations; Gremlins `unleash` metrics;
+Google practical mutation testing at scale.
 
 Coverage is not a quality score by itself, but execution is a prerequisite for a
 test to kill a mutant. If tests never execute the mutated code, the result should
@@ -61,6 +69,10 @@ test_efficacy     = killed / (killed + survived)
 
 ### 2. Score Decomposition
 
+References: Mutation Coverage is Not Strongly Correlated with Mutation Coverage,
+AST 2024; Gremlins `unleash` metrics; The ratio of equivalent mutants, JSS
+2021.
+
 A single mutation score is too easy to misread. CervoMutant reports must always
 show the components behind the score.
 
@@ -80,6 +92,9 @@ Product rule:
 > A score without generator context is not an adoption decision.
 
 ### 3. Actionability Before Volume
+
+References: Practical mutation testing at scale / Google; An Empirical
+Evaluation of Manually Created Equivalent Mutants, 2024; Cobra comparison study.
 
 A survivor is valuable when it can guide a concrete test improvement. Large
 reports full of weak or redundant survivors are worse than smaller reports with
@@ -118,6 +133,9 @@ Minimum JSON fields for actionability:
 
 ### 4. CI Relevance And Scope Control
 
+References: On the use of commit-relevant mutants, EMSE 2022; Practical
+mutation testing at scale / Google; PIT-style history and prioritization.
+
 CI should not run every possible mutant on every pull request. It should run the
 mutants most relevant to the change, then use scheduled full runs to prevent
 blind spots.
@@ -145,6 +163,9 @@ CI should not fail on:
 
 ### 5. History-Aware Scheduling
 
+References: PIT-style history and prioritization; Practical mutation testing at
+scale / Google; On the use of commit-relevant mutants, EMSE 2022.
+
 History is not a shortcut to hide bad results. It is a way to spend time on the
 mutants most likely to produce useful feedback.
 
@@ -168,6 +189,10 @@ Priority order for PR feedback:
 5. Long-running or noisy mutants deferred to scheduled runs.
 
 ### 6. Equivalent-Risk Governance
+
+References: Equivalent Mutants in the Wild, ISSTA 2024; Static detection of
+equivalent mutants, 2022; The ratio of equivalent mutants, JSS 2021; An
+Empirical Evaluation of Manually Created Equivalent Mutants, 2024.
 
 Equivalent mutants cannot be fully solved, but CervoMutant can make the burden
 visible and reduce obvious noise.
@@ -195,6 +220,10 @@ in summary and JSON.
 
 ### 7. Operator Governance Beyond Operator Lists
 
+References: Mutation Coverage is Not Strongly Correlated with Mutation Coverage,
+AST 2024; The ratio of equivalent mutants, JSS 2021; Equivalent Mutants in the
+Wild, ISSTA 2024; Cobra comparison study.
+
 Operators are promoted or demoted based on measured utility, not taste.
 
 Per-operator metrics:
@@ -220,6 +249,10 @@ Promotion policy:
 | `experimental` | Insufficient evidence; must be opt-in. |
 
 ### 8. Validity Controls
+
+References: Mutation Testing Advances: An Analysis and Survey; Mutation Coverage
+is Not Strongly Correlated with Mutation Coverage, AST 2024; Cobra comparison
+study.
 
 Every benchmark or adoption decision should record threats to validity.
 
@@ -289,9 +322,12 @@ Candidate policy:
 - Gremlins features and limitations: https://gremlins.dev/0.2/
 - Gremlins `unleash` command and metrics: https://gremlins.dev/next/usage/commands/unleash/
 - Practical mutation testing at scale / Google: https://homes.cs.washington.edu/~rjust/publ/mutation_testing_practices_icse_2021.pdf
+- Practical mutation testing at scale, IEEE TSE 2022 publication page: https://doi.org/10.1109/TSE.2021.3131293
 - Equivalent Mutants in the Wild, ISSTA 2024: https://2024.issta.org/details/issta-2024-papers/53/Equivalent-Mutants-in-the-Wild-Identifying-and-Efficiently-Suppressing-Equivalent-Mu
 - Mutation Coverage is Not Strongly Correlated with Mutation Coverage, AST 2024: https://researchwith.njit.edu/en/publications/mutation-coverage-is-not-strongly-correlated-with-mutation-covera/
 - An Empirical Evaluation of Manually Created Equivalent Mutants, 2024: https://arxiv.org/abs/2404.09241
 - Static detection of equivalent mutants, 2022: https://link.springer.com/article/10.1007/s10664-022-10149-y
 - The ratio of equivalent mutants, JSS 2021: https://www.sciencedirect.com/science/article/abs/pii/S0164121221001369
 - On the use of commit-relevant mutants, EMSE 2022: https://link.springer.com/article/10.1007/s10664-022-10138-1
+- Mutation Testing Advances: An Analysis and Survey: https://doi.org/10.1016/bs.adcom.2018.03.015
+- PIT mutation testing system: https://pitest.org/

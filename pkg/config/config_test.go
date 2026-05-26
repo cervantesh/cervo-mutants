@@ -85,3 +85,16 @@ ci:
 		t.Fatal("Load accepted invalid selection mode")
 	}
 }
+
+func TestValidateAllowsOverlayIsolation(t *testing.T) {
+	cfg := Defaults()
+	cfg.Execution.Isolation = "overlay"
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("Validate rejected overlay isolation: %v", err)
+	}
+
+	cfg.Execution.Isolation = "shared-worktree"
+	if err := cfg.Validate(); err == nil {
+		t.Fatal("Validate accepted invalid isolation")
+	}
+}

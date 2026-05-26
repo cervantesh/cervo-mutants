@@ -43,6 +43,7 @@ type Mutant struct {
 	Diff        string `json:"unified_diff"`
 	Fingerprint string `json:"fingerprint"`
 	Hint        string `json:"hint"`
+	Description string `json:"description"`
 }
 
 func Definitions() []Definition {
@@ -136,10 +137,33 @@ func collectNode(mutants *[]Mutant, fset *token.FileSet, pkg, filename string, s
 		addBinaryMutants(mutants, fset, pkg, filename, src, fn, n, profile, ignores)
 	case *ast.Ident:
 		if n.Name == "true" {
-			addMutation(mutants, fset, pkg, filename, src, fn, n, "boolean-literals", "true", "false", ignores)
+			addMutation(mutants, fset, pkg, filename, src, fn, n, "boolean-literals", "true", "false", profile, ignores)
 		}
 		if n.Name == "false" {
-			addMutation(mutants, fset, pkg, filename, src, fn, n, "boolean-literals", "false", "true", ignores)
+			addMutation(mutants, fset, pkg, filename, src, fn, n, "boolean-literals", "false", "true", profile, ignores)
+		}
+	case *ast.BasicLit:
+		if n.Kind == token.INT && n.Value != "0" {
+			addMutation(mutants, fset, pkg, filename, src, fn, n, "literals", n.Value, "0", profile, ignores)
+		}
+		if n.Kind == token.INT && n.Value == "0" {
+			addMutation(mutants, fset, pkg, filename, src, fn, n, "literals", "0", "1", profile, ignores)
+		}
+		if n.Kind == token.STRING && n.Value != `""` {
+			addMutation(mutants, fset, pkg, filename, src, fn, n, "literals", n.Value, `""`, profile, ignores)
+		}
+	case *ast.ReturnStmt:
+		for _, result := range n.Results {
+			ident, ok := result.(*ast.Ident)
+			if !ok {
+				continue
+			}
+			if ident.Name == "true" {
+				addMutation(mutants, fset, pkg, filename, src, fn, ident, "returns", "true", "false", profile, ignores)
+			}
+			if ident.Name == "false" {
+				addMutation(mutants, fset, pkg, filename, src, fn, ident, "returns", "false", "true", profile, ignores)
+			}
 		}
 	}
 }
@@ -179,7 +203,7 @@ func addBinaryMutants(mutants *[]Mutant, fset *token.FileSet, pkg, filename stri
 	if isNilCheck(expr) {
 		operator = "nil-checks"
 	}
-	addMutation(mutants, fset, pkg, filename, src, fn, expr, operator, expr.Op.String(), replacement, ignores)
+	addMutation(mutants, fset, pkg, filename, src, fn, expr, operator, expr.Op.String(), replacement, profile, ignores)
 }
 
 func isNilCheck(expr *ast.BinaryExpr) bool {
@@ -194,8 +218,8 @@ func isNil(expr ast.Expr) bool {
 	return ok && ident.Name == "nil"
 }
 
-func addMutation(mutants *[]Mutant, fset *token.FileSet, pkg, filename string, src []byte, fn string, node ast.Node, operator, original, mutated string, ignores []inlineIgnore) {
-	if !operatorEnabled(operator) {
+func addMutation(mutants *[]Mutant, fset *token.FileSet, pkg, filename string, src []byte, fn string, node ast.Node, operator, original, mutated, profile string, ignores []inlineIgnore) {
+	if !operatorEnabled(operator, profile) {
 		return
 	}
 	pos := fset.Position(node.Pos())
@@ -231,11 +255,21 @@ func addMutation(mutants *[]Mutant, fset *token.FileSet, pkg, filename string, s
 		Diff:        diff,
 		Fingerprint: fp,
 		Hint:        hint(operator),
+		Description: description(fn, operator, original, mutated),
 	})
 }
 
-func operatorEnabled(operator string) bool {
-	return operator == "conditionals" || operator == "logical" || operator == "boolean-literals" || operator == "nil-checks" || operator == "arithmetic-basic"
+func operatorEnabled(operator, profile string) bool {
+	switch operator {
+	case "conditionals", "logical", "boolean-literals", "nil-checks", "arithmetic-basic":
+		return true
+	case "error-returns":
+		return profile == ProfileDefault || profile == ProfileAggressive
+	case "literals", "returns", "loop-control":
+		return profile == ProfileAggressive
+	default:
+		return false
+	}
 }
 
 func ignored(line int, operator string, ignores []inlineIgnore) bool {
@@ -277,6 +311,14 @@ func hint(operator string) string {
 	default:
 		return "Add an assertion that observes the changed behavior."
 	}
+}
+
+func description(fn, operator, original, mutated string) string {
+	where := "expression"
+	if fn != "" {
+		where = "function " + fn
+	}
+	return fmt.Sprintf("%s mutation in %s: changed %s to %s.", operator, where, original, mutated)
 }
 
 func FormatNode(fset *token.FileSet, node ast.Node) string {

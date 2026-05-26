@@ -29,6 +29,9 @@ func Check(n int, ready bool, p *int) bool {
 		if mutant.ID == "" || mutant.Operator == "" || mutant.Diff == "" || mutant.Line == 0 {
 			t.Fatalf("mutant missing actionable fields: %+v", mutant)
 		}
+		if mutant.Description == "" {
+			t.Fatalf("mutant missing description: %+v", mutant)
+		}
 		if seen[mutant.ID] {
 			t.Fatalf("duplicate mutant ID: %s", mutant.ID)
 		}
@@ -51,6 +54,43 @@ func Check(n int, ready bool, p *int) bool {
 	}
 	if !foundConditional || !foundLogical || !foundNil || !foundBoolean {
 		t.Fatalf("missing expected operators: conditionals=%v logical=%v nil=%v boolean=%v", foundConditional, foundLogical, foundNil, foundBoolean)
+	}
+}
+
+func TestAggressiveProfileAddsLiteralAndReturnMutators(t *testing.T) {
+	src := `package sample
+
+func Answer() int {
+	return 1
+}
+
+func Ready() bool {
+	return true
+}
+`
+
+	conservative, err := Generate("sample", "sample.go", []byte(src), ProfileConservative)
+	if err != nil {
+		t.Fatalf("Generate conservative returned error: %v", err)
+	}
+	for _, mutant := range conservative {
+		if mutant.Operator == "literals" || mutant.Operator == "returns" {
+			t.Fatalf("conservative generated aggressive mutant: %+v", mutant)
+		}
+	}
+
+	aggressive, err := Generate("sample", "sample.go", []byte(src), ProfileAggressive)
+	if err != nil {
+		t.Fatalf("Generate aggressive returned error: %v", err)
+	}
+	foundLiteral := false
+	foundReturn := false
+	for _, mutant := range aggressive {
+		foundLiteral = foundLiteral || mutant.Operator == "literals"
+		foundReturn = foundReturn || mutant.Operator == "returns"
+	}
+	if !foundLiteral || !foundReturn {
+		t.Fatalf("aggressive profile missing literal/return mutants: literal=%v return=%v mutants=%+v", foundLiteral, foundReturn, aggressive)
 	}
 }
 

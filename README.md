@@ -23,12 +23,14 @@ cervomut run ./... --budget 10m --sample deterministic
 - `cervomut affected ./...`
 - `cervomut run ./...`
 - `cervomut run ./... --dry-run`
+- `cervomut eval ./... --out .cervomut/evaluation`
+- `cervomut compare --cervomut .cervomut/reports/mutation-report.json --gremlins gremlins.json --gomu gomu.txt --go-mutesting go-mutesting.txt`
 - `cervomut baseline update`
 - `cervomut baseline compare`
-- `cervomut report summary`
-- `cervomut report survivors`
+- `cervomut report summary --out .cervomut/reports`
+- `cervomut report survivors --out .cervomut/reports`
 - `cervomut report open`
-- `cervomut show <mutant-id>`
+- `cervomut show <mutant-id> --out .cervomut/reports`
 - `cervomut explain <mutant-id> --format text|json`
 - `cervomut list-mutators`
 - `cervomut daemon`
@@ -43,8 +45,12 @@ The default policy is baseline-first adoption:
 - quarantine entries require owner, issue, reason, and expiry.
 - reports include summary, JSON schema v1, JUnit XML, and HTML.
 - execution uses temp workdirs so source workspaces are not mutated.
+- `execution.isolation: overlay` is available for Go-native overlay mutation
+  runs that avoid copying the full module.
 - coverage mode records a Go coverage profile during baseline and uses it to
   pick package-scoped test commands when the mutated file is covered.
+- JSON reports include mutation descriptions, nearby package tests, selected
+  test commands, status reasons, diffs, hints, and per-mutator statistics.
 - worker mode applies jobs in isolated temp workdirs and returns the same JSON
   result schema as local execution.
 - cache fingerprints include the mutant patch, source file, relevant tests,

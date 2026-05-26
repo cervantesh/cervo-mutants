@@ -72,6 +72,12 @@ func TestRunDryRunDiscoversMutantsWithoutChangingWorkspace(t *testing.T) {
 	if result.Summary.Total == 0 {
 		t.Fatal("dry-run discovered no mutants")
 	}
+	if result.Mutants[0].Mutant.Description == "" {
+		t.Fatalf("mutant missing description: %+v", result.Mutants[0].Mutant)
+	}
+	if len(result.Mutants[0].Mutant.NearbyTests) == 0 {
+		t.Fatalf("mutant missing nearby tests: %+v", result.Mutants[0].Mutant)
+	}
 	after, err := os.ReadFile(filepath.Join(dir, "calc.go"))
 	if err != nil {
 		t.Fatal(err)
@@ -150,6 +156,47 @@ func TestRunHandlesOneDriveStyleModulePathWithSpaces(t *testing.T) {
 	if string(after) != string(before) {
 		t.Fatal("run changed source workspace under OneDrive-style path")
 	}
+}
+
+func TestRunCanUseGoOverlayIsolationWithoutChangingWorkspace(t *testing.T) {
+	dir := writeFixture(t)
+	before, err := os.ReadFile(filepath.Join(dir, "calc.go"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg := config.Defaults()
+	cfg.Execution.Isolation = "overlay"
+	cfg.Tests.Command = []string{"go", "test", "./..."}
+	cfg.Tests.Timeout = 10_000_000_000
+	cfg.Limits.MaxMutants = 1
+	isolateArtifacts(&cfg, dir)
+
+	result, err := New(cfg).Run(context.Background(), RunRequest{Targets: []string{dir}})
+	if err != nil {
+		t.Fatalf("Run returned error: %v", err)
+	}
+	if len(result.Mutants) != 1 {
+		t.Fatalf("mutants = %d, want 1", len(result.Mutants))
+	}
+	if !containsArg(result.Mutants[0].TestCommand, "-overlay") {
+		t.Fatalf("overlay test command missing -overlay: %#v", result.Mutants[0].TestCommand)
+	}
+	after, err := os.ReadFile(filepath.Join(dir, "calc.go"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(after) != string(before) {
+		t.Fatal("overlay isolation changed source workspace")
+	}
+}
+
+func containsArg(args []string, want string) bool {
+	for _, arg := range args {
+		if arg == want {
+			return true
+		}
+	}
+	return false
 }
 
 func TestCoverageSelectionUsesCoverageProfileAndRecordsTiming(t *testing.T) {

@@ -191,6 +191,9 @@ func (cfg Config) Validate() error {
 	if !oneOf(cfg.Mutators.Profile, "conservative", "default", "aggressive") {
 		return errors.New("mutators.profile must be conservative, default, or aggressive")
 	}
+	if !oneOf(cfg.Execution.Isolation, "temp-workdir", "overlay") {
+		return errors.New("execution.isolation must be temp-workdir or overlay")
+	}
 	if !oneOf(cfg.Cache.Mode, "off", "read-only", "incremental") {
 		return errors.New("cache.mode must be off, read-only, or incremental")
 	}

@@ -20,20 +20,22 @@ const (
 )
 
 type Mutant struct {
-	ID          string `json:"id"`
-	Module      string `json:"module"`
-	Package     string `json:"package"`
-	File        string `json:"file"`
-	Line        int    `json:"line"`
-	Function    string `json:"function"`
-	Operator    string `json:"operator"`
-	Original    string `json:"original"`
-	Mutated     string `json:"mutated"`
-	StartOffset int    `json:"start_offset"`
-	EndOffset   int    `json:"end_offset"`
-	Diff        string `json:"unified_diff"`
-	Fingerprint string `json:"fingerprint"`
-	Hint        string `json:"hint"`
+	ID          string   `json:"id"`
+	Module      string   `json:"module"`
+	Package     string   `json:"package"`
+	File        string   `json:"file"`
+	Line        int      `json:"line"`
+	Function    string   `json:"function"`
+	Operator    string   `json:"operator"`
+	Original    string   `json:"original"`
+	Mutated     string   `json:"mutated"`
+	StartOffset int      `json:"start_offset"`
+	EndOffset   int      `json:"end_offset"`
+	Diff        string   `json:"unified_diff"`
+	Fingerprint string   `json:"fingerprint"`
+	Hint        string   `json:"hint"`
+	Description string   `json:"description"`
+	NearbyTests []string `json:"nearby_tests,omitempty"`
 }
 
 type MutantJob struct {

@@ -306,7 +306,7 @@ Practices to adopt:
 - CI-friendly preflight, thresholds, changed-scope execution, baseline compare,
   and report formats.
 
-Priority actions for CervoMutant:
+Actions for CervoMutant:
 
 1. Add a benchmark/compare harness that runs Gremlins, gomu, go-mutesting, and
    CervoMutant under WSL/Linux and normalizes their result schemas.
@@ -317,6 +317,20 @@ Priority actions for CervoMutant:
    invalid/not-viable/equivalent risk per operator.
 5. Improve AI actionability by adding nearby tests, mutation descriptions, and
    stronger hints to survivor reports.
+
+Issue #10 did not limit implementation to the highest-priority items. The
+follow-up work addressed every action at least to an executable first version:
+
+- `cervomut compare` and `pkg/extcompare` normalize CervoMutant, Gremlins, gomu,
+  and go-mutesting outputs into one schema for repeatable studies.
+- Package mode remains the default selection path, and the comparison harness
+  gives future benchmark runs a stable place to capture speed deltas.
+- `execution.isolation: overlay` adds a Go-native overlay backend that runs tests
+  from the source module without copying the whole worktree.
+- Aggressive mutator profile now includes literal and return mutations, while
+  conservative stays limited to lower-risk operators.
+- JSON schema v1 gained additive `description` and `nearby_tests` fields so AI
+  agents and reviewers can move from survivor to candidate test quickly.
 
 ## What Gremlins Gives Us As A Concrete Reference
 
@@ -377,15 +391,16 @@ That is aligned with the goal of being the default AI-friendly mutation-testing 
 
 ## Improvement Backlog Candidates
 
-These should become proposal issues before implementation:
+These backlog candidates were either implemented in issue #10 or left as
+tracked candidates for deeper follow-up:
 
 - Add `not_covered` as a first-class mutation status or reason in JSON schema v1. Implemented in issue #10 follow-up work.
 - Add top-level mutation coverage and test efficacy metrics, distinct from mutation score. Implemented in issue #10 follow-up work.
 - Add mutator statistics to summary, JSON, and HTML reports. Implemented in issue #10 follow-up work.
-- Add an external-tool comparison harness that can ingest Gremlins, gomu, and go-mutesting reports/logs.
+- Add an external-tool comparison harness that can ingest Gremlins, gomu, and go-mutesting reports/logs. Implemented in issue #10 follow-up work.
 - Optimize temp-workdir and package-mode execution to close the performance gap with Gremlins.
 - Add a benchmark profile for popular Go repos with pinned commits, package scopes, and repeatable commands.
-- Add Windows path regression fixtures for isolation, overlay, and worker temp paths.
+- Add Windows path regression fixtures for isolation, overlay, and worker temp paths. Implemented for temp-workdir and overlay in issue #10 follow-up work.
 
 ## Issue #10 Follow-Up Implementation
 
@@ -396,6 +411,25 @@ After the initial study, CervoMutant added Gremlins-inspired reporting primitive
 - `mutator_statistics` in JSON plus visible mutator statistics in summary and HTML reports.
 
 The same Cobra `./doc` sample now reports these fields in `summary.txt`, `mutation-report.json`, and `evaluation.json`.
+
+## Full Lesson Coverage Follow-Up
+
+The one-by-one tool analysis produced five concrete improvements, all now
+represented in code:
+
+- CLI study UX: global `help`/`--help` now exits successfully, and `report` plus
+  `show` accept `--out` so artifact directories from evaluations can be inspected
+  without changing config files.
+- External comparison: `pkg/extcompare` parses the observed CervoMutant,
+  Gremlins, gomu, and go-mutesting report shapes and writes a normalized
+  `schema_version: "1"` study file through `cervomut compare`.
+- Report actionability: mutants carry natural-language `description` and
+  package-local `nearby_tests` in JSON reports.
+- Mutator breadth: aggressive profile includes literal and return mutations,
+  keeping noisy operators out of conservative mode.
+- Isolation strategy: `execution.isolation: overlay` uses Go's `-overlay` flag
+  for mutation runs that should avoid full module copies while preserving source
+  tree cleanliness.
 
 ## Windows Path Hardening Follow-Up
 

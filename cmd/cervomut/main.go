@@ -16,6 +16,7 @@ import (
 	"gitea.cervbox.synology.me/CervoSoft/cervo-mutant/pkg/doctor"
 	"gitea.cervbox.synology.me/CervoSoft/cervo-mutant/pkg/engine"
 	evalpkg "gitea.cervbox.synology.me/CervoSoft/cervo-mutant/pkg/eval"
+	"gitea.cervbox.synology.me/CervoSoft/cervo-mutant/pkg/extcompare"
 	"gitea.cervbox.synology.me/CervoSoft/cervo-mutant/pkg/mutator"
 	"gitea.cervbox.synology.me/CervoSoft/cervo-mutant/pkg/report"
 )
@@ -33,6 +34,9 @@ func run(args []string) error {
 		return nil
 	}
 	switch args[0] {
+	case "help", "--help", "-h":
+		usage()
+		return nil
 	case "init":
 		return cmdInit()
 	case "doctor":
@@ -43,6 +47,8 @@ func run(args []string) error {
 		return cmdRun(args[1:])
 	case "eval":
 		return cmdEval(args[1:])
+	case "compare":
+		return cmdCompare(args[1:])
 	case "baseline":
 		return cmdBaseline(args[1:])
 	case "report":
@@ -62,7 +68,7 @@ func run(args []string) error {
 }
 
 func usage() {
-	fmt.Println("usage: cervomut <init|doctor|affected|run|eval|baseline|report|show|explain|list-mutators|daemon|worker>")
+	fmt.Println("usage: cervomut <init|doctor|affected|run|eval|compare|baseline|report|show|explain|list-mutators|daemon|worker>")
 }
 
 func cmdInit() error {
@@ -214,6 +220,57 @@ func cmdEval(args []string) error {
 	return nil
 }
 
+func cmdCompare(args []string) error {
+	fs := flag.NewFlagSet("compare", flag.ContinueOnError)
+	cervo := fs.String("cervomut", "", "cervo-mutant mutation-report.json")
+	gremlins := fs.String("gremlins", "", "Gremlins report JSON")
+	gomu := fs.String("gomu", "", "gomu text or JSON summary")
+	goMutesting := fs.String("go-mutesting", "", "go-mutesting text summary")
+	out := fs.String("out", ".cervomut/evaluation/tool-comparison.json", "normalized comparison output")
+	if err := fs.Parse(reorderFlags(args, map[string]bool{
+		"cervomut": true, "gremlins": true, "gomu": true, "go-mutesting": true, "out": true,
+	})); err != nil {
+		return err
+	}
+	var results []extcompare.ToolResult
+	if *cervo != "" {
+		result, err := extcompare.ParseCervo(*cervo)
+		if err != nil {
+			return err
+		}
+		results = append(results, result)
+	}
+	if *gremlins != "" {
+		result, err := extcompare.ParseGremlins(*gremlins)
+		if err != nil {
+			return err
+		}
+		results = append(results, result)
+	}
+	if *gomu != "" {
+		result, err := extcompare.ParseGomu(*gomu)
+		if err != nil {
+			return err
+		}
+		results = append(results, result)
+	}
+	if *goMutesting != "" {
+		result, err := extcompare.ParseGoMutesting(*goMutesting)
+		if err != nil {
+			return err
+		}
+		results = append(results, result)
+	}
+	if len(results) == 0 {
+		return fmt.Errorf("compare requires at least one tool report")
+	}
+	if err := extcompare.Write(*out, results); err != nil {
+		return err
+	}
+	fmt.Printf("Tool comparison written to %s\n", *out)
+	return nil
+}
+
 func cmdBaseline(args []string) error {
 	if len(args) == 0 {
 		return fmt.Errorf("baseline requires update or compare")
@@ -256,10 +313,18 @@ func cmdBaseline(args []string) error {
 }
 
 func cmdReport(args []string) error {
-	if len(args) == 0 {
+	fs := flag.NewFlagSet("report", flag.ContinueOnError)
+	out := fs.String("out", "", "report output directory")
+	if err := fs.Parse(reorderFlags(args, map[string]bool{"out": true})); err != nil {
+		return err
+	}
+	if fs.NArg() == 0 {
 		return fmt.Errorf("report requires summary, survivors, or open")
 	}
 	cfg := loadConfigIfPresent()
+	if *out != "" {
+		cfg.Reports.Output = *out
+	}
 	data, err := os.ReadFile(filepath.Join(cfg.Reports.Output, "mutation-report.json"))
 	if err != nil {
 		return err
@@ -268,7 +333,8 @@ func cmdReport(args []string) error {
 	if err := json.Unmarshal(data, &result); err != nil {
 		return err
 	}
-	switch args[0] {
+	action := fs.Arg(0)
+	switch action {
 	case "summary":
 		fmt.Print(report.Summary(result))
 	case "survivors":
@@ -277,28 +343,37 @@ func cmdReport(args []string) error {
 		path := filepath.Join(cfg.Reports.Output, "index.html")
 		return exec.Command("rundll32", "url.dll,FileProtocolHandler", path).Start()
 	default:
-		return fmt.Errorf("unknown report command %q", args[0])
+		return fmt.Errorf("unknown report command %q", action)
 	}
 	return nil
 }
 
 func cmdShow(args []string) error {
-	if len(args) == 0 {
+	fs := flag.NewFlagSet("show", flag.ContinueOnError)
+	out := fs.String("out", "", "report output directory")
+	if err := fs.Parse(reorderFlags(args, map[string]bool{"out": true})); err != nil {
+		return err
+	}
+	if fs.NArg() == 0 {
 		return fmt.Errorf("show requires mutant id")
 	}
 	cfg := loadConfigIfPresent()
+	if *out != "" {
+		cfg.Reports.Output = *out
+	}
 	result, err := loadLastRun(cfg)
 	if err != nil {
 		return err
 	}
+	id := fs.Arg(0)
 	for _, mutant := range result.Mutants {
-		if mutant.MutantID == args[0] || mutant.Mutant.ID == args[0] {
+		if mutant.MutantID == id || mutant.Mutant.ID == id {
 			data, _ := json.MarshalIndent(mutant, "", "  ")
 			fmt.Println(string(data))
 			return nil
 		}
 	}
-	return fmt.Errorf("mutant %q not found", args[0])
+	return fmt.Errorf("mutant %q not found", id)
 }
 
 func cmdExplain(args []string) error {

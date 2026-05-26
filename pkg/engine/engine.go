@@ -174,10 +174,34 @@ func (e *Engine) generateMutants(discovered discover.Result) ([]Mutant, error) {
 				Diff:        generated[i].Diff,
 				Fingerprint: fingerprint,
 				Hint:        generated[i].Hint,
+				Description: generated[i].Description,
+				NearbyTests: nearbyTests(file.ModuleDir, file.Path),
 			})
 		}
 	}
 	return mutants, nil
+}
+
+func nearbyTests(moduleDir, sourceFile string) []string {
+	dir := filepath.Dir(sourceFile)
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil
+	}
+	var tests []string
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), "_test.go") {
+			continue
+		}
+		path := filepath.Join(dir, entry.Name())
+		rel, err := filepath.Rel(moduleDir, path)
+		if err != nil || strings.HasPrefix(rel, "..") {
+			rel = path
+		}
+		tests = append(tests, filepath.ToSlash(rel))
+	}
+	sort.Strings(tests)
+	return tests
 }
 
 func (e *Engine) stableMutantIdentity(mutant mutator.Mutant) (string, string) {
@@ -247,24 +271,91 @@ func (e *Engine) runMutant(ctx context.Context, mutant Mutant) (MutantResult, er
 			return result, nil
 		}
 	}
-	workdir, err := isolate.CopyModule(mutant.Module)
+	workdir, command, cleanup, err := e.prepareMutation(mutant, plan.Command)
 	if err != nil {
 		return MutantResult{}, err
 	}
-	defer isolate.Cleanup(workdir)
-	targetFile, err := isolate.ContainedTargetPath(mutant.Module, workdir, mutant.File)
-	if err != nil {
-		return MutantResult{}, err
-	}
-	if err := applyDiffReplacement(targetFile, mutant); err != nil {
-		return MutantResult{}, err
-	}
-	result, err := e.runTest(ctx, MutantJob{ID: mutant.ID, Mutant: mutant, WorkDir: workdir, TestCommand: plan.Command, Timeout: e.cfg.Tests.Timeout.String()})
+	defer cleanup()
+	result, err := e.runTest(ctx, MutantJob{ID: mutant.ID, Mutant: mutant, WorkDir: workdir, TestCommand: command, Timeout: e.cfg.Tests.Timeout.String()})
 	e.recordTiming(mutant.ID, result.Duration)
 	if err == nil && e.cfg.Cache.Enabled && e.cfg.Cache.Mode == "incremental" {
 		_ = e.putCached(key, result)
 	}
 	return result, err
+}
+
+func (e *Engine) prepareMutation(mutant Mutant, command []string) (string, []string, func(), error) {
+	if e.cfg.Execution.Isolation == "overlay" {
+		return prepareOverlayMutation(mutant, command)
+	}
+	workdir, err := isolate.CopyModule(mutant.Module)
+	if err != nil {
+		return "", nil, func() {}, err
+	}
+	cleanup := func() { _ = isolate.Cleanup(workdir) }
+	targetFile, err := isolate.ContainedTargetPath(mutant.Module, workdir, mutant.File)
+	if err != nil {
+		cleanup()
+		return "", nil, func() {}, err
+	}
+	if err := applyDiffReplacement(targetFile, mutant); err != nil {
+		cleanup()
+		return "", nil, func() {}, err
+	}
+	return workdir, command, cleanup, nil
+}
+
+func prepareOverlayMutation(mutant Mutant, command []string) (string, []string, func(), error) {
+	tmp, err := os.MkdirTemp("", "cervomut-overlay-*")
+	if err != nil {
+		return "", nil, func() {}, err
+	}
+	cleanup := func() { _ = os.RemoveAll(tmp) }
+	rel, err := filepath.Rel(mutant.Module, mutant.File)
+	if err != nil || rel == "." || strings.HasPrefix(rel, "..") {
+		cleanup()
+		return "", nil, func() {}, errors.New("mutant file is outside module")
+	}
+	mutatedPath := filepath.Join(tmp, rel)
+	if err := os.MkdirAll(filepath.Dir(mutatedPath), 0o755); err != nil {
+		cleanup()
+		return "", nil, func() {}, err
+	}
+	data, err := os.ReadFile(mutant.File)
+	if err != nil {
+		cleanup()
+		return "", nil, func() {}, err
+	}
+	if err := os.WriteFile(mutatedPath, data, 0o644); err != nil {
+		cleanup()
+		return "", nil, func() {}, err
+	}
+	if err := applyDiffReplacement(mutatedPath, mutant); err != nil {
+		cleanup()
+		return "", nil, func() {}, err
+	}
+	overlayPath := filepath.Join(tmp, "overlay.json")
+	overlay := struct {
+		Replace map[string]string `json:"Replace"`
+	}{Replace: map[string]string{mutant.File: mutatedPath}}
+	overlayData, err := json.MarshalIndent(overlay, "", "  ")
+	if err != nil {
+		cleanup()
+		return "", nil, func() {}, err
+	}
+	if err := os.WriteFile(overlayPath, overlayData, 0o644); err != nil {
+		cleanup()
+		return "", nil, func() {}, err
+	}
+	return mutant.Module, withOverlayFlag(command, overlayPath), cleanup, nil
+}
+
+func withOverlayFlag(command []string, overlayPath string) []string {
+	next := append([]string{}, command...)
+	if len(next) >= 2 && next[0] == "go" && next[1] == "test" {
+		return append(append([]string{}, next[:2]...), append([]string{"-overlay", overlayPath}, next[2:]...)...)
+	}
+	return next
 }
 
 func (e *Engine) selectTests(mutant Mutant) TestPlan {

@@ -26,16 +26,18 @@ func TestJSONReportSchemaV1IncludesActionableFields(t *testing.T) {
 			StatusReason: "tests passed with mutant applied",
 			Output:       "ok",
 			Mutant: engine.Mutant{
-				ID:       "pkg/foo.go:10:conditionals:eq-to-ne",
-				Package:  "pkg",
-				File:     "pkg/foo.go",
-				Line:     10,
-				Function: "Check",
-				Operator: "conditionals",
-				Original: "==",
-				Mutated:  "!=",
-				Diff:     "--- pkg/foo.go\n+++ pkg/foo.go\n",
-				Hint:     "Add an assertion for the opposite branch.",
+				ID:          "pkg/foo.go:10:conditionals:eq-to-ne",
+				Package:     "pkg",
+				File:        "pkg/foo.go",
+				Line:        10,
+				Function:    "Check",
+				Operator:    "conditionals",
+				Original:    "==",
+				Mutated:     "!=",
+				Diff:        "--- pkg/foo.go\n+++ pkg/foo.go\n",
+				Hint:        "Add an assertion for the opposite branch.",
+				Description: "Changed == to != in Check.",
+				NearbyTests: []string{"pkg/foo_test.go"},
 			},
 		}},
 	}
@@ -52,7 +54,7 @@ func TestJSONReportSchemaV1IncludesActionableFields(t *testing.T) {
 		t.Fatalf("schema_version = %v", decoded["schema_version"])
 	}
 	text := string(data)
-	for _, want := range []string{"baseline", "cache", "quarantine", "unified_diff", "status_reason", "selected_tests"} {
+	for _, want := range []string{"baseline", "cache", "quarantine", "unified_diff", "status_reason", "selected_tests", "description", "nearby_tests"} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("JSON report missing %q: %s", want, text)
 		}

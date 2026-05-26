@@ -138,3 +138,16 @@ Summary:
 This run confirms that `ci-balanced` is operationally stable across the first
 four calibration targets. The main remaining calibration need is qualitative:
 review survivor rankings and suppression candidates against human judgement.
+
+## 2026-05-26 Anti-Fitting Pool
+
+Issue #13 added a 40-repository Go calibration pool and a smoke runner:
+
+- [go-repo-pool-40.md](go-repo-pool-40.md)
+- [go-repo-pool-40.json](go-repo-pool-40.json)
+- [2026-05-26-go-pool-40-smoke.md](2026-05-26-go-pool-40-smoke.md)
+
+Smoke result: all 40 repositories cloned, 23 passed the initial baseline target
+within 30 seconds, and 36 passed CervoMutant dry-run discovery. A selected
+12-repository mutation sample completed successfully in 11/12 repos; `decimal`
+timed out and needs a narrower target before fast calibration.

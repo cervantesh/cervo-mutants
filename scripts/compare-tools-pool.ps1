@@ -158,7 +158,13 @@ foreach ($repo in $repos) {
         @{ name = "gomu"; exe = $Gomu; args = @("run", $repo.target, "--workers", "$Workers", "--timeout", "30", "--threshold", "0", "--fail-on-gate=false", "--output", "json"); report = Join-Path $repoDir "mutation-report.json"; parser = "gomu" },
         @{ name = "go-mutesting"; exe = $GoMutesting; args = @("/noop", "/quiet", "/no-diffs", "/logger-summary-json", "/logger-agentic-json", "/exec-timeout:30", "/workers:$Workers", $repo.target); report = Join-Path $repoDir "report.json"; parser = "go-mutesting" }
     )
-    $tools = @($tools | Where-Object { $wantedTools.ContainsKey($_["name"]) })
+    $selectedTools = @()
+    foreach ($candidateTool in $tools) {
+        if ($wantedTools.ContainsKey($candidateTool["name"])) {
+            $selectedTools += $candidateTool
+        }
+    }
+    $tools = $selectedTools
     foreach ($tool in $tools) {
         if ($Resume -and (Has-Result $results $repo.name $tool["name"])) {
             continue

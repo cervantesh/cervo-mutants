@@ -151,3 +151,86 @@ CervoMutant design implications:
 - Large-project CI profiles should support smaller package slices, maximum
   mutants per package, and early partial summaries so a failed run is still
   diagnostically useful.
+
+## 2026-05-28 Local WSL2 Same-Limit Retry
+
+To avoid cloud cost and remove Windows-native path/process overhead from the
+comparison, the `hugo` and `grpc-go` retry was repeated inside local
+`Ubuntu-24.04` WSL2 on the Linux filesystem under `/tmp`.
+
+The WSL2 retry used a hard `systemd-run --user --scope` cgroup per case:
+
+```text
+MemoryMax: 6G
+MemorySwapMax: 1024M
+CPUQuota: 100%
+TasksMax: 384
+GOMEMLIMIT: 3GiB
+GOMAXPROCS: 1
+GOFLAGS: -p=1
+workers: 1
+outer timeout: 1900s per repo/tool
+```
+
+Artifacts:
+
+```text
+/tmp/cervomut-wsl-results/local-retry-startprocess-20260528-010616
+/tmp/cervomut-wsl-results/cervomut-same-limits-20260528-020929
+```
+
+Baseline package tests passed before mutation:
+
+| Repo | Package | Exit | Peak RSS |
+| --- | --- | ---: | ---: |
+| `hugo` | `./helpers` | 0 | 441472 KB |
+| `grpc-go` | `./metadata` | 0 | 99328 KB |
+
+Same-limit mutation results:
+
+| Repo | Tool | Exit | Wall time | Peak RSS | Outcome |
+| --- | --- | ---: | ---: | ---: | --- |
+| `hugo` | `gomu` | 124 | ~31m 36s | not reported | Timed out after processing part of file 3/8; no final metrics. |
+| `grpc-go` | `gomu` | 143 | ~2m 13s | not reported | Terminated inside the bounded scope after starting `metadata.go` with 123 mutants; no final metrics. |
+| `hugo` | `go-mutesting` | 2 | 0.62s | 37372 KB | Panicked immediately in `go/types` through old `golang.org/x/tools` package loading on Go 1.25. |
+| `grpc-go` | `go-mutesting` | 2 | 0.38s | 21760 KB | Same immediate `go/types` panic on Go 1.25. |
+| `hugo` | `cervomut` | 0 | 14m 58.59s | 452736 KB | Completed with JSON/summary/survivor artifacts. |
+| `grpc-go` | `cervomut` | 0 | 10.38s | 100096 KB | Completed with JSON/summary/survivor artifacts. |
+
+CervoMutant outputs under the same limits:
+
+| Repo | Generated | Covered | Executed | Killed | Survived | Not covered | Timed out | Compile errors | Mutation score |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `hugo` `./helpers` | 105 | 77 | 77 | 37 | 12 | 28 | 28 | 0 | 48.05% |
+| `grpc-go` `./metadata` | 18 | 18 | 18 | 16 | 2 | 0 | 0 | 0 | 88.89% |
+
+Additional findings:
+
+- WSL2 with cgroup scopes is a viable local, no-cost way to run hostile mutation
+  experiments without exhausting the Windows host. The Windows-native retries
+  needed a process-tree watchdog; WSL2 can enforce the cap at the kernel/cgroup
+  level.
+- `go-mutesting` is not a useful Go 1.25 reference without a compatibility pass.
+  Its failure here is not mutation performance; it crashes before mutation due
+  to stale package-loading dependencies. A follow-up comparison can test it with
+  older Go toolchains, but for modern CervoSoft defaults this is a real adoption
+  risk.
+- `gomu` degraded better in WSL2 than in Windows-native retries because the
+  machine stayed healthy, but it still failed to return comparable final metrics
+  for the two target packages.
+- CervoMutant finished both same-limit runs and produced machine-readable
+  reports, but it was too quiet during the long `hugo` run. It should emit
+  progress and durable checkpoints while running, not only final artifacts.
+
+New CervoMutant design implications:
+
+- Add first-class WSL/Linux cgroup resource-limit guidance to `doctor` and CI
+  documentation for local large-repo experiments.
+- Add periodic progress output and a partial JSON checkpoint file during `run`.
+- Preserve a final report even when the outer watchdog kills the run by writing
+  checkpointed results incrementally.
+- Record `go_version`, `toolchain`, `GOFLAGS`, `GOMAXPROCS`, `GOMEMLIMIT`, and
+  cgroup/memory-limit metadata in JSON reports so comparisons remain auditable.
+- Add a compatibility finding category for external tools that panic before
+  mutation starts; do not mix those failures with timeout or mutation-quality
+  outcomes.

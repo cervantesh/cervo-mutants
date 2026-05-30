@@ -167,6 +167,18 @@ Implementation status:
   output.
 - Implemented budget scheduling tie-breaks that prioritize lower timeout-risk
   operators within the same recommendation class.
+- Re-ran the small 10-repo pool in WSL2 after these changes. Denominator health
+  correctly flagged high-score Gremlins rows with poor effective denominators:
+  `pflag`, `decimal`, and `jsonparser`.
+- Implemented atomic partial mutation report writes after the re-run exposed a
+  zero-byte CervoMutant checkpoint on `gjson` under watchdog termination.
+
+Remaining implementation gap:
+
+- Parse `partial-mutation-report.json` in the comparison harness when
+  `mutation-report.json` is absent so timeout rows retain observed denominators.
+- Cap or segment very large partial reports; `jsonparser` produced a useful but
+  large checkpoint around 75 MB.
 
 ### What Not To Copy
 

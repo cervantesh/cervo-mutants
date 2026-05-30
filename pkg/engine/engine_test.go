@@ -141,6 +141,43 @@ func TestRunClassifiesSurvivorAndWritesReports(t *testing.T) {
 	}
 }
 
+func TestWritePartialResultsUsesAtomicReplacement(t *testing.T) {
+	cfg := config.Defaults()
+	cfg.Reports.Output = t.TempDir()
+	engine := New(cfg)
+
+	engine.writePartialResults([]MutantResult{{
+		MutantID: "old",
+		Status:   StatusSurvived,
+		Mutant:   Mutant{ID: "old", Operator: "boolean-literal"},
+	}})
+	engine.writePartialResults([]MutantResult{{
+		MutantID: "new",
+		Status:   StatusKilled,
+		Mutant:   Mutant{ID: "new", Operator: "nil-check"},
+	}})
+
+	path := filepath.Join(cfg.Reports.Output, "partial-mutation-report.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("partial report was not written: %v", err)
+	}
+	var run RunResult
+	if err := json.Unmarshal(data, &run); err != nil {
+		t.Fatalf("partial report is not valid JSON: %v\n%s", err, data)
+	}
+	if len(run.Mutants) != 1 || run.Mutants[0].MutantID != "new" {
+		t.Fatalf("partial report was not atomically replaced: %+v", run.Mutants)
+	}
+	leftovers, err := filepath.Glob(filepath.Join(cfg.Reports.Output, ".partial-mutation-report.json.*.tmp"))
+	if err != nil {
+		t.Fatalf("glob temp files: %v", err)
+	}
+	if len(leftovers) != 0 {
+		t.Fatalf("atomic write left temp files: %v", leftovers)
+	}
+}
+
 func TestRunCanResumeFromPartialCheckpoint(t *testing.T) {
 	dir := writeFixture(t)
 	cfg := config.Defaults()

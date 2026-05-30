@@ -365,3 +365,85 @@ Artifacts:
 
 These statuses are more actionable than empty metric cells and should be used
 in future multi-repo calibration summaries.
+
+## Post-Implementation WSL Re-Run
+
+Follow-up run completed on 2026-05-29 after implementing Gremlins-compatible
+target metadata, denominator health, test efficacy, mutation coverage, and
+budget-aware operator risk ordering in CervoMutant.
+
+Artifacts:
+
+```text
+/tmp/cervomut-wsl-results/cervomut-gremlins-small-10-current-20260529-184401/summary.json
+```
+
+Execution guardrails:
+
+```text
+WSL Ubuntu-24.04
+Go: /tmp/cervomut-wsl-tools/go/bin/go go1.25.6 linux/amd64
+MemoryMax=6G
+MemorySwapMax=1G
+CPUQuota=200%
+GOMEMLIMIT=3GiB
+GOMAXPROCS=2
+GOFLAGS=-p=2
+timeout=600s per tool case
+CervoMutant: cervomut run <target> --profile gremlins-compatible --isolation overlay --workers 2
+Gremlins: gremlins unleash <effective_target> --workers 2 --timeout-coefficient 4
+```
+
+| Repo | Tool | Effective target | Exit | Sec | Status | Total | Killed | Survived | Not covered | Timed out | Efficacy | Coverage | Denom health | Warnings |
+| --- | --- | --- | ---: | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |
+| `cobra` | `cervomut` | `./doc` | 0 | 15 | `ok` | 69 | 51 | 18 | 0 | 0 | 73.91 | 100 | true |  |
+| `cobra` | `gremlins` | `./doc` | 0 | 28 | `ok` | 81 | 52 | 29 | 5 | 6 | 64.20 | 94.57 | true |  |
+| `pflag` | `cervomut` | `./...` | 0 | 135 | `ok` | 214 | 185 | 27 | 0 | 2 | 87.26 | 100 | true |  |
+| `pflag` | `gremlins` | `.` | 0 | 261 | `ok` | 29 | 28 | 1 | 18 | 342 | 96.55 | 95.37 | false | `timed_out_exceeds_effective`, `high_score_poor_denominator_health` |
+| `logrus` | `cervomut` | `./...` | 0 | 65 | `ok` | 103 | 73 | 29 | 0 | 1 | 71.57 | 100 | true |  |
+| `logrus` | `gremlins` | `.` | 0 | 159 | `ok` | 81 | 77 | 4 | 31 | 38 | 95.06 | 79.33 | true |  |
+| `uuid` | `cervomut` | `./...` | 0 | 97 | `ok` | 89 | 70 | 16 | 0 | 3 | 81.40 | 100 | true |  |
+| `uuid` | `gremlins` | `.` | 0 | 50 | `ok` | 49 | 49 | 0 | 26 | 48 | 100.00 | 78.86 | true |  |
+| `decimal` | `cervomut` | `./...` | 124 | 600 | `timeout` |  |  |  |  |  |  |  |  | `no_report` |
+| `decimal` | `gremlins` | `.` | 0 | 456 | `ok` | 29 | 29 | 0 | 93 | 671 | 100.00 | 88.27 | false | `timed_out_exceeds_effective`, `not_covered_exceeds_effective`, `high_score_poor_denominator_health` |
+| `gjson` | `cervomut` | `./...` | 124 | 600 | `timeout` |  |  |  |  |  |  |  |  | `no_report` |
+| `gjson` | `gremlins` | `.` | 124 | 615 | `timeout` |  |  |  |  |  |  |  |  | `no_report` |
+| `sjson` | `cervomut` | `./...` | 1 | 60 | `no CervoMutant JSON report` |  |  |  |  |  |  |  |  | `no_report` |
+| `sjson` | `gremlins` | `.` | 0 | 118 | `ok` | 100 | 100 | 0 | 33 | 68 | 100.00 | 83.58 | true |  |
+| `jsonparser` | `cervomut` | `./...` | 124 | 600 | `timeout` |  |  |  |  |  |  |  |  | `no_report` |
+| `jsonparser` | `gremlins` | `.` | 0 | 321 | `ok` | 17 | 16 | 1 | 848 | 584 | 94.12 | 41.48 | false | `timed_out_exceeds_effective`, `not_covered_exceeds_effective`, `high_score_poor_denominator_health` |
+| `burntsushi-toml` | `cervomut` | `./...` | 0 | 374 | `ok` | 585 | 458 | 125 | 0 | 2 | 78.56 | 100 | true |  |
+| `burntsushi-toml` | `gremlins` | `.` | 0 | 557 | `ok` | 547 | 482 | 65 | 218 | 5 | 88.12 | 71.69 | true |  |
+| `urfave-cli` | `cervomut` | `./...` | 0 | 255 | `ok` | 317 | 159 | 44 | 0 | 0 | 78.33 | 100 | true |  |
+| `urfave-cli` | `gremlins` | `.` | 124 | 623 | `timeout` |  |  |  |  |  |  |  |  | `no_report` |
+
+Findings:
+
+1. Denominator health now exposes misleading high scores. Gremlins reported
+   high efficacy on `pflag`, `decimal`, and `jsonparser`, but each row is now
+   visibly unhealthy because timeout or not-covered counts dwarf the effective
+   killed/survived denominator.
+2. CervoMutant completed 6/10 rows with healthy denominators and complete
+   mutation coverage over its generated pool: `cobra`, `pflag`, `logrus`,
+   `uuid`, `burntsushi-toml`, and `urfave-cli`.
+3. CervoMutant timed out on `decimal`, `gjson`, and `jsonparser`; `sjson`
+   exited without a final JSON report. These remain the best small-pool targets
+   for bounded scheduling and diagnostic-report work.
+4. Gremlins completed 8/10 rows under package-root normalization. It timed out
+   on `gjson` and `urfave-cli`.
+5. CervoMutant partial checkpoints existed for timeout/error cases, but report
+   quality differed:
+   - `decimal`: usable `partial-mutation-report.json` around 2.4 MB.
+   - `jsonparser`: usable `partial-mutation-report.json` around 75 MB.
+   - `sjson`: usable `partial-mutation-report.json` around 1.0 MB despite exit 1.
+   - `gjson`: zero-byte `partial-mutation-report.json`, which exposed a bug in
+     direct partial-report writes under process termination.
+
+Implementation response:
+
+- CervoMutant now writes partial mutation reports through an atomic
+  temp-file-and-rename path so a watchdog kill during JSON serialization cannot
+  replace the last valid checkpoint with an empty file.
+- The comparison harness still needs to parse partial reports when final reports
+  are absent, otherwise timeout rows lose denominators even when CervoMutant
+  preserved useful checkpoint data.

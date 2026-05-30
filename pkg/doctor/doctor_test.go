@@ -22,7 +22,7 @@ func TestRunIncludesCommandAndRuntimeChecks(t *testing.T) {
 	if len(checks) < 2 {
 		t.Fatalf("checks = %d, want at least command checks", len(checks))
 	}
-	if !containsCheck(checks, "go") || !containsCheck(checks, "git") || !containsCheck(checks, "runtime") {
+	if !containsCheck(checks, "go") || !containsCheck(checks, "git") || !containsCheck(checks, "runtime") || !containsCheck(checks, "go-version-compatibility") {
 		t.Fatalf("expected go/git/runtime checks: %+v", checks)
 	}
 }
@@ -58,6 +58,44 @@ func TestRuntimeEnvironmentHelpers(t *testing.T) {
 		t.Fatal("isWSL should be false outside Linux")
 	}
 	_ = linuxChecks()
+}
+
+func TestGoVersionCompatibilityChecks(t *testing.T) {
+	ok := goVersionCompatibilityCheck("go version go1.25.6 windows/amd64")
+	if !ok.OK || ok.Severity != "ok" {
+		t.Fatalf("go1.25 should be supported: %+v", ok)
+	}
+	old := goVersionCompatibilityCheck("go version go1.23.9 linux/amd64")
+	if old.OK || old.Severity != "fail" {
+		t.Fatalf("old Go should fail compatibility: %+v", old)
+	}
+	future := goVersionCompatibilityCheck("go version go1.26.0 linux/amd64")
+	if !future.OK || future.Severity != "warn" {
+		t.Fatalf("future Go should warn: %+v", future)
+	}
+	unknown := goVersionCompatibilityCheck("not a go version")
+	if !unknown.OK || unknown.Severity != "warn" {
+		t.Fatalf("unknown Go version should warn: %+v", unknown)
+	}
+}
+
+func TestGoToolchainEnvHelpers(t *testing.T) {
+	if major, minor, ok := parseGoMajorMinor("go version go1.25.6 windows/amd64"); !ok || major != 1 || minor != 25 {
+		t.Fatalf("parseGoMajorMinor = %d.%d ok=%t", major, minor, ok)
+	}
+	if _, _, ok := parseGoMajorMinor("garbage"); ok {
+		t.Fatal("parseGoMajorMinor accepted garbage")
+	}
+	overlay := goOverlayCompatibilityCheck("go version go1.13.15 linux/amd64")
+	if overlay.OK {
+		t.Fatalf("old Go should not support overlay: %+v", overlay)
+	}
+	summary := goEnvSummary(map[string]string{"GOTOOLCHAIN": "auto", "GOFLAGS": "-p=1", "GOMAXPROCS": "1", "GOMEMLIMIT": "3GiB"})
+	for _, want := range []string{"GOTOOLCHAIN=auto", "GOFLAGS=-p=1", "GOMAXPROCS=1", "GOMEMLIMIT=3GiB"} {
+		if !strings.Contains(summary, want) {
+			t.Fatalf("go env summary missing %q: %s", want, summary)
+		}
+	}
 }
 
 func containsCheck(checks []Check, name string) bool {

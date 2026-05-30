@@ -11,6 +11,12 @@ import (
 	"strings"
 )
 
+const (
+	minSupportedGoMinor     = 24
+	currentTestedGoMinor    = 25
+	compatibilityMatrixText = "supported Go versions: 1.24.x compatible, 1.25.x tested; newer versions warn until validated"
+)
+
 type Check struct {
 	Name     string `json:"name"`
 	OK       bool   `json:"ok"`
@@ -19,7 +25,11 @@ type Check struct {
 }
 
 func Run(ctx context.Context) []Check {
-	checks := []Check{checkCommand(ctx, "go", "version"), checkCommand(ctx, "git", "--version")}
+	goVersion := checkCommand(ctx, "go", "version")
+	checks := []Check{goVersion, checkCommand(ctx, "git", "--version")}
+	if goVersion.OK {
+		checks = append(checks, goToolchainChecks(ctx, goVersion.Message)...)
+	}
 	checks = append(checks, checkRuntimeEnvironment()...)
 	return checks
 }
@@ -35,6 +45,95 @@ func checkCommand(ctx context.Context, name string, args ...string) Check {
 		severity = "fail"
 	}
 	return Check{Name: name, OK: err == nil, Severity: severity, Message: output.String()}
+}
+
+func goToolchainChecks(ctx context.Context, versionOutput string) []Check {
+	checks := []Check{goVersionCompatibilityCheck(versionOutput), goOverlayCompatibilityCheck(versionOutput)}
+	checks = append(checks, goEnvChecks(ctx)...)
+	return checks
+}
+
+func goVersionCompatibilityCheck(output string) Check {
+	major, minor, ok := parseGoMajorMinor(output)
+	if !ok {
+		return warning("go-version-compatibility", "unable to parse Go version; "+compatibilityMatrixText+"\n")
+	}
+	if major != 1 || minor < minSupportedGoMinor {
+		return Check{Name: "go-version-compatibility", OK: false, Severity: "fail", Message: fmt.Sprintf("Go %d.%d is below the supported matrix; %s\n", major, minor, compatibilityMatrixText)}
+	}
+	if minor > currentTestedGoMinor {
+		return warning("go-version-compatibility", fmt.Sprintf("Go %d.%d is newer than the validated matrix; %s\n", major, minor, compatibilityMatrixText))
+	}
+	return Check{Name: "go-version-compatibility", OK: true, Severity: "ok", Message: fmt.Sprintf("Go %d.%d is within the compatibility matrix; %s\n", major, minor, compatibilityMatrixText)}
+}
+
+func goOverlayCompatibilityCheck(output string) Check {
+	major, minor, ok := parseGoMajorMinor(output)
+	if !ok {
+		return warning("go-overlay", "unable to confirm Go overlay support from version output\n")
+	}
+	if major != 1 || minor < 14 {
+		return Check{Name: "go-overlay", OK: false, Severity: "fail", Message: "Go overlay isolation requires Go 1.14 or newer\n"}
+	}
+	return Check{Name: "go-overlay", OK: true, Severity: "ok", Message: "Go overlay isolation is supported by this toolchain\n"}
+}
+
+func goEnvChecks(ctx context.Context) []Check {
+	values, err := goEnv(ctx, "GOTOOLCHAIN", "GOFLAGS", "GOMAXPROCS", "GOMEMLIMIT")
+	if err != nil {
+		return []Check{warning("go-env", fmt.Sprintf("unable to inspect go env: %v\n", err))}
+	}
+	checks := []Check{{Name: "go-env", OK: true, Severity: "ok", Message: goEnvSummary(values)}}
+	if strings.EqualFold(values["GOTOOLCHAIN"], "auto") {
+		checks = append(checks, warning("go-toolchain-auto", "GOTOOLCHAIN=auto can download toolchains during CI; pin toolchains for reproducible mutation runs\n"))
+	}
+	if values["GOFLAGS"] != "" && strings.Contains(values["GOFLAGS"], "-coverprofile") {
+		checks = append(checks, warning("go-flags-coverprofile", "GOFLAGS contains -coverprofile; CervoMutant may override or conflict with coverage profile output\n"))
+	}
+	return checks
+}
+
+func goEnv(ctx context.Context, names ...string) (map[string]string, error) {
+	args := append([]string{"env"}, names...)
+	cmd := exec.CommandContext(ctx, "go", args...)
+	var output bytes.Buffer
+	cmd.Stdout = &output
+	cmd.Stderr = &output
+	if err := cmd.Run(); err != nil {
+		return nil, fmt.Errorf("%w: %s", err, strings.TrimSpace(output.String()))
+	}
+	lines := strings.Split(strings.TrimRight(output.String(), "\r\n"), "\n")
+	values := map[string]string{}
+	for i, name := range names {
+		if i < len(lines) {
+			values[name] = strings.TrimSpace(lines[i])
+		}
+	}
+	return values, nil
+}
+
+func goEnvSummary(values map[string]string) string {
+	return fmt.Sprintf("GOTOOLCHAIN=%s GOFLAGS=%s GOMAXPROCS=%s GOMEMLIMIT=%s\n", values["GOTOOLCHAIN"], values["GOFLAGS"], values["GOMAXPROCS"], values["GOMEMLIMIT"])
+}
+
+func parseGoMajorMinor(output string) (int, int, bool) {
+	fields := strings.Fields(output)
+	for _, field := range fields {
+		if !strings.HasPrefix(field, "go") {
+			continue
+		}
+		version := strings.TrimPrefix(field, "go")
+		parts := strings.Split(version, ".")
+		if len(parts) < 2 {
+			continue
+		}
+		var major, minor int
+		if _, err := fmt.Sscanf(parts[0]+"."+parts[1], "%d.%d", &major, &minor); err != nil {
+			continue
+		}
+		return major, minor, true
+	}
+	return 0, 0, false
 }
 
 func checkRuntimeEnvironment() []Check {

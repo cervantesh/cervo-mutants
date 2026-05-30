@@ -400,6 +400,8 @@ Latest local Sonar pass after issue #31:
   product framework behind CervoMutant defaults.
 - [docs/policy-presets.md](docs/policy-presets.md): policy preset behavior.
 - [docs/sonar.md](docs/sonar.md): local and CI Sonar workflow.
+- [docs/go-toolchain-compatibility.md](docs/go-toolchain-compatibility.md):
+  supported Go versions and `doctor` checks.
 - [docs/evaluations/multi-repo-calibration.md](docs/evaluations/multi-repo-calibration.md):
   multi-repo calibration plan.
 - [docs/evaluations/tool-comparison-protocol.md](docs/evaluations/tool-comparison-protocol.md):

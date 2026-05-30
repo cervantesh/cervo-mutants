@@ -135,6 +135,16 @@ func TestPolicyPresetsTuneMutationRuns(t *testing.T) {
 	}
 
 	cfg = Defaults()
+	cfg.Policy = "comparison-safe"
+	cfg = ApplyPolicy(cfg)
+	if cfg.Mutators.Profile != "gremlins-compatible" || cfg.Execution.Budget != 10*time.Minute || cfg.Limits.Sample != "deterministic" || cfg.Limits.MaxMutants != 250 {
+		t.Fatalf("comparison-safe preset not bounded/comparable: %+v", cfg)
+	}
+	if cfg.Execution.Workers > 2 || cfg.Tests.Timeout != 20*time.Second {
+		t.Fatalf("comparison-safe resource limits not applied: workers=%d timeout=%s", cfg.Execution.Workers, cfg.Tests.Timeout)
+	}
+
+	cfg = Defaults()
 	cfg.Policy = "campaign"
 	cfg = ApplyPolicy(cfg)
 	if cfg.Mutators.Profile != "aggressive" || cfg.Selection.Mode != "package" || cfg.Selection.Prefilter {

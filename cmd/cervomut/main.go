@@ -137,7 +137,7 @@ func cmdRun(args []string) error {
 	out := fs.String("out", "", "report output directory")
 	workers := fs.Int("workers", 0, "parallel mutation workers")
 	isolation := fs.String("isolation", "", "isolation backend: temp-workdir or overlay")
-	policy := fs.String("policy", "", "policy preset: ci-fast, ci-balanced, nightly, or campaign")
+	policy := fs.String("policy", "", "policy preset: ci-fast, ci-balanced, comparison-safe, nightly, or campaign")
 	profile := fs.String("profile", "", "mutator profile")
 	prefilter := fs.Bool("coverage-prefilter", false, "use coverage profile as a prefilter")
 	resume := fs.Bool("resume", false, "resume from partial-mutation-report.json in the output directory")
@@ -233,7 +233,7 @@ func cmdEval(args []string) error {
 	sample := fs.String("sample", "", "sampling mode")
 	workers := fs.Int("workers", 0, "parallel mutation workers")
 	isolation := fs.String("isolation", "", "isolation backend: temp-workdir or overlay")
-	policy := fs.String("policy", "", "policy preset: ci-fast, ci-balanced, nightly, or campaign")
+	policy := fs.String("policy", "", "policy preset: ci-fast, ci-balanced, comparison-safe, nightly, or campaign")
 	resume := fs.Bool("resume", false, "resume from partial-mutation-report.json in the output directory")
 	maxProcessMemory := fs.Int("max-process-memory-mb", 0, "best-effort process-tree memory cap in MB")
 	if err := fs.Parse(reorderFlags(args, map[string]bool{

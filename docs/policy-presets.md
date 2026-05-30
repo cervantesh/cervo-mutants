@@ -10,6 +10,7 @@ expectations.
 | --- | --- | --- | --- | --- | --- |
 | `ci-fast` | Pull-request smoke and changed-code feedback. | `conservative-fast` | coverage with prefilter | overlay | summary, JSON, JUnit |
 | `ci-balanced` | Regular CI where the test suite cost is acceptable. | `conservative` | coverage with prefilter | overlay | summary, JSON, JUnit |
+| `comparison-safe` | External tool and multi-repo apples-to-apples calibration. | `gremlins-compatible` | package | overlay | summary, JSON, JUnit |
 | `nightly` | Scheduled deeper signal without campaign noise. | `default` | coverage with prefilter | overlay | summary, JSON, JUnit, HTML |
 | `campaign` | Manual or scheduled deep mutation campaign. | `aggressive` | package | temp-workdir | summary, JSON, JUnit, HTML |
 
@@ -27,6 +28,22 @@ operators:
 ```powershell
 cervomut run ./... --policy ci-balanced --max-mutants 100 --sample deterministic
 ```
+
+Use `comparison-safe` for external tool comparison and multi-repo calibration:
+
+```powershell
+cervomut run . --policy comparison-safe
+```
+
+This preset is intentionally bounded:
+
+- `execution.workers` is capped at 2;
+- `execution.budget` defaults to 10 minutes;
+- `tests.timeout` defaults to 20 seconds per mutant;
+- `limits.sample` is deterministic;
+- `limits.max_mutants` defaults to 250 unless explicitly set;
+- `partial-summary.json` and `partial-mutation-report.json` preserve observed
+  denominators on timeout.
 
 Use `nightly` for scheduled jobs and baseline comparison:
 

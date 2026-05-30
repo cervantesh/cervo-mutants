@@ -90,13 +90,18 @@ The current harness builds command lines as follows.
 
 | Tool | Command shape |
 | --- | --- |
-| CervoMutant | `cervomut run <effective_target> --profile gremlins-compatible --isolation overlay --workers <n> --out <repoOut>/cervomut` |
+| CervoMutant | `cervomut run <effective_target> --policy comparison-safe --workers <n> --out <repoOut>/cervomut` |
 | Gremlins | `gremlins unleash <effective_target> --workers <n> --threshold-efficacy 0 --threshold-mcover 0 --output <repoOut>/gremlins.json` |
 | gomu | `gomu run <effective_target> --workers <n> --timeout <seconds> --threshold 0 --fail-on-gate=false --output json` |
 | go-mutesting | `go-mutesting /noop /quiet /no-diffs /logger-summary-json /logger-agentic-json /exec-timeout:<seconds> /workers:<n> <effective_target>` |
 
 Gremlins can add `--timeout-coefficient <n>` through
 `GremlinsTimeoutCoefficient`.
+
+CervoMutant's `comparison-safe` policy is the default apples-to-apples lane. It
+uses the Gremlins-compatible operator profile, overlay isolation, deterministic
+sampling, a 10 minute run budget, a 20 second per-mutant timeout, and a default
+250 mutant cap when no explicit cap is provided.
 
 ## Memory And Timeout Guards
 
@@ -138,6 +143,8 @@ The harness uses these statuses:
 
 For CervoMutant, when `mutation-report.json` is absent, the harness now falls
 back to `partial-mutation-report.json` and sets `partial_report_used=true`.
+CervoMutant also writes `partial-summary.json`, which is the first artifact to
+inspect when a full partial mutant list is large.
 
 ## Outputs
 

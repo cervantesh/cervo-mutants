@@ -112,6 +112,7 @@ type Summary struct {
 	SuppressionQuarantineRequired int                    `json:"suppression_quarantine_required"`
 	NewSurvivors                  int                    `json:"new_survivors"`
 	LongStandingSurvivors         int                    `json:"long_standing_survivors"`
+	TimeoutRiskStats              map[string]int         `json:"timeout_risk_statistics,omitempty"`
 	EquivalentRiskStats           map[string]int         `json:"equivalent_risk_statistics,omitempty"`
 	MutatorStats                  map[string]MutatorStat `json:"mutator_statistics,omitempty"`
 }

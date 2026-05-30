@@ -353,7 +353,7 @@ foreach ($repo in $repos) {
     New-Item -ItemType Directory -Path $repoOut -Force | Out-Null
     $toolDefs = New-Object System.Collections.Generic.List[object]
     $cervoTarget = Get-ComparisonTarget $repo.target
-    $toolDefs.Add([pscustomobject]@{ name = "cervomut"; exe = $CervoMutant; args = @("run", $cervoTarget, "--profile", "gremlins-compatible", "--isolation", "overlay", "--workers", "$Workers", "--out", (Join-Path $repoOut "cervomut")); report = Join-Path $repoOut "cervomut/mutation-report.json"; partialReport = Join-Path $repoOut "cervomut/partial-mutation-report.json"; parser = "cervo"; effectiveTarget = $cervoTarget; targetMode = (Get-TargetMode "cervomut") }) | Out-Null
+    $toolDefs.Add([pscustomobject]@{ name = "cervomut"; exe = $CervoMutant; args = @("run", $cervoTarget, "--policy", "comparison-safe", "--workers", "$Workers", "--out", (Join-Path $repoOut "cervomut")); report = Join-Path $repoOut "cervomut/mutation-report.json"; partialReport = Join-Path $repoOut "cervomut/partial-mutation-report.json"; parser = "cervo"; effectiveTarget = $cervoTarget; targetMode = (Get-TargetMode "cervomut") }) | Out-Null
     $gremlinsTarget = Get-GremlinsTarget $repo.target
     $gremlinsArgs = @("unleash", $gremlinsTarget, "--workers", "$Workers", "--threshold-efficacy", "0", "--threshold-mcover", "0", "--output", (Join-Path $repoOut "gremlins.json"))
     if ($GremlinsTimeoutCoefficient -gt 1) {

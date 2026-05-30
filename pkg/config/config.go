@@ -234,8 +234,8 @@ func Load(path string) (Config, error) {
 }
 
 func (cfg Config) Validate() error {
-	if cfg.Policy != "" && !oneOf(cfg.Policy, "ci-fast", "ci-balanced", "nightly", "campaign") {
-		return errors.New("policy must be ci-fast, ci-balanced, nightly, or campaign")
+	if cfg.Policy != "" && !oneOf(cfg.Policy, "ci-fast", "ci-balanced", "nightly", "campaign", "comparison-safe") {
+		return errors.New("policy must be ci-fast, ci-balanced, nightly, campaign, or comparison-safe")
 	}
 	if !oneOf(cfg.Scope.Mode, "all", "changed", "packages") {
 		return errors.New("scope.mode must be all, changed, or packages")
@@ -288,6 +288,19 @@ func ApplyPolicy(cfg Config) Config {
 		cfg.Execution.Isolation = "overlay"
 		cfg.Tests.Timeout = 45 * time.Second
 		cfg.Reports.Formats = []string{"summary", "json", "junit"}
+	case "comparison-safe":
+		cfg.Mutators.Profile = "gremlins-compatible"
+		cfg.Selection.Mode = "package"
+		cfg.Selection.Prefilter = false
+		cfg.Execution.Isolation = "overlay"
+		cfg.Execution.Budget = 10 * time.Minute
+		cfg.Execution.Workers = minInt(cfg.Execution.Workers, 2)
+		cfg.Tests.Timeout = 20 * time.Second
+		cfg.Limits.Sample = "deterministic"
+		if cfg.Limits.MaxMutants == 0 {
+			cfg.Limits.MaxMutants = 250
+		}
+		cfg.Reports.Formats = []string{"summary", "json", "junit"}
 	case "nightly":
 		cfg.Mutators.Profile = "default"
 		cfg.Selection.Mode = "coverage"
@@ -304,6 +317,13 @@ func ApplyPolicy(cfg Config) Config {
 		cfg.Reports.Formats = []string{"summary", "json", "junit", "html"}
 	}
 	return cfg
+}
+
+func minInt(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 func oneOf(value string, allowed ...string) bool {

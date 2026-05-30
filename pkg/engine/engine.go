@@ -595,6 +595,20 @@ func (e *Engine) writePartialResults(results []MutantResult) {
 	}
 	_ = os.MkdirAll(e.cfg.Reports.Output, 0o755)
 	_ = writeFileAtomic(filepath.Join(e.cfg.Reports.Output, "partial-mutation-report.json"), data, 0o644)
+	summary, err := json.MarshalIndent(struct {
+		SchemaVersion string         `json:"schema_version"`
+		Checkpoint    Checkpoint     `json:"checkpoint"`
+		Summary       Summary        `json:"summary"`
+		Thresholds    map[string]any `json:"thresholds"`
+	}{
+		SchemaVersion: "1",
+		Checkpoint:    run.Checkpoint,
+		Summary:       run.Summary,
+		Thresholds:    run.Thresholds,
+	}, "", "  ")
+	if err == nil {
+		_ = writeFileAtomic(filepath.Join(e.cfg.Reports.Output, "partial-summary.json"), summary, 0o644)
+	}
 }
 
 func writeFileAtomic(path string, data []byte, perm os.FileMode) error {
@@ -1185,7 +1199,7 @@ func moduleForTargets(targets []string) (string, error) {
 }
 
 func summarize(results []MutantResult) Summary {
-	s := Summary{MutatorStats: map[string]MutatorStat{}, EquivalentRiskStats: map[string]int{}}
+	s := Summary{MutatorStats: map[string]MutatorStat{}, EquivalentRiskStats: map[string]int{}, TimeoutRiskStats: map[string]int{}}
 	s.Total = len(results)
 	s.GeneratedMutants = len(results)
 	for _, result := range results {
@@ -1200,6 +1214,7 @@ func summarize(results []MutantResult) Summary {
 			risk = "unknown"
 		}
 		s.EquivalentRiskStats[risk]++
+		s.TimeoutRiskStats[timeoutRiskBand(result.Mutant)]++
 		if stat.Recommendation == "" {
 			stat.Recommendation = result.Mutant.Recommendation
 		}
@@ -1304,6 +1319,19 @@ func summarize(results []MutantResult) Summary {
 	}
 	s.DenominatorHealth = denominatorHealth(s)
 	return s
+}
+
+func timeoutRiskBand(mutant Mutant) string {
+	switch timeoutRiskPriority(mutant) {
+	case 0:
+		return "low"
+	case 1:
+		return "medium"
+	case 2:
+		return "high"
+	default:
+		return "very_high"
+	}
 }
 
 func denominatorHealth(s Summary) DenominatorHealth {

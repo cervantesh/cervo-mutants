@@ -129,6 +129,9 @@ func TestRunClassifiesSurvivorAndWritesReports(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(cfg.Reports.Output, "partial-mutation-report.json")); err != nil {
 		t.Fatalf("partial report was not written: %v", err)
 	}
+	if _, err := os.Stat(filepath.Join(cfg.Reports.Output, "partial-summary.json")); err != nil {
+		t.Fatalf("partial summary was not written: %v", err)
+	}
 	progress, err := os.ReadFile(filepath.Join(cfg.Reports.Output, "progress.jsonl"))
 	if err != nil {
 		t.Fatalf("progress stream was not written: %v", err)
@@ -175,6 +178,13 @@ func TestWritePartialResultsUsesAtomicReplacement(t *testing.T) {
 	}
 	if len(leftovers) != 0 {
 		t.Fatalf("atomic write left temp files: %v", leftovers)
+	}
+	summaryData, err := os.ReadFile(filepath.Join(cfg.Reports.Output, "partial-summary.json"))
+	if err != nil {
+		t.Fatalf("partial summary was not written: %v", err)
+	}
+	if !strings.Contains(string(summaryData), `"timeout_risk_statistics"`) {
+		t.Fatalf("partial summary missing timeout risk stats: %s", summaryData)
 	}
 }
 
@@ -719,6 +729,16 @@ func TestBudgetSchedulingUsesTimeoutRiskWithinSameRecommendation(t *testing.T) {
 	want := []string{"fast", "medium", "slow"}
 	if strings.Join(got, ",") != strings.Join(want, ",") {
 		t.Fatalf("scheduled IDs = %v, want %v", got, want)
+	}
+}
+
+func TestSummarizeIncludesTimeoutRiskStats(t *testing.T) {
+	result := summarize([]MutantResult{
+		{MutantID: "fast", Status: StatusKilled, Mutant: Mutant{ID: "fast", Operator: "conditionals-negation"}},
+		{MutantID: "slow", Status: StatusTimedOut, Mutant: Mutant{ID: "slow", Operator: "loop-control"}},
+	})
+	if result.TimeoutRiskStats["low"] != 1 || result.TimeoutRiskStats["very_high"] != 1 {
+		t.Fatalf("unexpected timeout risk stats: %+v", result.TimeoutRiskStats)
 	}
 }
 

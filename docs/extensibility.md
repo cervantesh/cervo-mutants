@@ -17,6 +17,34 @@ The built-in defaults remain the reference behavior:
   replace or compose those seams.
 - report schema and CLI flags do not change when you use the defaults.
 
+## Supported Scope
+
+The supported programmatic seams are:
+
+- `mutator.Generator` plus `mutator.DefaultGenerator()` and
+  `mutator.ChainGenerators(...)`
+- `engine.SuppressionEvaluator` plus
+  `engine.DefaultSuppressionEvaluator(cfg)` and
+  `engine.ChainSuppressionEvaluators(...)`
+- `engine.SurvivorRanker` plus `engine.DefaultSurvivorRanker()`
+- `engine.NewWithOptions(cfg, ...)` as the composition entry point
+
+These are the intended extension points for custom mutators, suppression
+audits, and survivor prioritization.
+
+### Triage note
+
+There is not yet a separate public triage-plugin interface.
+
+Today, triage customization is intentionally narrowed to:
+
+- suppression policy before execution and reporting
+- survivor ranking and actionability policy after execution
+- custom mutation generation when a team needs different operator behavior
+
+That means advanced users can tune triage outcomes without depending on a
+standalone plugin protocol that the project is not ready to support yet.
+
 ## Available Seams
 
 ### Mutant generation
@@ -134,6 +162,21 @@ customRanker := engine.SurvivorRankerFunc(func(goos string, results []engine.Mut
 
 engine.NewWithOptions(cfg, engine.WithSurvivorRanker(customRanker))
 ```
+
+## Compatibility Guardrails
+
+These seams are expected to stay additive and documented rather than changing
+silently behind the CLI.
+
+See [docs/compatibility-policy.md](compatibility-policy.md) for the formal
+policy that now covers extension-facing library surfaces.
+
+The current contract guards also have direct tests:
+
+- `pkg/mutator/mutator_test.go`: chained generator dedupe and custom-mutant
+  retention
+- `pkg/engine/engine_test.go`: custom generator, suppression evaluator, and
+  survivor ranker wiring through `engine.NewWithOptions`
 
 ## Guidance
 

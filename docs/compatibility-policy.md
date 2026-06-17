@@ -11,6 +11,8 @@ This policy applies to:
 
 - documented CLI commands and flags
 - report outputs intended for CI, automation, or long-lived integrations
+- documented library extension seams used to customize generation, suppression,
+  or ranking
 - the daemon/worker protocol surface
 
 ## Compatibility Levels
@@ -95,6 +97,42 @@ Breaking report changes require:
 
 This policy covers the JSON report and other documented report projections that
 are described as public compatibility surfaces.
+
+## Extension Library Policy
+
+The documented library seams in [docs/extensibility.md](extensibility.md) are a
+supported integration surface when used through their published interfaces and
+helpers.
+
+That currently includes:
+
+- `mutator.Generator`
+- `mutator.DefaultGenerator()`
+- `mutator.ChainGenerators(...)`
+- `engine.SuppressionEvaluator`
+- `engine.DefaultSuppressionEvaluator(cfg)`
+- `engine.ChainSuppressionEvaluators(...)`
+- `engine.SurvivorRanker`
+- `engine.DefaultSurvivorRanker()`
+- `engine.NewWithOptions(cfg, ...)`
+
+Rules:
+
+- additive helpers, fields, or metadata are allowed when existing integrations
+  keep working
+- semantic changes to documented extension behavior must be called out in
+  release notes and upgrade notes
+- removals, renames, or signature breaks on these seams require a deprecation
+  path unless there is a correctness or security exception
+
+What is not promised yet:
+
+- a standalone triage-plugin protocol
+- CLI-level plugin distribution or discovery
+- compatibility for undocumented internal helpers outside the published seams
+
+The repository keeps focused tests around these seams so refactors fail loudly
+when custom generator, suppression, or ranking scenarios break.
 
 ## Daemon And Worker Policy
 

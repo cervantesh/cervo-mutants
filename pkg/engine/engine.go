@@ -400,6 +400,9 @@ func (e *Engine) environment(mutants int) Environment {
 	if runtime.GOOS == "windows" && e.cfg.Execution.Isolation == config.IsolationTempWorkdir && e.cfg.Tests.Timeout > 0 && e.cfg.Tests.Timeout < 20*time.Second {
 		env.Warnings = append(env.Warnings, fmt.Sprintf("per-mutant timeout %s may be too aggressive for Windows temp-workdir runs", e.cfg.Tests.Timeout))
 	}
+	if runtime.GOOS != "windows" && hasProcessLimits(e.cfg.Execution.Resources) {
+		env.Warnings = append(env.Warnings, "process resource limits are not enforced on this platform; continuing without process-limit isolation")
+	}
 	return env
 }
 

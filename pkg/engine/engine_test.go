@@ -794,9 +794,33 @@ func TestRunTestClassifiesPassFailureAndTimeout(t *testing.T) {
 		if err != nil {
 			t.Fatalf("resource-limited runTest returned error: %v", err)
 		}
-		if resourceSkipped.Status != StatusSkippedResource || resourceSkipped.FailureKind != "resource_limit_unsupported" {
+		if resourceSkipped.Status != StatusSurvived || resourceSkipped.FailureKind != "" {
 			t.Fatalf("resource-limited result = %+v", resourceSkipped)
 		}
+	}
+}
+
+func TestEnvironmentWarnsWhenProcessLimitsAreBestEffort(t *testing.T) {
+	cfg := config.Defaults()
+	cfg.Execution.Resources.MaxProcessMemoryMB = 64
+	env := New(cfg).environment(1)
+	if runtime.GOOS == "windows" {
+		for _, warning := range env.Warnings {
+			if strings.Contains(warning, "process resource limits are not enforced on this platform") {
+				t.Fatalf("unexpected non-Windows process-limit warning on Windows: %+v", env.Warnings)
+			}
+		}
+		return
+	}
+	found := false
+	for _, warning := range env.Warnings {
+		if strings.Contains(warning, "process resource limits are not enforced on this platform") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("expected best-effort process-limit warning, got %+v", env.Warnings)
 	}
 }
 

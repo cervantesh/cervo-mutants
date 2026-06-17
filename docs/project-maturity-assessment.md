@@ -67,7 +67,7 @@ while `pages` is green. That gap is large enough to keep the project in beta.
 - `go vet ./...` passed
 - `go test ./...` passed
 - fresh package coverage sample:
-  - `pkg/engine`: `86.6%`
+- `pkg/engine`: `88.7%`
   - `pkg/report`: `92.6%`
   - `pkg/runner`: `96.8%`
   - `pkg/mutator`: `90.5%`

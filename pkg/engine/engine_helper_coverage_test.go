@@ -1,0 +1,204 @@
+package engine
+
+import (
+	"errors"
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"runtime"
+	"strings"
+	"testing"
+
+	"github.com/cervantesh/cervo-mutants/pkg/config"
+)
+
+func TestFailureHelpersAndFailureResult(t *testing.T) {
+	panicErr := &PanicError{Stage: "baseline", Recovered: "boom"}
+	if got := panicErr.Error(); got != "internal_error: panic in baseline: boom" {
+		t.Fatalf("PanicError.Error() = %q", got)
+	}
+
+	if err := wrapStageError("runner_error", nil); err != nil {
+		t.Fatalf("wrapStageError(nil) = %v", err)
+	}
+	if got := wrapStageError("runner_error", panicErr); got != panicErr {
+		t.Fatalf("wrapStageError should preserve PanicError: %v", got)
+	}
+
+	prefixed := errors.New("runner_error: failed")
+	if got := wrapStageError("runner_error", prefixed); got != prefixed {
+		t.Fatalf("wrapStageError should preserve prefixed error: %v", got)
+	}
+
+	internal := errors.New("internal_error: panic in run")
+	if got := wrapStageError("runner_error", internal); got != internal {
+		t.Fatalf("wrapStageError should preserve internal_error: %v", got)
+	}
+
+	plain := errors.New("bad baseline")
+	wrapped := wrapStageError("runner_error", plain)
+	if wrapped == plain || wrapped == nil {
+		t.Fatalf("wrapStageError should wrap plain errors: %v", wrapped)
+	}
+	if !strings.Contains(wrapped.Error(), "runner_error: bad baseline") {
+		t.Fatalf("wrapped error = %q", wrapped.Error())
+	}
+
+	cfg := config.Defaults()
+	cfg.CI.FailUnder = 85
+	cfg.Baseline.Enabled = true
+	cfg.History.Enabled = true
+	cfg.History.Path = filepath.ToSlash(filepath.Join(t.TempDir(), "history.json"))
+	failure := Failure{Kind: "runner_error", Message: "baseline failed", CorrelationID: "cid-test"}
+	result := FailureResult(cfg, failure)
+	if result.SchemaVersion != "1" || result.Failure == nil {
+		t.Fatalf("FailureResult() missing schema/failure: %+v", result)
+	}
+	if result.Failure.Kind != failure.Kind || result.StoppedReason != failure.Kind {
+		t.Fatalf("FailureResult() did not preserve failure metadata: %+v", result)
+	}
+	if failed, _ := result.Thresholds["failed"].(bool); !failed {
+		t.Fatalf("FailureResult() thresholds = %+v", result.Thresholds)
+	}
+	if result.History.Path != cfg.History.Path || !result.History.Enabled {
+		t.Fatalf("FailureResult() history = %+v", result.History)
+	}
+	if result.Baseline.Enabled != cfg.Baseline.Enabled || len(result.Mutants) != 0 {
+		t.Fatalf("FailureResult() baseline/mutants = %+v %+v", result.Baseline, result.Mutants)
+	}
+}
+
+func TestHelperCoverageBranches(t *testing.T) {
+	handle := processLimitHandle{}
+	handle.Cleanup()
+	if got := handle.Stats(); got != (processLimitStats{}) {
+		t.Fatalf("nil processLimitHandle stats = %+v", got)
+	}
+
+	noopProcessLimitCleanup()
+	noopCleanup()
+
+	cases := []struct {
+		name    string
+		sliceBy string
+		mutant  Mutant
+		want    string
+	}{
+		{name: "package", sliceBy: "package", mutant: Mutant{Package: "pkg/a", ID: "m1"}, want: "pkg/a"},
+		{name: "file", sliceBy: "file", mutant: Mutant{File: filepath.Join("dir", "calc.go"), ID: "m2"}, want: "dir/calc.go"},
+		{name: "function", sliceBy: "function", mutant: Mutant{Function: "DoThing", ID: "m3"}, want: "DoThing"},
+		{name: "operator", sliceBy: "operator", mutant: Mutant{Operator: "inc-dec", ID: "m4"}, want: "inc-dec"},
+		{name: "mutant", sliceBy: "mutant", mutant: Mutant{ID: "m5"}, want: "m5"},
+		{name: "fallback-id", sliceBy: "package", mutant: Mutant{ID: "m6"}, want: "m6"},
+		{name: "fallback-file-operator", sliceBy: "package", mutant: Mutant{File: filepath.Join("dir", "other.go"), Operator: "logical"}, want: "dir/other.go:logical"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := sliceGroupKey(tc.mutant, tc.sliceBy); got != tc.want {
+				t.Fatalf("sliceGroupKey(%q) = %q, want %q", tc.sliceBy, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestMemoryLimitExceededBranches(t *testing.T) {
+	state := exitStateForTest(t, 2)
+	resources := config.Resources{MaxProcessMemoryMB: 64}
+	errBoom := errors.New("boom")
+
+	if memoryLimitExceeded(nil, state, resources, "out of memory") {
+		t.Fatal("nil error should not count as memory limit exceeded")
+	}
+	if memoryLimitExceeded(errBoom, state, config.Resources{}, "out of memory") {
+		t.Fatal("zero memory limit should not count as memory limit exceeded")
+	}
+	if !memoryLimitExceeded(errBoom, state, resources, "fatal: out of memory") {
+		t.Fatal("explicit out-of-memory output should be detected")
+	}
+	if memoryLimitExceeded(errBoom, nil, resources, "plain failure") {
+		t.Fatal("nil process state should not count as memory limit exceeded")
+	}
+	for _, output := range []string{"panic: boom", "build failed", "setup failed", "undefined: x", "syntax error", "FAIL fixture"} {
+		if memoryLimitExceeded(errBoom, state, resources, output) {
+			t.Fatalf("output %q should not count as memory limit exceeded", output)
+		}
+	}
+	if !memoryLimitExceeded(errBoom, state, resources, "plain process exit") {
+		t.Fatal("exit code 2 without conflicting output should count as memory limit exceeded")
+	}
+}
+
+func TestWriteFileAtomicAndPrepareOverlayMutationBranches(t *testing.T) {
+	dir := t.TempDir()
+	target := filepath.Join(dir, "report.json")
+	if err := writeFileAtomic(target, []byte("first"), 0o600); err != nil {
+		t.Fatalf("writeFileAtomic(first) error = %v", err)
+	}
+	if err := writeFileAtomic(target, []byte("second"), 0o644); err != nil {
+		t.Fatalf("writeFileAtomic(second) error = %v", err)
+	}
+	data, err := os.ReadFile(target)
+	if err != nil {
+		t.Fatalf("read written file: %v", err)
+	}
+	if string(data) != "second" {
+		t.Fatalf("writeFileAtomic data = %q", data)
+	}
+	if err := writeFileAtomic(filepath.Join(dir, "missing", "report.json"), []byte("x"), 0o644); err == nil {
+		t.Fatal("writeFileAtomic accepted a path whose parent directory does not exist")
+	}
+
+	moduleDir := writeFixture(t)
+	source := filepath.Join(moduleDir, "calc.go")
+	sourceData, err := os.ReadFile(source)
+	if err != nil {
+		t.Fatalf("read fixture source: %v", err)
+	}
+	start := strings.Index(string(sourceData), ">=")
+	if start < 0 {
+		t.Fatal("fixture source missing comparison token")
+	}
+	mutant := Mutant{
+		ID:          "overlay",
+		Module:      moduleDir,
+		File:        source,
+		Original:    ">=",
+		Mutated:     ">",
+		StartOffset: start,
+		EndOffset:   start + len(">="),
+	}
+
+	missingSource := mutant
+	missingSource.File = filepath.Join(moduleDir, "missing.go")
+	if _, _, cleanup, err := prepareOverlayMutation(missingSource, []string{"go", "test", "."}, ""); err == nil {
+		cleanup()
+		t.Fatal("prepareOverlayMutation accepted a missing source file")
+	}
+
+	badOffsets := mutant
+	badOffsets.StartOffset = len(sourceData) + 10
+	badOffsets.EndOffset = badOffsets.StartOffset + 1
+	if _, _, cleanup, err := prepareOverlayMutation(badOffsets, []string{"go", "test", "."}, ""); err == nil {
+		cleanup()
+		t.Fatal("prepareOverlayMutation accepted invalid mutant offsets")
+	}
+}
+
+func exitStateForTest(t *testing.T, code int) *os.ProcessState {
+	t.Helper()
+	var cmd *exec.Cmd
+	if runtime.GOOS == "windows" {
+		cmd = exec.Command("cmd", "/c", fmt.Sprintf("exit %d", code))
+	} else {
+		cmd = exec.Command("sh", "-c", fmt.Sprintf("exit %d", code))
+	}
+	err := cmd.Run()
+	if err == nil {
+		t.Fatalf("exitStateForTest expected non-zero exit for code %d", code)
+	}
+	if cmd.ProcessState == nil {
+		t.Fatalf("exitStateForTest missing process state for code %d", code)
+	}
+	return cmd.ProcessState
+}

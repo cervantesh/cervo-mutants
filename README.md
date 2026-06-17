@@ -498,6 +498,15 @@ staticcheck ./...
 go run ./cmd/cervomut list-mutators
 ```
 
+Focused fuzz/property targets now cover inline-ignore parsing, external report
+normalization, and `GOFLAGS` normalization. Example entry points:
+
+```powershell
+go test ./pkg/mutator -run Test -fuzz=FuzzParseInlineIgnore -fuzztime=10s
+go test ./pkg/extcompare -run Test -fuzz=FuzzNormalizeTarget -fuzztime=10s
+go test ./pkg/engine -run Test -fuzz=FuzzNormalizeGoFlags -fuzztime=10s
+```
+
 Sonar docs: [docs/sonar.md](docs/sonar.md).
 
 Latest local Sonar pass after issue #31:

@@ -1,6 +1,7 @@
 package mutator
 
 import (
+	"go/ast"
 	"go/parser"
 	"go/token"
 	"strings"
@@ -330,6 +331,255 @@ func TestSmallMutationHelpersCoverFallbackBranches(t *testing.T) {
 	if hint("unknown") == "" || description("", "unknown", "a", "b") == "" {
 		t.Fatal("fallback hint/description should be populated")
 	}
+}
+
+func TestSemanticHelperBranches(t *testing.T) {
+	src := `package sample
+
+import (
+	"os"
+	"sort"
+)
+
+func Review(path string, xs []int) {
+	for i := 0; i < len(xs); i++ {
+		_ = xs[i]
+	}
+	for j := len(xs) - 1; j >= 0; j-- {
+		_ = xs[j]
+	}
+	for k := 0; len(xs) > k; k += 2 {
+		_ = xs[k]
+	}
+	_ = os.MkdirAll(path, 0o755)
+	sort.Slice(xs, func(i, j int) bool {
+		return xs[i] < xs[j]
+	})
+	if len(xs) > 0 {
+		_ = xs[0]
+	}
+}
+`
+
+	ctx, file := parseMutationContext(t, src)
+	incDecs := findIncDecs(file)
+	if len(incDecs) < 2 {
+		t.Fatalf("expected at least two inc/dec nodes, got %d", len(incDecs))
+	}
+	if risk := nonProgressLoopRisk(ctx.parents, incDecs[0], opIncDec); risk != "high" {
+		t.Fatalf("nonProgressLoopRisk inc++ = %q, want high", risk)
+	}
+	if risk := nonProgressLoopRisk(ctx.parents, incDecs[1], opIncDec); risk != "high" {
+		t.Fatalf("nonProgressLoopRisk dec-- = %q, want high", risk)
+	}
+
+	assign := findAssignByToken(file, token.ADD_ASSIGN)
+	if assign == nil {
+		t.Fatal("expected += assignment in fixture")
+	}
+	if risk := nonProgressLoopRisk(ctx.parents, assign, opAssignmentArithmetic); risk != "high" {
+		t.Fatalf("nonProgressLoopRisk += = %q, want high", risk)
+	}
+	if risk := nonProgressLoopRisk(ctx.parents, assign, opIncDec); risk != "" {
+		t.Fatalf("nonProgressLoopRisk with wrong operator = %q, want empty", risk)
+	}
+
+	permLit := findBasicLit(file, "0o755")
+	if permLit == nil {
+		t.Fatal("expected permission literal")
+	}
+	if !permissionModeMutation(ctx.parents, permLit, opNumericLiterals) {
+		t.Fatal("permissionModeMutation should flag os.MkdirAll mode literal")
+	}
+	if permissionModeMutation(ctx.parents, permLit, opBooleanLiterals) {
+		t.Fatal("permissionModeMutation should ignore unrelated operator")
+	}
+	call, argIndex, ok := enclosingCallForNode(ctx.parents, permLit)
+	if !ok || argIndex != 1 || selectorName(call.Fun) != "os.MkdirAll" {
+		t.Fatalf("enclosingCallForNode mismatch: ok=%v arg=%d call=%v", ok, argIndex, call)
+	}
+
+	sortExpr := findBinaryContaining(ctx.fset, file, "xs[i] < xs[j]")
+	if sortExpr == nil {
+		t.Fatal("expected sort comparator expression")
+	}
+	group, label, reason := semanticGroup(ctx, sortExpr, opConditionalsBoundary)
+	if group == "" || label != "sort comparator boundary" || reason == "" {
+		t.Fatalf("sort comparator semantic group mismatch: %q %q %q", group, label, reason)
+	}
+	sortCall := findCallByName(file, "sort.Slice")
+	if sortCall == nil || !isSortComparatorCall(ctx.parents, sortExpr, sortCall) {
+		t.Fatal("sort comparator should be detected inside sort.Slice closure")
+	}
+
+	lenExpr := findBinaryContaining(ctx.fset, file, "len(xs) > 0")
+	if lenExpr == nil {
+		t.Fatal("expected len boundary expression")
+	}
+	group, label, reason = semanticGroup(ctx, lenExpr, opSliceMapLenBoundary)
+	if group == "" || label != "len boundary" || reason == "" {
+		t.Fatalf("len semantic group mismatch: %q %q %q", group, label, reason)
+	}
+	if !isLenComparison(lenExpr) || !isLenCall(lenExpr.X) {
+		t.Fatalf("len helper mismatch for %s", FormatNode(ctx.fset, lenExpr))
+	}
+	if direction, ok := loopConditionDirection(lenExpr, "missing"); ok || direction != "" {
+		t.Fatalf("loopConditionDirection should not match unknown ident: %q %v", direction, ok)
+	}
+}
+
+func TestDirectionAndSelectorHelpers(t *testing.T) {
+	leftCases := []struct {
+		op   token.Token
+		want string
+		ok   bool
+	}{
+		{op: token.LSS, want: "ascending", ok: true},
+		{op: token.LEQ, want: "ascending", ok: true},
+		{op: token.GTR, want: "descending", ok: true},
+		{op: token.GEQ, want: "descending", ok: true},
+		{op: token.EQL, want: "", ok: false},
+	}
+	for _, tc := range leftCases {
+		got, ok := directionFromComparison(tc.op, true)
+		if got != tc.want || ok != tc.ok {
+			t.Fatalf("directionFromComparison(%v, true) = (%q, %v), want (%q, %v)", tc.op, got, ok, tc.want, tc.ok)
+		}
+	}
+
+	rightCases := []struct {
+		op   token.Token
+		want string
+		ok   bool
+	}{
+		{op: token.GTR, want: "ascending", ok: true},
+		{op: token.GEQ, want: "ascending", ok: true},
+		{op: token.LSS, want: "descending", ok: true},
+		{op: token.LEQ, want: "descending", ok: true},
+		{op: token.EQL, want: "", ok: false},
+	}
+	for _, tc := range rightCases {
+		got, ok := directionFromComparison(tc.op, false)
+		if got != tc.want || ok != tc.ok {
+			t.Fatalf("directionFromComparison(%v, false) = (%q, %v), want (%q, %v)", tc.op, got, ok, tc.want, tc.ok)
+		}
+	}
+
+	if directionForAssign(token.ADD_ASSIGN) != "ascending" || directionForAssign(token.SUB_ASSIGN) != "descending" || directionForAssign(token.ASSIGN) != "" {
+		t.Fatal("directionForAssign branches changed")
+	}
+	if directionForIncDec(token.INC) != "ascending" || directionForIncDec(token.DEC) != "descending" || directionForIncDec(token.ADD) != "" {
+		t.Fatal("directionForIncDec branches changed")
+	}
+	if oppositeDirection("ascending") != "descending" || oppositeDirection("descending") != "ascending" || oppositeDirection("sideways") != "" {
+		t.Fatal("oppositeDirection branches changed")
+	}
+	if boundaryReplacement(token.LSS) != "<=" || boundaryReplacement(token.LEQ) != "<" || boundaryReplacement(token.GTR) != ">=" || boundaryReplacement(token.GEQ) != ">" {
+		t.Fatal("boundaryReplacement branches changed")
+	}
+
+	tags := appendUnique([]string{"one"}, "")
+	tags = appendUnique(tags, "one")
+	tags = appendUnique(tags, "two")
+	if strings.Join(tags, ",") != "one,two" {
+		t.Fatalf("appendUnique result = %v", tags)
+	}
+
+	if selectorName(&ast.Ident{Name: "local"}) != "local" {
+		t.Fatal("selectorName should return plain ident names")
+	}
+	if selectorName(&ast.SelectorExpr{X: &ast.BasicLit{}, Sel: &ast.Ident{Name: "Field"}}) != "Field" {
+		t.Fatal("selectorName should fall back to selector field name")
+	}
+	if selectorName(&ast.BasicLit{}) != "" || identName(&ast.BasicLit{}) != "" {
+		t.Fatal("selectorName/identName should ignore unsupported expressions")
+	}
+	if identName(&ast.Ident{Name: "value"}) != "value" {
+		t.Fatal("identName should return identifier names")
+	}
+}
+
+func parseMutationContext(t *testing.T, src string) (mutationContext, *ast.File) {
+	t.Helper()
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset, "sample.go", src, parser.ParseComments)
+	if err != nil {
+		t.Fatalf("ParseFile returned error: %v", err)
+	}
+	mutants := []Mutant{}
+	return mutationContext{
+		mutants:  &mutants,
+		fset:     fset,
+		pkg:      "sample",
+		filename: "sample.go",
+		src:      []byte(src),
+		fn:       "Review",
+		profile:  ProfileAggressive,
+		parents:  buildParentIndex(file),
+	}, file
+}
+
+func findIncDecs(root ast.Node) []*ast.IncDecStmt {
+	var nodes []*ast.IncDecStmt
+	ast.Inspect(root, func(node ast.Node) bool {
+		if stmt, ok := node.(*ast.IncDecStmt); ok {
+			nodes = append(nodes, stmt)
+		}
+		return true
+	})
+	return nodes
+}
+
+func findAssignByToken(root ast.Node, tok token.Token) *ast.AssignStmt {
+	var found *ast.AssignStmt
+	ast.Inspect(root, func(node ast.Node) bool {
+		stmt, ok := node.(*ast.AssignStmt)
+		if ok && stmt.Tok == tok {
+			found = stmt
+			return false
+		}
+		return true
+	})
+	return found
+}
+
+func findBasicLit(root ast.Node, value string) *ast.BasicLit {
+	var found *ast.BasicLit
+	ast.Inspect(root, func(node ast.Node) bool {
+		lit, ok := node.(*ast.BasicLit)
+		if ok && lit.Value == value {
+			found = lit
+			return false
+		}
+		return true
+	})
+	return found
+}
+
+func findBinaryContaining(fset *token.FileSet, root ast.Node, want string) *ast.BinaryExpr {
+	var found *ast.BinaryExpr
+	ast.Inspect(root, func(node ast.Node) bool {
+		expr, ok := node.(*ast.BinaryExpr)
+		if ok && normalizeExpr(FormatNode(fset, expr)) == normalizeExpr(want) {
+			found = expr
+			return false
+		}
+		return true
+	})
+	return found
+}
+
+func findCallByName(root ast.Node, want string) *ast.CallExpr {
+	var found *ast.CallExpr
+	ast.Inspect(root, func(node ast.Node) bool {
+		call, ok := node.(*ast.CallExpr)
+		if ok && selectorName(call.Fun) == want {
+			found = call
+			return false
+		}
+		return true
+	})
+	return found
 }
 
 func operatorSet(mutants []Mutant) map[string]bool {

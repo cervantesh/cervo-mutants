@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/cervantesh/cervo-mutants/pkg/engine"
+	"github.com/cervantesh/cervo-mutants/pkg/triage"
 )
 
 type GoTestRunner struct {
@@ -77,16 +78,18 @@ func trim(s string, max int) string {
 }
 
 func applySemanticTimeoutClassification(result *engine.MutantResult) {
-	if result.Status != engine.StatusTimedOut {
-		return
-	}
-	if result.Mutant.NonProgressRisk != "high" {
-		result.FailureKind = "timeout"
-		return
-	}
-	result.FailureKind = "non_progress_loop"
-	result.StatusReason = "test command timed out after a likely non-progress loop mutation"
-	if result.SuggestedSkipReason == "" {
-		result.SuggestedSkipReason = "reviewed-skip or quarantine if the timeout is a confirmed non-progress loop"
-	}
+	normalized := triage.NormalizeResult(triage.Result{
+		MutantID:      result.MutantID,
+		Status:        string(result.Status),
+		FailureKind:   result.FailureKind,
+		StatusReason:  result.StatusReason,
+		SuggestedSkip: result.SuggestedSkipReason,
+		Mutant: triage.Mutant{
+			NonProgressRisk: result.Mutant.NonProgressRisk,
+			SuggestedSkip:   result.Mutant.SuggestedSkipReason,
+		},
+	})
+	result.FailureKind = normalized.FailureKind
+	result.StatusReason = normalized.StatusReason
+	result.SuggestedSkipReason = normalized.SuggestedSkip
 }

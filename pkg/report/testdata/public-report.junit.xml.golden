@@ -1,0 +1,15 @@
+<testsuite name="cervomut" tests="5" failures="4">
+  <testcase name="pkg/review.go:19:conditionals-boundary:123456789abc">
+    <failure message="survived">tests passed with mutant applied</failure>
+  </testcase>
+  <testcase name="pkg/review.go:27:logical:abc123def456"></testcase>
+  <testcase name="pkg/fs.go:41:numeric-literals:ff00ff00aa11">
+    <failure message="survived">tests passed on Windows permission-mode mutation</failure>
+  </testcase>
+  <testcase name="pkg/loop.go:12:inc-dec:998877665544">
+    <failure message="timed_out">loop variable stopped making progress</failure>
+  </testcase>
+  <testcase name="pkg/fs.go:50:numeric-literals:001122334455">
+    <failure message="not_covered">coverage profile did not match mutant file</failure>
+  </testcase>
+</testsuite>

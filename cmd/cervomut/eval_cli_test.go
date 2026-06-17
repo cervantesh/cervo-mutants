@@ -1,13 +1,16 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/cervantesh/cervo-mutants/internal/testharness"
 	"github.com/cervantesh/cervo-mutants/pkg/config"
 	"github.com/cervantesh/cervo-mutants/pkg/engine"
 	evalpkg "github.com/cervantesh/cervo-mutants/pkg/eval"
@@ -77,6 +80,9 @@ func TestInitListMutatorsExplainAndExitCodes(t *testing.T) {
 	}
 	if !strings.Contains(string(data), "mutators:") || !strings.Contains(defaultConfigYAML(), "reports:") {
 		t.Fatalf("default config missing expected sections: %s", data)
+	}
+	if !strings.Contains(string(data), "actionable_only: false") {
+		t.Fatalf("default config missing actionable_only default: %s", data)
 	}
 	if err := cmdInit(); err == nil {
 		t.Fatal("cmdInit overwrote existing config")
@@ -172,6 +178,59 @@ func TestReportAndShowAcceptOutputDirectory(t *testing.T) {
 	}
 	if err := run([]string{"explain", id, "--format", "text"}); err != nil {
 		t.Fatalf("explain text returned error: %v", err)
+	}
+}
+
+func TestRunAndReportActionableOnlyViews(t *testing.T) {
+	dir := writeCLIFixture(t)
+	out := filepath.Join(dir, "actionable-out")
+	restoreCLIHooks(t)
+	runEngineFn = func(cfg config.Config, req engine.RunRequest) (engine.RunResult, error) {
+		if !cfg.Reports.ActionableOnly {
+			t.Fatalf("run config should enable actionable-only: %+v", cfg.Reports)
+		}
+		_ = req
+		return actionableOnlyRunResult(), nil
+	}
+
+	runOutput := captureStdout(t, func() {
+		if err := run([]string{"run", dir, "--out", out, "--actionable-only"}); err != nil {
+			t.Fatalf("run --actionable-only returned error: %v", err)
+		}
+	})
+	if !strings.Contains(runOutput, "Actionable-only view: showing 2 of 4 survivors") {
+		t.Fatalf("run stdout missing actionable-only header:\n%s", runOutput)
+	}
+
+	raw := readRunReportForTest(t, out)
+	if len(raw.Mutants) != 4 {
+		t.Fatalf("raw mutation report should preserve all mutants: %+v", raw.Mutants)
+	}
+
+	actionablePath := filepath.Join(out, "survivors-actionable.txt")
+	data, err := os.ReadFile(actionablePath)
+	if err != nil {
+		t.Fatalf("survivors-actionable.txt missing: %v", err)
+	}
+	text := string(data)
+	for _, want := range []string{"group-lead", "keep", "Actionable-only view: showing 2 of 4 survivors"} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("actionable artifact missing %q:\n%s", want, text)
+		}
+	}
+	for _, avoid := range []string{"#2 0.0 group-dup ", "#3 0.0 platform "} {
+		if strings.Contains(text, avoid) {
+			t.Fatalf("actionable artifact should not include %q:\n%s", avoid, text)
+		}
+	}
+
+	reportOutput := captureStdout(t, func() {
+		if err := run([]string{"report", "survivors", "--out", out, "--actionable-only"}); err != nil {
+			t.Fatalf("report survivors --actionable-only returned error: %v", err)
+		}
+	})
+	if !strings.Contains(reportOutput, "Actionable-only view: showing 2 of 4 survivors") || strings.Contains(reportOutput, "#3 0.0 platform ") {
+		t.Fatalf("report survivors actionable-only output unexpected:\n%s", reportOutput)
 	}
 }
 
@@ -446,19 +505,14 @@ func TestCompareCommandRecordsApplesToApplesPackageRootMode(t *testing.T) {
 
 func writeCLIFixture(t *testing.T) string {
 	t.Helper()
-	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module fixture\n\ngo 1.25.6\n"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(dir, "calc.go"), []byte(`package fixture
+	return testharness.WriteGoModuleTempDir(t, "fixture", map[string]string{
+		"calc.go": `package fixture
 
 func IsPositiveOrZero(n int) bool {
 	return n >= 0
 }
-`), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(dir, "calc_test.go"), []byte(`package fixture
+`,
+		"calc_test.go": `package fixture
 
 import "testing"
 
@@ -467,10 +521,8 @@ func TestIsPositiveOrZero(t *testing.T) {
 		t.Fatal("want positive")
 	}
 }
-`), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	return dir
+`,
+	})
 }
 
 func extractMutantIDForTest(t *testing.T, report string) string {
@@ -532,5 +584,111 @@ func assertCorrelationIDPresent(t *testing.T, message string) {
 	t.Helper()
 	if !strings.Contains(message, "correlation_id=") {
 		t.Fatalf("error missing correlation id: %v", message)
+	}
+}
+
+func captureStdout(t *testing.T, fn func()) string {
+	t.Helper()
+	old := os.Stdout
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	os.Stdout = w
+	defer func() {
+		os.Stdout = old
+	}()
+	fn()
+	if err := w.Close(); err != nil {
+		t.Fatal(err)
+	}
+	var buf bytes.Buffer
+	if _, err := io.Copy(&buf, r); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.Close(); err != nil {
+		t.Fatal(err)
+	}
+	return buf.String()
+}
+
+func actionableOnlyRunResult() engine.RunResult {
+	return engine.RunResult{
+		SchemaVersion: "1",
+		Environment:   engine.Environment{OS: "windows", Arch: "amd64", GoVersion: "go1.25.6"},
+		Summary:       engine.Summary{Total: 4, Survived: 4},
+		Mutants: []engine.MutantResult{
+			{
+				MutantID:            "group-lead",
+				Status:              engine.StatusSurvived,
+				SurvivorRank:        1,
+				Actionability:       "high",
+				SuggestedTestScope:  "./fixture",
+				SuggestedSkipReason: "review once",
+				SemanticGroupSize:   2,
+				Mutant: engine.Mutant{
+					ID:            "group-lead",
+					File:          "calc.go",
+					Line:          4,
+					Operator:      "conditionals-boundary",
+					Original:      "<",
+					Mutated:       "<=",
+					SemanticGroup: "sort:1",
+					GroupLabel:    "sort comparator boundary",
+					GroupReason:   "shared review",
+				},
+			},
+			{
+				MutantID:            "group-dup",
+				Status:              engine.StatusSurvived,
+				SurvivorRank:        2,
+				Actionability:       "medium",
+				SuggestedTestScope:  "./fixture",
+				SuggestedSkipReason: "review once",
+				SemanticGroupSize:   2,
+				Mutant: engine.Mutant{
+					ID:            "group-dup",
+					File:          "calc.go",
+					Line:          5,
+					Operator:      "conditionals-boundary",
+					Original:      "<",
+					Mutated:       "<=",
+					SemanticGroup: "sort:1",
+					GroupLabel:    "sort comparator boundary",
+					GroupReason:   "shared review",
+				},
+			},
+			{
+				MutantID:           "platform",
+				Status:             engine.StatusSurvived,
+				SurvivorRank:       3,
+				Actionability:      "high",
+				SuggestedTestScope: "./fixture",
+				Mutant: engine.Mutant{
+					ID:                "platform",
+					File:              "calc.go",
+					Line:              6,
+					Operator:          "numeric-literals",
+					Original:          "0o755",
+					Mutated:           "0",
+					PlatformSensitive: true,
+				},
+			},
+			{
+				MutantID:           "keep",
+				Status:             engine.StatusSurvived,
+				SurvivorRank:       4,
+				Actionability:      "medium",
+				SuggestedTestScope: "./fixture",
+				Mutant: engine.Mutant{
+					ID:       "keep",
+					File:     "calc.go",
+					Line:     7,
+					Operator: "logical",
+					Original: "&&",
+					Mutated:  "||",
+				},
+			},
+		},
 	}
 }

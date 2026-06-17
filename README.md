@@ -40,6 +40,9 @@ platform. The project currently includes:
 - Summary, JSON schema v1, JUnit XML, and HTML reports.
 - Survivor ranking and denominator-health reporting.
 - Semantic triage v1 for non-progress loop timeouts, permission-mode platform sensitivity, and equivalence-risk survivor groups.
+- Semantic actionability heuristics extracted into `pkg/triage` for shared use across engine, runner, and reporting.
+- Engine orchestration split across dedicated files for execution, checkpointing, history, summary, slicing, and mutation scheduling.
+- CLI orchestration split across command-family files for run/eval, compare/pool, baseline/report, and shared entrypoint dispatch.
 - Daemon/worker JSON-lines contracts for future distributed execution.
 - External-tool comparison normalization for apples-to-apples studies.
 
@@ -86,12 +89,18 @@ Important files:
 | `.cervomut/reports/mutation-report.json` | Stable JSON report for CI and agents. |
 | `.cervomut/reports/summary.txt` | Human-readable run summary. |
 | `.cervomut/reports/junit.xml` | CI test report format. |
-| `.cervomut/reports/index.html` | Human report for browsing survivors and diffs. |
+| `.cervomut/reports/index.html` | Filterable survivor review workbench with raw-report fallback, diff browsing, and client-side triage filters. |
+| `.cervomut/reports/survivors-actionable.txt` | Optional actionable-only survivor review view. |
+| `.cervomut/reports/semantic-triage-ledger.json` | Auditable skip/quarantine suggestions for known noisy patterns. |
 | `.cervomut/reports/partial-mutation-report.json` | Checkpoint report for timeout/interrupted runs. |
 | `.cervomut/reports/partial-summary.json` | Small checkpoint summary. |
 | `.cervomut/history.json` | Historical survivor/cache signal. |
 | `.cervomut/baseline.json` | Accepted baseline for regression gates. |
 | `.cervomut/quarantine.json` | Temporary audited quarantine entries. |
+
+The public JSON, JUnit, and HTML report formats are treated as compatibility
+surfaces. Golden fixtures in `pkg/report/testdata/` lock those outputs so
+schema or rendering drift fails tests before release.
 
 ## Recommended CI Flow
 
@@ -156,7 +165,8 @@ More detail: [docs/policy-presets.md](docs/policy-presets.md).
 | `cervomut baseline compare` | Compare current report to baseline. |
 | `cervomut report summary --out DIR` | Print report summary. |
 | `cervomut report survivors --out DIR` | Print ranked surviving mutants. |
-| `cervomut report open` | Open the HTML report. |
+| `cervomut report survivors --out DIR --actionable-only` | Print only the actionable survivor review set, with equivalent/platform-sensitive duplicates collapsed. |
+| `cervomut report open` | Open the HTML survivor review workbench. |
 | `cervomut show MUTANT_ID --out DIR` | Show a mutant diff/context. |
 | `cervomut explain MUTANT_ID --format text\|json` | Explain what a survivor means. |
 | `cervomut list-mutators` | List operators and risk metadata. |
@@ -169,6 +179,7 @@ Common run flags:
 cervomut run ./... `
   --policy ci-fast `
   --budget 10m `
+  --actionable-only `
   --max-mutants 100 `
   --slice-by package `
   --shard 1/4 `
@@ -184,6 +195,19 @@ cervomut run ./... `
   --max-process-memory-mb 6144 `
   --out .cervomut/reports
 ```
+
+`--actionable-only` is a review view, not a suppression mode. Raw JSON, HTML,
+and the normal `survivors.txt` remain complete; the actionable projection is
+printed to stdout for `run`, available in `report survivors --actionable-only`,
+and written to `.cervomut/reports/survivors-actionable.txt`.
+
+`mutation-report.json` also carries an additive `summary.actionable` block so
+consumers can read actionable score and triage-weighted survivor counts without
+changing the meaning of the existing raw score fields.
+
+`semantic-triage-ledger.json` is a companion artifact. It groups equivalent-risk
+survivors, flags Windows-only permission-mode noise, and suggests quarantine
+review for confirmed non-progress loop timeouts without mutating the raw report.
 
 ## Configuration
 
@@ -229,6 +253,7 @@ quarantine:
   fail_on_expired: true
 reports:
   formats: [summary, json, junit, html]
+  actionable_only: false
 ```
 
 Supported selection modes:

@@ -120,6 +120,7 @@ type Summary struct {
 	EffectiveScore                float64                `json:"effective_score"`
 	TestEfficacy                  float64                `json:"test_efficacy"`
 	MutationCoverage              float64                `json:"mutation_coverage"`
+	Actionable                    ActionableSummary      `json:"actionable"`
 	DenominatorHealth             DenominatorHealth      `json:"denominator_health"`
 	HighRiskSurvivors             int                    `json:"high_risk_survivors"`
 	SuppressionReportOnly         int                    `json:"suppression_report_only"`
@@ -134,6 +135,19 @@ type Summary struct {
 	EquivalentRiskStats           map[string]int         `json:"equivalent_risk_statistics,omitempty"`
 	SemanticGroupStats            map[string]int         `json:"semantic_group_statistics,omitempty"`
 	MutatorStats                  map[string]MutatorStat `json:"mutator_statistics,omitempty"`
+}
+
+type ActionableSummary struct {
+	RawScore                    float64 `json:"raw_score"`
+	ActionableScore             float64 `json:"actionable_score"`
+	Survivors                   int     `json:"survivors"`
+	ActionableSurvivors         int     `json:"actionable_survivors"`
+	TrueActionableSurvivors     int     `json:"true_actionable_survivors"`
+	EquivalentRiskSurvivors     int     `json:"equivalent_risk_survivors"`
+	PlatformSensitiveSurvivors  int     `json:"platform_sensitive_survivors"`
+	NonProgressTimeouts         int     `json:"non_progress_timeouts"`
+	SemanticGroupReviewUnits    int     `json:"semantic_group_review_units"`
+	CollapsedSemanticDuplicates int     `json:"collapsed_semantic_duplicates"`
 }
 
 type DenominatorHealth struct {

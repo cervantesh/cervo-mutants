@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"math"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -11,34 +12,30 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cervantesh/cervo-mutants/internal/testharness"
 	"github.com/cervantesh/cervo-mutants/pkg/config"
 	"github.com/cervantesh/cervo-mutants/pkg/mutator"
 )
 
 func writeFixture(t *testing.T) string {
 	t.Helper()
-	dir := t.TempDir()
-	writeFixtureFiles(t, dir)
-	return dir
+	return testharness.WriteGoModuleTempDir(t, "fixture", fixtureFiles())
 }
 
 func writeFixtureFiles(t *testing.T, dir string) {
 	t.Helper()
-	if err := os.MkdirAll(dir, 0o700); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module fixture\n\ngo 1.25.6\n"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(dir, "calc.go"), []byte(`package fixture
+	testharness.WriteGoModuleFixture(t, dir, "fixture", fixtureFiles())
+}
+
+func fixtureFiles() map[string]string {
+	return map[string]string{
+		"calc.go": `package fixture
 
 func IsPositiveOrZero(n int) bool {
 	return n >= 0
 }
-`), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(dir, "calc_test.go"), []byte(`package fixture
+`,
+		"calc_test.go": `package fixture
 
 import "testing"
 
@@ -47,8 +44,7 @@ func TestIsPositiveOrZero(t *testing.T) {
 		t.Fatal("want positive")
 	}
 }
-`), 0o600); err != nil {
-		t.Fatal(err)
+`,
 	}
 }
 
@@ -1328,12 +1324,15 @@ func TestSummarizeIncludesTimeoutRiskStats(t *testing.T) {
 }
 
 func TestSummarizeIncludesSemanticTriageStats(t *testing.T) {
-	result := summarize([]MutantResult{
+	results := []MutantResult{
 		{MutantID: "loop", Status: StatusTimedOut, Mutant: Mutant{ID: "loop", Operator: "inc-dec", NonProgressRisk: "high"}},
-		{MutantID: "perm", Status: StatusSurvived, Mutant: Mutant{ID: "perm", PlatformSensitive: true}},
-		{MutantID: "group-a", Status: StatusSurvived, Mutant: Mutant{ID: "group-a", SemanticGroup: "sort:1", GroupLabel: "sort comparator boundary"}},
-		{MutantID: "group-b", Status: StatusSurvived, Mutant: Mutant{ID: "group-b", SemanticGroup: "sort:1", GroupLabel: "sort comparator boundary"}},
-	})
+		{MutantID: "perm", Status: StatusSurvived, Actionability: "medium", Mutant: Mutant{ID: "perm", PlatformSensitive: true}},
+		{MutantID: "group-a", Status: StatusSurvived, Actionability: "high", Mutant: Mutant{ID: "group-a", EquivalentRisk: "high", SemanticGroup: "sort:1", GroupLabel: "sort comparator boundary"}},
+		{MutantID: "group-b", Status: StatusSurvived, Actionability: "high", Mutant: Mutant{ID: "group-b", EquivalentRisk: "high", SemanticGroup: "sort:1", GroupLabel: "sort comparator boundary"}},
+		{MutantID: "keep", Status: StatusSurvived, Actionability: "medium", Mutant: Mutant{ID: "keep", Operator: "logical"}},
+		{MutantID: "killed", Status: StatusKilled, Mutant: Mutant{ID: "killed", Operator: "logical"}},
+	}
+	result := summarize(results)
 	if result.NonProgressTimeouts != 1 {
 		t.Fatalf("non-progress timeouts = %d, want 1", result.NonProgressTimeouts)
 	}
@@ -1342,6 +1341,29 @@ func TestSummarizeIncludesSemanticTriageStats(t *testing.T) {
 	}
 	if result.SemanticGroupStats["sort comparator boundary"] != 2 {
 		t.Fatalf("semantic group stats = %+v", result.SemanticGroupStats)
+	}
+	if result.Actionable.RawScore == 0 || result.Actionable.ActionableScore == 0 {
+		t.Fatalf("actionable score block missing scores: %+v", result.Actionable)
+	}
+	expectedActionableSurvivors := 4
+	expectedTrueActionable := 3
+	expectedActionableScore := 25.0
+	if runtime.GOOS == "windows" {
+		expectedActionableSurvivors = 3
+		expectedTrueActionable = 2
+		expectedActionableScore = 100.0 / 3.0
+	}
+	if result.Actionable.Survivors != 4 || result.Actionable.ActionableSurvivors != expectedActionableSurvivors || result.Actionable.TrueActionableSurvivors != expectedTrueActionable {
+		t.Fatalf("unexpected actionable survivor counts: %+v", result.Actionable)
+	}
+	if result.Actionable.EquivalentRiskSurvivors != 2 || result.Actionable.SemanticGroupReviewUnits != 1 || result.Actionable.CollapsedSemanticDuplicates != 1 {
+		t.Fatalf("unexpected actionable grouping counters: %+v", result.Actionable)
+	}
+	if result.Actionable.PlatformSensitiveSurvivors != 1 || result.Actionable.NonProgressTimeouts != 1 {
+		t.Fatalf("unexpected actionable platform/timeout counters: %+v", result.Actionable)
+	}
+	if math.Abs(result.Actionable.ActionableScore-expectedActionableScore) > 1e-9 {
+		t.Fatalf("actionable score = %.14f, want %.14f", result.Actionable.ActionableScore, expectedActionableScore)
 	}
 }
 
@@ -1792,11 +1814,6 @@ func assertQuarantineLoad(t *testing.T, e *Engine, path string) {
 
 func assertPriorityHelpers(t *testing.T) {
 	t.Helper()
-	for risk, want := range map[string]int{"low": 0, "medium": 1, "high": 2, "other": 3} {
-		if got := riskPriority(risk); got != want {
-			t.Fatalf("riskPriority(%q) = %d, want %d", risk, got, want)
-		}
-	}
 	for action, want := range map[string]int{"report-only": 0, "lower-priority": 1, "quarantine-required": 2, "suppress": 3, "none": -1} {
 		if got := suppressionPriority(action); got != want {
 			t.Fatalf("suppressionPriority(%q) = %d, want %d", action, got, want)

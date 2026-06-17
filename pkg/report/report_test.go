@@ -21,6 +21,7 @@ func TestJSONReportSchemaV1IncludesActionableFields(t *testing.T) {
 			Total:                      1,
 			Survived:                   1,
 			Score:                      0,
+			Actionable:                 engine.ActionableSummary{RawScore: 0, ActionableScore: 0, Survivors: 1, ActionableSurvivors: 1, TrueActionableSurvivors: 1, EquivalentRiskSurvivors: 1, SemanticGroupReviewUnits: 1},
 			Quarantined:                0,
 			PlatformSensitiveSurvivors: 1,
 			NonProgressTimeouts:        1,
@@ -94,7 +95,7 @@ func TestJSONReportSchemaV1IncludesActionableFields(t *testing.T) {
 		t.Fatalf("schema_version = %v", decoded["schema_version"])
 	}
 	text := string(data)
-	for _, want := range []string{"environment", "go_version", "temp_root", "warnings", "slice", "slice_by", "shard_index", "shard_count", "selected_files", "max_mutants_per_package", "isolation", "checkpoint", "fingerprint", "includes_file_digests", "failure_kind", "memory_peak_bytes", "baseline", "cache", "quarantine", "history", "unified_diff", "status_reason", "selection_reason", "coverage_source", "selected_tests", "description", "nearby_tests", "equivalent_risk", "recommendation", "compile_error_risk", "semantic_tags", "semantic_group", "group_label", "group_reason", "suggested_skip_reason", "semantic_group_size", "semantic_group_statistics", "platform_sensitive_survivors", "non_progress_timeouts", "suppression_audit", "evidence_level", "survivor_rank", "rank_score", "rank_reason", "actionability", "suggested_test_scope", "nearest_tests", "previous_status", "first_seen", "survivor_age_runs", "operator_historical_yield"} {
+	for _, want := range []string{"environment", "go_version", "temp_root", "warnings", "slice", "slice_by", "shard_index", "shard_count", "selected_files", "max_mutants_per_package", "isolation", "checkpoint", "fingerprint", "includes_file_digests", "failure_kind", "memory_peak_bytes", "baseline", "cache", "quarantine", "history", "unified_diff", "status_reason", "selection_reason", "coverage_source", "selected_tests", "description", "nearby_tests", "equivalent_risk", "recommendation", "compile_error_risk", "semantic_tags", "semantic_group", "group_label", "group_reason", "suggested_skip_reason", "semantic_group_size", "semantic_group_statistics", "platform_sensitive_survivors", "non_progress_timeouts", "actionable", "raw_score", "actionable_score", "true_actionable_survivors", "equivalent_risk_survivors", "semantic_group_review_units", "collapsed_semantic_duplicates", "suppression_audit", "evidence_level", "survivor_rank", "rank_score", "rank_reason", "actionability", "suggested_test_scope", "nearest_tests", "previous_status", "first_seen", "survivor_age_runs", "operator_historical_yield"} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("JSON report missing %q: %s", want, text)
 		}
@@ -114,6 +115,18 @@ func TestSummaryIncludesGremlinsStyleCoverageMetricsAndMutatorStats(t *testing.T
 			ScoreDenominator: 2,
 			TestEfficacy:     50,
 			MutationCoverage: 66.66666666666666,
+			Actionable: engine.ActionableSummary{
+				RawScore:                    50,
+				ActionableScore:             75,
+				Survivors:                   1,
+				ActionableSurvivors:         1,
+				TrueActionableSurvivors:     1,
+				EquivalentRiskSurvivors:     1,
+				PlatformSensitiveSurvivors:  1,
+				NonProgressTimeouts:         1,
+				SemanticGroupReviewUnits:    1,
+				CollapsedSemanticDuplicates: 1,
+			},
 			DenominatorHealth: engine.DenominatorHealth{
 				Generated:        3,
 				Covered:          2,
@@ -151,6 +164,12 @@ func TestSummaryIncludesGremlinsStyleCoverageMetricsAndMutatorStats(t *testing.T
 		"Score denominator: 2",
 		"Test efficacy: 50.00%",
 		"Mutation coverage: 66.67%",
+		"Actionable score: 75.00%",
+		"Actionable survivors: 1",
+		"True actionable survivors: 1",
+		"Equivalent-risk survivors: 1",
+		"Semantic review units: 1",
+		"Collapsed semantic duplicates: 1",
 		"Denominator health: healthy=true generated=3 covered=2 executed=2 effective=2 score_denominator=2 killed=1 survived=1 not_covered=1 pending_budget=0 skipped_resource=0 timed_out=0 memory_killed=0 compile_error=0",
 		"High-risk survivors: 1",
 		"New survivors: 1",
@@ -179,9 +198,9 @@ func TestSummaryIncludesGremlinsStyleCoverageMetricsAndMutatorStats(t *testing.T
 func TestSurvivorsReportIsRanked(t *testing.T) {
 	run := engine.RunResult{
 		Mutants: []engine.MutantResult{
-			{MutantID: "later", Status: engine.StatusSurvived, SurvivorRank: 2, RankReason: "risk=high", SuggestedSkipReason: "review once", SemanticGroupSize: 2, Mutant: engine.Mutant{File: "a.go", Line: 2, Operator: "returns", Original: "x", Mutated: "y", SemanticGroup: "sort:1", GroupLabel: "sort comparator boundary", GroupReason: "Boundary mutations inside sort comparator closures often collapse into one review decision."}},
-			{MutantID: "first", Status: engine.StatusSurvived, SurvivorRank: 1, RankReason: "risk=low", Mutant: engine.Mutant{File: "b.go", Line: 1, Operator: "boolean", Original: "true", Mutated: "false"}},
-			{MutantID: "again", Status: engine.StatusSurvived, SurvivorRank: 3, RankReason: "risk=high", SuggestedSkipReason: "review once", SemanticGroupSize: 2, Mutant: engine.Mutant{File: "c.go", Line: 3, Operator: "returns", Original: "x", Mutated: "z", SemanticGroup: "sort:1", GroupLabel: "sort comparator boundary", GroupReason: "Boundary mutations inside sort comparator closures often collapse into one review decision."}},
+			{MutantID: "later", Status: engine.StatusSurvived, SurvivorRank: 2, RankReason: "risk=high", Actionability: "medium", SuggestedSkipReason: "review once", SemanticGroupSize: 2, Mutant: engine.Mutant{File: "a.go", Line: 2, Operator: "returns", Original: "x", Mutated: "y", SemanticGroup: "sort:1", GroupLabel: "sort comparator boundary", GroupReason: "Boundary mutations inside sort comparator closures often collapse into one review decision."}},
+			{MutantID: "first", Status: engine.StatusSurvived, SurvivorRank: 1, RankReason: "risk=low", Actionability: "high", Mutant: engine.Mutant{File: "b.go", Line: 1, Operator: "boolean", Original: "true", Mutated: "false"}},
+			{MutantID: "again", Status: engine.StatusSurvived, SurvivorRank: 3, RankReason: "risk=high", Actionability: "medium", SuggestedSkipReason: "review once", SemanticGroupSize: 2, Mutant: engine.Mutant{File: "c.go", Line: 3, Operator: "returns", Original: "x", Mutated: "z", SemanticGroup: "sort:1", GroupLabel: "sort comparator boundary", GroupReason: "Boundary mutations inside sort comparator closures often collapse into one review decision."}},
 		},
 	}
 
@@ -194,6 +213,142 @@ func TestSurvivorsReportIsRanked(t *testing.T) {
 	}
 }
 
+func TestSurvivorsActionableOnlyFiltersAndCollapses(t *testing.T) {
+	run := engine.RunResult{
+		Environment: engine.Environment{OS: "windows"},
+		Mutants: []engine.MutantResult{
+			{MutantID: "group-lead", Status: engine.StatusSurvived, SurvivorRank: 1, Actionability: "high", SemanticGroupSize: 2, SuggestedSkipReason: "review once", Mutant: engine.Mutant{File: "a.go", Line: 1, Operator: "conditionals-boundary", Original: "<", Mutated: "<=", SemanticGroup: "sort:1", GroupLabel: "sort comparator boundary", GroupReason: "shared review"}},
+			{MutantID: "group-dup", Status: engine.StatusSurvived, SurvivorRank: 2, Actionability: "medium", SemanticGroupSize: 2, SuggestedSkipReason: "review once", Mutant: engine.Mutant{File: "a.go", Line: 2, Operator: "conditionals-boundary", Original: "<", Mutated: "<=", SemanticGroup: "sort:1", GroupLabel: "sort comparator boundary", GroupReason: "shared review"}},
+			{MutantID: "platform", Status: engine.StatusSurvived, SurvivorRank: 3, Actionability: "high", Mutant: engine.Mutant{File: "b.go", Line: 3, Operator: "numeric-literals", Original: "0o755", Mutated: "0", PlatformSensitive: true}},
+			{MutantID: "low", Status: engine.StatusSurvived, SurvivorRank: 4, Actionability: "low", Mutant: engine.Mutant{File: "c.go", Line: 4, Operator: "literals", Original: "1", Mutated: "0"}},
+			{MutantID: "keep", Status: engine.StatusSurvived, SurvivorRank: 5, Actionability: "medium", Mutant: engine.Mutant{File: "d.go", Line: 5, Operator: "logical", Original: "&&", Mutated: "||"}},
+		},
+	}
+
+	text := SurvivorsWithOptions(run, SurvivorsOptions{ActionableOnly: true})
+	for _, want := range []string{
+		"Actionable-only view: showing 2 of 5 survivors (filtered=2 collapsed=1)",
+		"Group sort comparator boundary (2 mutants): shared review",
+		"group-lead",
+		"keep",
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("actionable-only survivors missing %q:\n%s", want, text)
+		}
+	}
+	for _, avoid := range []string{"#2 0.0 group-dup ", "#3 0.0 platform ", "#4 0.0 low "} {
+		if strings.Contains(text, avoid) {
+			t.Fatalf("actionable-only survivors should not include %q:\n%s", avoid, text)
+		}
+	}
+}
+
+func TestSemanticTriageLedgerGroupsAndSuggestsActions(t *testing.T) {
+	run := engine.RunResult{
+		Environment: engine.Environment{OS: "windows"},
+		Mutants: []engine.MutantResult{
+			{MutantID: "group-lead", Status: engine.StatusSurvived, SurvivorRank: 1, Actionability: "high", SemanticGroupSize: 2, SuggestedSkipReason: "review once", Mutant: engine.Mutant{
+				File:                "a.go",
+				Line:                1,
+				Operator:            "conditionals-boundary",
+				Original:            "<",
+				Mutated:             "<=",
+				EquivalentRisk:      "high",
+				SemanticTags:        []string{"equivalence-risk-group", "sort-comparator-boundary"},
+				SemanticGroup:       "sort:1",
+				GroupLabel:          "sort comparator boundary",
+				GroupReason:         "shared review",
+				SuggestedSkipReason: "review once",
+			}},
+			{MutantID: "group-dup", Status: engine.StatusSurvived, SurvivorRank: 2, Actionability: "medium", SemanticGroupSize: 2, Mutant: engine.Mutant{
+				File:           "a.go",
+				Line:           2,
+				Operator:       "conditionals-boundary",
+				Original:       "<",
+				Mutated:        "<=",
+				EquivalentRisk: "high",
+				SemanticGroup:  "sort:1",
+				GroupLabel:     "sort comparator boundary",
+				GroupReason:    "shared review",
+			}},
+			{MutantID: "platform", Status: engine.StatusSurvived, Actionability: "medium", Mutant: engine.Mutant{
+				File:                "b.go",
+				Line:                3,
+				Operator:            "numeric-literals",
+				Original:            "0o755",
+				Mutated:             "0",
+				PlatformSensitive:   true,
+				SuggestedSkipReason: "review on windows first",
+			}},
+			{MutantID: "timeout", Status: engine.StatusTimedOut, FailureKind: "non_progress_loop", StatusReason: "loop variable stopped making progress", Mutant: engine.Mutant{
+				File:                "c.go",
+				Line:                4,
+				Operator:            "inc-dec",
+				Original:            "i++",
+				Mutated:             "i--",
+				NonProgressRisk:     "high",
+				SuggestedSkipReason: "reviewed-skip or quarantine if timeout confirms the loop is non-progress",
+			}},
+			{MutantID: "fallback", Status: engine.StatusSurvived, Actionability: "low", SuggestedSkipReason: "reviewed-skip after confirming fallback equivalence", Mutant: engine.Mutant{
+				File:           "d.go",
+				Line:           5,
+				Operator:       "literals",
+				Original:       "\"fallback\"",
+				Mutated:        "\"noop\"",
+				EquivalentRisk: "high",
+				SemanticTags:   []string{"fallback-literal"},
+			}},
+		},
+	}
+
+	data, err := SemanticTriageLedger(run)
+	if err != nil {
+		t.Fatalf("SemanticTriageLedger returned error: %v", err)
+	}
+	var ledger TriageLedger
+	if err := json.Unmarshal(data, &ledger); err != nil {
+		t.Fatalf("ledger is not JSON: %v", err)
+	}
+	if ledger.SchemaVersion != "1" {
+		t.Fatalf("ledger schema version = %q, want 1", ledger.SchemaVersion)
+	}
+	if len(ledger.Entries) != 4 {
+		t.Fatalf("ledger entry count = %d, want 4: %+v", len(ledger.Entries), ledger.Entries)
+	}
+
+	var (
+		groupEntry    *TriageLedgerEntry
+		platformEntry *TriageLedgerEntry
+		timeoutEntry  *TriageLedgerEntry
+		fallbackEntry *TriageLedgerEntry
+	)
+	for i := range ledger.Entries {
+		entry := &ledger.Entries[i]
+		switch entry.MutantID {
+		case "group-lead":
+			groupEntry = entry
+		case "platform":
+			platformEntry = entry
+		case "timeout":
+			timeoutEntry = entry
+		case "fallback":
+			fallbackEntry = entry
+		}
+	}
+	if groupEntry == nil || groupEntry.SuggestedAction != "reviewed-skip" || groupEntry.GroupKey != "sort:1" || groupEntry.GroupSize != 2 || len(groupEntry.MutantIDs) != 2 {
+		t.Fatalf("group entry unexpected: %+v", groupEntry)
+	}
+	if platformEntry == nil || platformEntry.Risk != "platform-sensitive" || platformEntry.SuggestedAction != "reviewed-skip" || !strings.Contains(strings.Join(platformEntry.Evidence, " "), "goos=windows") {
+		t.Fatalf("platform entry unexpected: %+v", platformEntry)
+	}
+	if timeoutEntry == nil || timeoutEntry.Risk != "non-progress-timeout" || timeoutEntry.SuggestedAction != "quarantine" || !strings.Contains(strings.Join(timeoutEntry.Evidence, " "), "failure_kind=non_progress_loop") {
+		t.Fatalf("timeout entry unexpected: %+v", timeoutEntry)
+	}
+	if fallbackEntry == nil || fallbackEntry.Risk != "equivalence-risk" || fallbackEntry.SuggestedAction != "reviewed-skip" || !strings.Contains(strings.Join(fallbackEntry.Evidence, " "), "equivalent_risk=high") {
+		t.Fatalf("fallback entry unexpected: %+v", fallbackEntry)
+	}
+}
+
 func TestWriteFormatsHonorsConfiguredFormats(t *testing.T) {
 	dir := t.TempDir()
 	run := engine.RunResult{SchemaVersion: "1", Summary: engine.Summary{Total: 1}}
@@ -201,7 +356,7 @@ func TestWriteFormatsHonorsConfiguredFormats(t *testing.T) {
 	if err := WriteFormats(dir, run, []string{"summary", "json"}); err != nil {
 		t.Fatalf("WriteFormats returned error: %v", err)
 	}
-	for _, want := range []string{"summary.txt", "survivors.txt", "mutation-report.json"} {
+	for _, want := range []string{"summary.txt", "survivors.txt", "mutation-report.json", "semantic-triage-ledger.json"} {
 		if _, err := os.Stat(filepath.Join(dir, want)); err != nil {
 			t.Fatalf("missing %s: %v", want, err)
 		}
@@ -217,7 +372,7 @@ func TestWriteFormatsDefaultsAndErrors(t *testing.T) {
 	if err := WriteFormats(dir, run, nil); err != nil {
 		t.Fatalf("WriteFormats default formats returned error: %v", err)
 	}
-	for _, want := range []string{"summary.txt", "survivors.txt", "mutation-report.json"} {
+	for _, want := range []string{"summary.txt", "survivors.txt", "mutation-report.json", "semantic-triage-ledger.json"} {
 		if _, err := os.Stat(filepath.Join(dir, want)); err != nil {
 			t.Fatalf("default formats missing %s: %v", want, err)
 		}
@@ -231,14 +386,94 @@ func TestWriteFormatsDefaultsAndErrors(t *testing.T) {
 	}
 }
 
+func TestWriteFormatsWithActionableViewWritesExtraArtifact(t *testing.T) {
+	dir := t.TempDir()
+	run := engine.RunResult{
+		Environment: engine.Environment{OS: "windows"},
+		Summary:     engine.Summary{Total: 2, Survived: 2},
+		Mutants: []engine.MutantResult{
+			{MutantID: "keep", Status: engine.StatusSurvived, SurvivorRank: 1, Actionability: "high", Mutant: engine.Mutant{File: "a.go", Line: 1, Operator: "logical", Original: "&&", Mutated: "||"}},
+			{MutantID: "hide", Status: engine.StatusSurvived, SurvivorRank: 2, Actionability: "high", Mutant: engine.Mutant{File: "b.go", Line: 2, Operator: "numeric-literals", Original: "0o755", Mutated: "0", PlatformSensitive: true}},
+		},
+	}
+
+	if err := WriteFormatsWithOptions(dir, run, []string{"summary"}, WriteOptions{ActionableOnly: true}); err != nil {
+		t.Fatalf("WriteFormatsWithOptions returned error: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "semantic-triage-ledger.json")); err != nil {
+		t.Fatalf("semantic-triage-ledger.json missing: %v", err)
+	}
+	data, err := os.ReadFile(filepath.Join(dir, "survivors-actionable.txt"))
+	if err != nil {
+		t.Fatalf("survivors-actionable.txt missing: %v", err)
+	}
+	text := string(data)
+	if !strings.Contains(text, "keep") || strings.Contains(text, "hide") {
+		t.Fatalf("unexpected actionable-only artifact:\n%s", text)
+	}
+}
+
 func TestJUnitHTMLAndWriteAll(t *testing.T) {
 	dir := t.TempDir()
 	run := engine.RunResult{
 		SchemaVersion: "1",
-		Summary:       engine.Summary{Total: 2, Killed: 1, Survived: 1, Score: 50},
+		Summary: engine.Summary{
+			Total:                 3,
+			Killed:                1,
+			Survived:              2,
+			Score:                 50,
+			LongStandingSurvivors: 1,
+			Actionable: engine.ActionableSummary{
+				RawScore:                50,
+				ActionableScore:         33.33,
+				Survivors:               2,
+				ActionableSurvivors:     2,
+				TrueActionableSurvivors: 2,
+			},
+		},
 		Mutants: []engine.MutantResult{
 			{MutantID: "killed", Status: engine.StatusKilled, Mutant: engine.Mutant{Diff: "-a\n+b\n"}},
-			{MutantID: "survived", Status: engine.StatusSurvived, StatusReason: "tests passed", Mutant: engine.Mutant{Diff: "<unsafe>"}},
+			{
+				MutantID:           "survived",
+				Status:             engine.StatusSurvived,
+				StatusReason:       "tests passed",
+				Duration:           3 * time.Second,
+				SurvivorRank:       1,
+				Actionability:      "high",
+				SurvivorAgeRuns:    6,
+				HistoryStatus:      "long_standing_survivor",
+				SuggestedTestScope: "./pkg",
+				NearestTests:       []string{"pkg/foo_test.go"},
+				RankReason:         "risk=medium recommendation=fast-ci",
+				Mutant: engine.Mutant{
+					File:           "pkg/foo.go",
+					Line:           10,
+					Function:       "Check",
+					Operator:       "conditionals-boundary",
+					Original:       "<",
+					Mutated:        "<=",
+					EquivalentRisk: "high",
+					GroupLabel:     "sort comparator boundary",
+					Diff:           "<unsafe>",
+					Description:    "Changed < to <= in Check.",
+				},
+			},
+			{
+				MutantID:      "survived-2",
+				Status:        engine.StatusSurvived,
+				Duration:      250 * time.Millisecond,
+				SurvivorRank:  2,
+				Actionability: "medium",
+				Mutant: engine.Mutant{
+					File:           "pkg/bar.go",
+					Line:           11,
+					Operator:       "logical",
+					Original:       "&&",
+					Mutated:        "||",
+					EquivalentRisk: "medium",
+					Diff:           "-old\n+new\n",
+				},
+			},
 		},
 	}
 
@@ -246,17 +481,40 @@ func TestJUnitHTMLAndWriteAll(t *testing.T) {
 	if err != nil {
 		t.Fatalf("JUnit returned error: %v", err)
 	}
-	if !strings.Contains(string(junit), `tests="2"`) || !strings.Contains(string(junit), `failures="1"`) {
+	if !strings.Contains(string(junit), `tests="3"`) || !strings.Contains(string(junit), `failures="2"`) {
 		t.Fatalf("unexpected junit: %s", junit)
 	}
 	html := HTML(run)
-	if !strings.Contains(html, "cervomut mutation report") || strings.Contains(html, "<unsafe>") {
-		t.Fatalf("html should include report title and escape diffs: %s", html)
+	for _, want := range []string{
+		"cervomut survivor review workbench",
+		`id="filter-search"`,
+		`id="filter-actionability"`,
+		`id="filter-group"`,
+		`id="filter-history"`,
+		`id="filter-age"`,
+		`id="filter-timing"`,
+		"Group shortcuts",
+		"Operator shortcuts",
+		`data-mutant-row`,
+		`data-survivor="true"`,
+		`data-actionability="high"`,
+		`data-group="sort comparator boundary"`,
+		"Actionable score",
+		"True actionable survivors",
+		"long-standing (5+ runs)",
+		"slow (&gt;2s)",
+	} {
+		if !strings.Contains(html, want) {
+			t.Fatalf("html workbench missing %q:\n%s", want, html)
+		}
+	}
+	if strings.Contains(html, "<unsafe>") {
+		t.Fatalf("html should escape diffs: %s", html)
 	}
 	if err := WriteAll(dir, run); err != nil {
 		t.Fatalf("WriteAll returned error: %v", err)
 	}
-	for _, want := range []string{"summary.txt", "survivors.txt", "mutation-report.json", "junit.xml", "index.html"} {
+	for _, want := range []string{"summary.txt", "survivors.txt", "mutation-report.json", "semantic-triage-ledger.json", "junit.xml", "index.html"} {
 		if _, err := os.Stat(filepath.Join(dir, want)); err != nil {
 			t.Fatalf("missing %s: %v", want, err)
 		}

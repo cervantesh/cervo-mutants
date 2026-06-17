@@ -159,6 +159,7 @@ type Reports struct {
 	Output            string   `yaml:"output" json:"output"`
 	Formats           []string `yaml:"formats" json:"formats"`
 	Detail            string   `yaml:"detail" json:"detail"`
+	ActionableOnly    bool     `yaml:"actionable_only" json:"actionable_only"`
 	IncludeDiff       bool     `yaml:"include_diff" json:"include_diff"`
 	IncludeTestOutput string   `yaml:"include_test_output" json:"include_test_output"`
 	MaxOutputBytes    int      `yaml:"max_output_bytes" json:"max_output_bytes"`
@@ -211,6 +212,7 @@ func Defaults() Config {
 			Output:            ".cervomut/reports",
 			Formats:           []string{"summary", "json", "junit", "html"},
 			Detail:            "standard",
+			ActionableOnly:    false,
 			IncludeDiff:       true,
 			IncludeTestOutput: "failed-only",
 			MaxOutputBytes:    12000,

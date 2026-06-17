@@ -1,0 +1,475 @@
+{
+  "schema_version": "1",
+  "summary": {
+    "total": 4,
+    "killed": 1,
+    "survived": 2,
+    "not_covered": 1,
+    "timed_out": 1,
+    "memory_killed": 0,
+    "compile_error": 0,
+    "skipped": 0,
+    "skipped_resource": 0,
+    "pending_budget": 0,
+    "ignored": 0,
+    "quarantined": 0,
+    "cached": 0,
+    "expired_quarantine": 0,
+    "generated_mutants": 5,
+    "covered_mutants": 4,
+    "executed_mutants": 4,
+    "effective_mutants": 3,
+    "score_denominator": 4,
+    "score": 50,
+    "effective_score": 33.33,
+    "test_efficacy": 33.33,
+    "mutation_coverage": 80,
+    "actionable": {
+      "raw_score": 50,
+      "actionable_score": 50,
+      "survivors": 2,
+      "actionable_survivors": 1,
+      "true_actionable_survivors": 1,
+      "equivalent_risk_survivors": 1,
+      "platform_sensitive_survivors": 1,
+      "non_progress_timeouts": 1,
+      "semantic_group_review_units": 1,
+      "collapsed_semantic_duplicates": 0
+    },
+    "denominator_health": {
+      "generated": 5,
+      "covered": 4,
+      "executed": 4,
+      "effective": 3,
+      "score_denominator": 4,
+      "killed": 1,
+      "survived": 2,
+      "not_covered": 1,
+      "timed_out": 1,
+      "memory_killed": 0,
+      "compile_error": 0,
+      "skipped": 0,
+      "skipped_resource": 0,
+      "pending_budget": 0,
+      "ignored": 0,
+      "quarantined": 0,
+      "healthy": false,
+      "warnings": [
+        "timed_out_exceeds_effective"
+      ]
+    },
+    "high_risk_survivors": 1,
+    "suppression_report_only": 1,
+    "suppression_lower_priority": 1,
+    "suppression_suppressed": 0,
+    "suppression_quarantine_required": 1,
+    "new_survivors": 1,
+    "long_standing_survivors": 1,
+    "platform_sensitive_survivors": 1,
+    "non_progress_timeouts": 1,
+    "timeout_risk_statistics": {
+      "high": 1
+    },
+    "equivalent_risk_statistics": {
+      "high": 1,
+      "medium": 2
+    },
+    "semantic_group_statistics": {
+      "sort comparator boundary": 2
+    },
+    "mutator_statistics": {
+      "conditionals-boundary": {
+        "total": 2,
+        "killed": 0,
+        "survived": 2,
+        "not_covered": 0,
+        "timed_out": 0,
+        "memory_killed": 0,
+        "compile_error": 0,
+        "skipped": 0,
+        "skipped_resource": 0,
+        "pending_budget": 0,
+        "ignored": 0,
+        "quarantined": 0,
+        "cached": 0,
+        "recommendation": "fast-ci",
+        "equivalent_risk": "high"
+      },
+      "logical": {
+        "total": 1,
+        "killed": 1,
+        "survived": 0,
+        "not_covered": 0,
+        "timed_out": 0,
+        "memory_killed": 0,
+        "compile_error": 0,
+        "skipped": 0,
+        "skipped_resource": 0,
+        "pending_budget": 0,
+        "ignored": 0,
+        "quarantined": 0,
+        "cached": 0,
+        "recommendation": "conservative",
+        "equivalent_risk": "medium"
+      },
+      "numeric-literals": {
+        "total": 1,
+        "killed": 0,
+        "survived": 0,
+        "not_covered": 1,
+        "timed_out": 0,
+        "memory_killed": 0,
+        "compile_error": 0,
+        "skipped": 0,
+        "skipped_resource": 0,
+        "pending_budget": 0,
+        "ignored": 0,
+        "quarantined": 0,
+        "cached": 0,
+        "recommendation": "nightly",
+        "equivalent_risk": "medium"
+      }
+    }
+  },
+  "environment": {
+    "os": "windows",
+    "arch": "amd64",
+    "go_version": "go1.25.6",
+    "tool_version": "v0.2.0",
+    "working_dir": "C:\\dev\\CervoSoft\\CervoMutant",
+    "temp_dir": "C:\\Users\\tester\\AppData\\Local\\Temp\\cervomut-123",
+    "temp_root": "C:\\Users\\tester\\AppData\\Local\\CervoMutants\\tmp",
+    "isolation": "overlay",
+    "workers": 2,
+    "test_timeout": "30s",
+    "budget": "10m0s",
+    "go_flags": "-count=1 -p=1",
+    "go_max_procs": "2",
+    "go_mem_limit": "2GiB",
+    "ci": "github-actions",
+    "windows_onedrive": true,
+    "warnings": [
+      "workspace path contains spaces",
+      "temp root overridden away from OneDrive-backed temp"
+    ],
+    "extra": {
+      "campaign": "nightly"
+    }
+  },
+  "slice": {
+    "enabled": true,
+    "slice_by": "package",
+    "shard_index": 2,
+    "shard_count": 4,
+    "group_count": 12,
+    "selected_groups": 3,
+    "max_files_per_run": 5,
+    "selected_files": 2,
+    "max_mutants_per_package": 10,
+    "selected_mutants": 4
+  },
+  "checkpoint": {
+    "fingerprint": "abc123checkpoint",
+    "mutants": 4,
+    "includes_file_digests": true,
+    "reason": "final"
+  },
+  "stopped_reason": "completed",
+  "last_completed_mutant": "pkg/review.go:27:logical:abc123def456",
+  "thresholds": {
+    "fail_under": 75,
+    "failed": false
+  },
+  "baseline": {
+    "enabled": true,
+    "regression": true,
+    "new_survivors": [
+      "pkg/review.go:19:conditionals-boundary:123"
+    ],
+    "previous_score": 66.67,
+    "current_score": 50
+  },
+  "cache": {
+    "hits": 2,
+    "misses": 2
+  },
+  "quarantine": {
+    "active": 1,
+    "expired": 0
+  },
+  "history": {
+    "enabled": true,
+    "path": ".cervomut/history.json",
+    "loaded_mutants": 3,
+    "updated_mutants": 4,
+    "new_survivors": 1,
+    "long_standing_survivors": 1,
+    "operator_useful_survivor_yield": {
+      "conditionals-boundary": 0.5,
+      "logical": 0.2
+    }
+  },
+  "mutants": [
+    {
+      "mutant_id": "pkg/review.go:19:conditionals-boundary:123456789abc",
+      "status": "survived",
+      "memory_peak_bytes": 1048576,
+      "duration": 3500000000,
+      "selected_tests": [
+        "go",
+        "test",
+        "./pkg/review"
+      ],
+      "status_reason": "tests passed with mutant applied",
+      "selection_reason": "coverage profile matched mutant line",
+      "coverage_source": "coverage-mode",
+      "output": "ok",
+      "mutant": {
+        "id": "pkg/review.go:19:conditionals-boundary:123456789abc",
+        "module": "fixture",
+        "package": "./pkg/review",
+        "file": "pkg/review.go",
+        "line": 19,
+        "function": "ReviewIDs",
+        "operator": "conditionals-boundary",
+        "original": "\u003c",
+        "mutated": "\u003c=",
+        "start_offset": 120,
+        "end_offset": 121,
+        "unified_diff": "--- pkg/review.go\n+++ pkg/review.go\n@@\n-return ids[i] \u003c ids[j]\n+return ids[i] \u003c= ids[j]\n",
+        "fingerprint": "123456789abcdef0",
+        "hint": "Add a strict ordering assertion.",
+        "description": "Changed \u003c to \u003c= in ReviewIDs.",
+        "nearby_tests": [
+          "pkg/review_test.go",
+          "pkg/review_sort_test.go"
+        ],
+        "equivalent_risk": "high",
+        "recommendation": "fast-ci",
+        "compile_error_risk": "low",
+        "semantic_tags": [
+          "equivalence-risk-group",
+          "sort-comparator-boundary"
+        ],
+        "semantic_group": "sort-boundary:pkg/review.go:19",
+        "group_label": "sort comparator boundary",
+        "group_reason": "Boundary mutations inside sort comparator closures often collapse into one review decision.",
+        "suggested_skip_reason": "review once for this semantic group before treating each survivor independently",
+        "suppression_audit": [
+          {
+            "name": "equivalence-audit",
+            "action": "lower-priority",
+            "reason": "semantic grouping",
+            "evidence_level": "suspected",
+            "reviewer_count": 1
+          }
+        ]
+      },
+      "survivor_rank": 1,
+      "rank_score": 140,
+      "rank_reason": "risk=high recommendation=fast-ci nearby_tests=2",
+      "actionability": "high",
+      "suggested_test_scope": "./pkg/review",
+      "suggested_skip_reason": "review once for this semantic group before treating each survivor independently",
+      "nearest_tests": [
+        "pkg/review_test.go",
+        "pkg/review_sort_test.go"
+      ],
+      "semantic_group_size": 2,
+      "previous_status": "killed",
+      "first_seen": "2026-06-10T00:00:00Z",
+      "last_seen": "2026-06-17T00:00:00Z",
+      "survivor_age_runs": 1,
+      "history_status": "new_survivor",
+      "operator_historical_yield": 0.5
+    },
+    {
+      "mutant_id": "pkg/review.go:27:logical:abc123def456",
+      "status": "killed",
+      "memory_peak_bytes": 786432,
+      "duration": 240000000,
+      "selected_tests": [
+        "go",
+        "test",
+        "./pkg/review",
+        "-run",
+        "TestReviewIDs"
+      ],
+      "status_reason": "test TestReviewIDs failed",
+      "selection_reason": "package selected from mutant file",
+      "coverage_source": "package-mode-prefilter",
+      "output": "FAIL\tpkg/review",
+      "mutant": {
+        "id": "pkg/review.go:27:logical:abc123def456",
+        "module": "fixture",
+        "package": "./pkg/review",
+        "file": "pkg/review.go",
+        "line": 27,
+        "function": "ReviewIDs",
+        "operator": "logical",
+        "original": "\u0026\u0026",
+        "mutated": "||",
+        "start_offset": 222,
+        "end_offset": 224,
+        "unified_diff": "--- pkg/review.go\n+++ pkg/review.go\n@@\n-if ready \u0026\u0026 strict {\n+if ready || strict {\n",
+        "fingerprint": "abc123def4567890",
+        "hint": "Assert combined-branch behavior.",
+        "description": "Changed \u0026\u0026 to || in ReviewIDs.",
+        "nearby_tests": [
+          "pkg/review_test.go"
+        ],
+        "equivalent_risk": "medium",
+        "recommendation": "conservative",
+        "compile_error_risk": "low"
+      },
+      "previous_status": "survived",
+      "first_seen": "2026-06-01T00:00:00Z",
+      "last_seen": "2026-06-17T00:00:00Z",
+      "survivor_age_runs": 6,
+      "history_status": "resolved_survivor",
+      "operator_historical_yield": 0.2
+    },
+    {
+      "mutant_id": "pkg/fs.go:41:numeric-literals:ff00ff00aa11",
+      "status": "survived",
+      "memory_peak_bytes": 512000,
+      "duration": 1100000000,
+      "selected_tests": [
+        "go",
+        "test",
+        "./pkg/fs"
+      ],
+      "status_reason": "tests passed on Windows permission-mode mutation",
+      "selection_reason": "coverage profile matched mutant file",
+      "coverage_source": "coverage-mode-file-fallback",
+      "output": "ok",
+      "mutant": {
+        "id": "pkg/fs.go:41:numeric-literals:ff00ff00aa11",
+        "module": "fixture",
+        "package": "./pkg/fs",
+        "file": "pkg/fs.go",
+        "line": 41,
+        "function": "EnsureDir",
+        "operator": "numeric-literals",
+        "original": "0o755",
+        "mutated": "0",
+        "start_offset": 88,
+        "end_offset": 93,
+        "unified_diff": "--- pkg/fs.go\n+++ pkg/fs.go\n@@\n-os.MkdirAll(path, 0o755)\n+os.MkdirAll(path, 0)\n",
+        "fingerprint": "ff00ff00aa112233",
+        "hint": "Review on the target OS before treating permission-mode survivors as actionable.",
+        "description": "Changed 0o755 to 0 in EnsureDir.",
+        "nearby_tests": [
+          "pkg/fs_test.go"
+        ],
+        "equivalent_risk": "medium",
+        "recommendation": "nightly",
+        "compile_error_risk": "low",
+        "semantic_tags": [
+          "platform-sensitive"
+        ],
+        "platform_sensitive": true,
+        "suggested_skip_reason": "review on the target OS before treating this permission-mode mutant as actionable"
+      },
+      "survivor_rank": 2,
+      "rank_score": 95,
+      "rank_reason": "risk=medium recommendation=nightly platform-sensitive windows",
+      "actionability": "medium",
+      "suggested_test_scope": "./pkg/fs",
+      "suggested_skip_reason": "review on the target OS before treating this permission-mode mutant as actionable",
+      "nearest_tests": [
+        "pkg/fs_test.go"
+      ],
+      "semantic_group_size": 1,
+      "previous_status": "survived",
+      "first_seen": "2026-05-20T00:00:00Z",
+      "last_seen": "2026-06-17T00:00:00Z",
+      "survivor_age_runs": 7,
+      "history_status": "long_standing_survivor",
+      "operator_historical_yield": 0.4
+    },
+    {
+      "mutant_id": "pkg/loop.go:12:inc-dec:998877665544",
+      "status": "timed_out",
+      "failure_kind": "non_progress_loop",
+      "memory_peak_bytes": 1280000,
+      "duration": 2800000000,
+      "selected_tests": [
+        "go",
+        "test",
+        "./pkg/loop"
+      ],
+      "status_reason": "loop variable stopped making progress",
+      "selection_reason": "package selected from mutant file",
+      "coverage_source": "coverage-mode",
+      "output": "timed out after 3s",
+      "mutant": {
+        "id": "pkg/loop.go:12:inc-dec:998877665544",
+        "module": "fixture",
+        "package": "./pkg/loop",
+        "file": "pkg/loop.go",
+        "line": 12,
+        "function": "Walk",
+        "operator": "inc-dec",
+        "original": "i++",
+        "mutated": "i--",
+        "start_offset": 44,
+        "end_offset": 47,
+        "unified_diff": "--- pkg/loop.go\n+++ pkg/loop.go\n@@\n-for i := 0; i \u003c len(xs); i++ {\n+for i := 0; i \u003c len(xs); i-- {\n",
+        "fingerprint": "9988776655443322",
+        "hint": "Check loop termination behavior.",
+        "description": "Changed i++ to i-- in Walk.",
+        "nearby_tests": [
+          "pkg/loop_test.go"
+        ],
+        "equivalent_risk": "medium",
+        "recommendation": "review",
+        "compile_error_risk": "low",
+        "semantic_tags": [
+          "non-progress-loop-risk"
+        ],
+        "non_progress_risk": "high",
+        "suggested_skip_reason": "reviewed-skip or quarantine if timeout confirms a non-progress loop"
+      },
+      "suggested_skip_reason": "reviewed-skip or quarantine if timeout confirms a non-progress loop"
+    },
+    {
+      "mutant_id": "pkg/fs.go:50:numeric-literals:001122334455",
+      "status": "not_covered",
+      "memory_peak_bytes": 128000,
+      "duration": 100000000,
+      "selected_tests": [
+        "go",
+        "test",
+        "./pkg/fs"
+      ],
+      "status_reason": "coverage profile did not match mutant file",
+      "selection_reason": "coverage prefilter did not match mutant file",
+      "coverage_source": "package-mode-prefilter",
+      "output": "",
+      "mutant": {
+        "id": "pkg/fs.go:50:numeric-literals:001122334455",
+        "module": "fixture",
+        "package": "./pkg/fs",
+        "file": "pkg/fs.go",
+        "line": 50,
+        "function": "EnsureDir",
+        "operator": "numeric-literals",
+        "original": "2",
+        "mutated": "1",
+        "start_offset": 144,
+        "end_offset": 145,
+        "unified_diff": "--- pkg/fs.go\n+++ pkg/fs.go\n@@\n-return 2\n+return 1\n",
+        "fingerprint": "0011223344556677",
+        "hint": "Add direct assertions for the uncovered branch.",
+        "description": "Changed 2 to 1 in EnsureDir.",
+        "nearby_tests": [
+          "pkg/fs_test.go"
+        ],
+        "equivalent_risk": "medium",
+        "recommendation": "nightly",
+        "compile_error_risk": "low"
+      }
+    }
+  ]
+}

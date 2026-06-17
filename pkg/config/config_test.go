@@ -40,6 +40,9 @@ func TestDefaultsAreAdoptionFriendlyAndAllIn(t *testing.T) {
 			t.Fatalf("report formats = %#v, want %#v", cfg.Reports.Formats, wantReports)
 		}
 	}
+	if cfg.Reports.ActionableOnly {
+		t.Fatalf("reports actionable_only should default to false: %+v", cfg.Reports)
+	}
 }
 
 func TestLoadParsesYAMLAndValidatesEnums(t *testing.T) {
@@ -64,6 +67,8 @@ execution:
   checkpoint_includes: ["testdata/**", "golden/**"]
 selection:
   mode: coverage
+reports:
+  actionable_only: true
 ci:
   fail_under: 80
 limits:
@@ -89,6 +94,9 @@ limits:
 	}
 	if cfg.Mutators.Profile != "aggressive" || cfg.Execution.Workers != 2 || cfg.Selection.Mode != "coverage" || cfg.CI.FailUnder != 80 {
 		t.Fatalf("overrides not loaded: %+v", cfg)
+	}
+	if !cfg.Reports.ActionableOnly {
+		t.Fatalf("reports actionable_only not loaded: %+v", cfg.Reports)
 	}
 	if cfg.Execution.TempRoot != "C:/cervomut-tmp" {
 		t.Fatalf("temp_root not loaded: %+v", cfg.Execution)

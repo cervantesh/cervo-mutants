@@ -5,19 +5,20 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/cervantesh/cervo-mutants/internal/testharness"
 )
 
 func TestRunCompareUsesPartialCervoReportAndResume(t *testing.T) {
-	root := t.TempDir()
-	manifestPath := filepath.Join(root, "manifest.json")
-	writeManifest(t, manifestPath, []Repo{{
+	fixture := testharness.NewDir(t)
+	manifestPath := fixture.WriteJSON(t, "manifest.json", Manifest{SchemaVersion: "1", Repos: []Repo{{
 		Name:   "pflag",
 		URL:    "https://example.com/pflag.git",
 		Target: "./...",
 		Lane:   "validation",
 		Domain: "cli",
-	}})
-	workRoot := filepath.Join(root, "work")
+	}}})
+	workRoot := filepath.Join(fixture.Root, "work")
 	repoDir := filepath.Join(workRoot, "pflag")
 	if err := os.MkdirAll(repoDir, 0o755); err != nil {
 		t.Fatal(err)
@@ -40,7 +41,7 @@ func TestRunCompareUsesPartialCervoReportAndResume(t *testing.T) {
 	run, err := RunCompare(context.Background(), CompareOptions{
 		ManifestPath:      manifestPath,
 		WorkRoot:          workRoot,
-		OutputRoot:        filepath.Join(root, "out"),
+		OutputRoot:        filepath.Join(fixture.Root, "out"),
 		Names:             []string{"pflag"},
 		Tools:             []string{"cervomut"},
 		CompareTargetMode: "package-root",
@@ -77,7 +78,7 @@ func TestRunCompareUsesPartialCervoReportAndResume(t *testing.T) {
 	secondRun, err := RunCompare(context.Background(), CompareOptions{
 		ManifestPath:      manifestPath,
 		WorkRoot:          workRoot,
-		OutputRoot:        filepath.Join(root, "out"),
+		OutputRoot:        filepath.Join(fixture.Root, "out"),
 		Names:             []string{"pflag"},
 		Tools:             []string{"cervomut"},
 		CompareTargetMode: "package-root",
@@ -99,16 +100,15 @@ func TestRunCompareUsesPartialCervoReportAndResume(t *testing.T) {
 }
 
 func TestRunCompareClassifiesGremlinsPanicFromLog(t *testing.T) {
-	root := t.TempDir()
-	manifestPath := filepath.Join(root, "manifest.json")
-	writeManifest(t, manifestPath, []Repo{{
+	fixture := testharness.NewDir(t)
+	manifestPath := fixture.WriteJSON(t, "manifest.json", Manifest{SchemaVersion: "1", Repos: []Repo{{
 		Name:   "cobra",
 		URL:    "https://example.com/cobra.git",
 		Target: "./doc",
 		Lane:   "tuning",
 		Domain: "cli",
-	}})
-	workRoot := filepath.Join(root, "work")
+	}}})
+	workRoot := filepath.Join(fixture.Root, "work")
 	repoDir := filepath.Join(workRoot, "cobra")
 	if err := os.MkdirAll(repoDir, 0o755); err != nil {
 		t.Fatal(err)
@@ -127,7 +127,7 @@ func TestRunCompareClassifiesGremlinsPanicFromLog(t *testing.T) {
 	run, err := RunCompare(context.Background(), CompareOptions{
 		ManifestPath:      manifestPath,
 		WorkRoot:          workRoot,
-		OutputRoot:        filepath.Join(root, "out"),
+		OutputRoot:        filepath.Join(fixture.Root, "out"),
 		Names:             []string{"cobra"},
 		Tools:             []string{"gremlins"},
 		CompareTargetMode: "manifest",
@@ -147,5 +147,39 @@ func TestRunCompareClassifiesGremlinsPanicFromLog(t *testing.T) {
 	}
 	if run.Results[0].Status != "panic" {
 		t.Fatalf("status = %q, want panic", run.Results[0].Status)
+	}
+}
+
+func TestRunCompareRecordsMissingRepo(t *testing.T) {
+	fixture := testharness.NewDir(t)
+	manifestPath := fixture.WriteJSON(t, "manifest.json", Manifest{SchemaVersion: "1", Repos: []Repo{{
+		Name:   "missing",
+		URL:    "https://example.com/missing.git",
+		Target: "./...",
+	}}})
+
+	run, err := RunCompare(context.Background(), CompareOptions{
+		ManifestPath:      manifestPath,
+		WorkRoot:          fixture.Path("work"),
+		OutputRoot:        fixture.Path("out"),
+		Names:             []string{"missing"},
+		Tools:             []string{"cervomut"},
+		CompareTargetMode: "manifest",
+		CervoBinary:       "cervomut",
+		GremlinsBinary:    "gremlins",
+		GomuBinary:        "gomu",
+		GoMutestingBinary: "go-mutesting",
+	})
+	if err != nil {
+		t.Fatalf("RunCompare returned error: %v", err)
+	}
+	if len(run.Results) != 1 {
+		t.Fatalf("results = %d, want 1", len(run.Results))
+	}
+	if run.Results[0].Status != "missing_repo" || run.Results[0].Tool != "all" {
+		t.Fatalf("missing repo classification mismatch: %+v", run.Results[0])
+	}
+	if _, err := os.Stat(run.SummaryPath); err != nil {
+		t.Fatalf("summary missing: %v", err)
 	}
 }

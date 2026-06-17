@@ -129,6 +129,105 @@ func TestMemoryLimitExceededBranches(t *testing.T) {
 	}
 }
 
+func TestPlatformAndEnvironmentHelperCoverage(t *testing.T) {
+	plain := platformSensitivityPriority(Mutant{})
+	sensitive := platformSensitivityPriority(Mutant{PlatformSensitive: true})
+	if runtime.GOOS == "windows" {
+		if sensitive <= plain {
+			t.Fatalf("platformSensitivityPriority sensitive=%d plain=%d", sensitive, plain)
+		}
+	} else if sensitive != plain {
+		t.Fatalf("platformSensitivityPriority should stay neutral off Windows: sensitive=%d plain=%d", sensitive, plain)
+	}
+	if !pathMentionsOneDrive(filepath.Join("C:\\Users", "user", "OneDrive - Personal", "repo")) {
+		t.Fatal("pathMentionsOneDrive should detect OneDrive paths")
+	}
+	if pathMentionsOneDrive(filepath.Join("C:\\dev", "repo")) {
+		t.Fatal("pathMentionsOneDrive should ignore non-OneDrive paths")
+	}
+	if runtime.GOOS == "windows" {
+		if isWSL() {
+			t.Fatal("isWSL should be false on native Windows")
+		}
+		if got := cgroupSummary(); got != "" {
+			t.Fatalf("cgroupSummary on Windows = %q, want empty", got)
+		}
+	}
+}
+
+func TestCommandAndReportHelperCoverage(t *testing.T) {
+	if got := normalizeGoFlags("-count=1 -p 4 ./..."); got != "-count=1 ./... -p=1" {
+		t.Fatalf("normalizeGoFlags = %q", got)
+	}
+	if got := normalizeGoFlags("-count=1 -p=4 ./..."); got != "-count=1 ./... -p=1" {
+		t.Fatalf("normalizeGoFlags inline = %q", got)
+	}
+	if !isGoTestFlagWithSeparateValue("-run") || isGoTestFlagWithSeparateValue("-run=TestOne") {
+		t.Fatal("isGoTestFlagWithSeparateValue classification changed")
+	}
+
+	scoped := packageScopedCommand([]string{"go", "test", "-run", "TestOne", "./...", "-count=1"}, "./pkg/sample")
+	if strings.Join(scoped, " ") != "go test -run TestOne ./pkg/sample -count=1" {
+		t.Fatalf("packageScopedCommand replace = %q", strings.Join(scoped, " "))
+	}
+	scoped = packageScopedCommand([]string{"go", "test", "-count=1"}, "./pkg/sample")
+	if strings.Join(scoped, " ") != "go test -count=1 ./pkg/sample" {
+		t.Fatalf("packageScopedCommand append = %q", strings.Join(scoped, " "))
+	}
+
+	withProfile := withCoverProfile([]string{"go", "test", "./..."}, "cover.out")
+	if strings.Join(withProfile, " ") != "go test -coverprofile cover.out ./..." {
+		t.Fatalf("withCoverProfile add = %q", strings.Join(withProfile, " "))
+	}
+	preserved := withCoverProfile([]string{"go", "test", "-coverprofile", "existing.out", "./..."}, "cover.out")
+	if strings.Join(preserved, " ") != "go test -coverprofile existing.out ./..." {
+		t.Fatalf("withCoverProfile preserve = %q", strings.Join(preserved, " "))
+	}
+	if got := withCoverProfile([]string{"bash", "script.sh"}, "cover.out"); strings.Join(got, " ") != "bash script.sh" {
+		t.Fatalf("withCoverProfile non-go = %q", strings.Join(got, " "))
+	}
+
+	longStack := strings.Repeat("stack-frame\n", 2000)
+	if got := trimStack(longStack); len(got) != 8192 {
+		t.Fatalf("trimStack length = %d, want 8192", len(got))
+	}
+
+	if !allStatus([]MutantResult{{Status: StatusKilled}, {Status: StatusKilled}}, StatusKilled) {
+		t.Fatal("allStatus should accept uniform statuses")
+	}
+	if allStatus([]MutantResult{{Status: StatusKilled}, {Status: StatusSurvived}}, StatusKilled) {
+		t.Fatal("allStatus should reject mixed statuses")
+	}
+	results := []MutantResult{
+		{MutantID: "skip", Status: StatusPendingBudget},
+		{MutantID: "later", Status: StatusSurvived},
+	}
+	if got := lastCompletedMutant(results); got != "later" {
+		t.Fatalf("lastCompletedMutant = %q, want later", got)
+	}
+
+	dir := t.TempDir()
+	eventPath := filepath.Join(dir, "progress.jsonl")
+	if err := appendProgressEvent(eventPath, ProgressEvent{SchemaVersion: "1", Message: "ok"}); err != nil {
+		t.Fatalf("appendProgressEvent returned error: %v", err)
+	}
+	if text, err := os.ReadFile(eventPath); err != nil || !strings.Contains(string(text), `"schema_version":"1"`) {
+		t.Fatalf("appendProgressEvent data mismatch: %v %s", err, text)
+	}
+
+	cfg := config.Defaults()
+	cfg.Reports.Output = filepath.Join(dir, "reports")
+	result := RunResult{SchemaVersion: "1", Summary: Summary{Total: 1}}
+	if err := New(cfg).writeReports(result); err != nil {
+		t.Fatalf("writeReports returned error: %v", err)
+	}
+	for _, name := range []string{"mutation-report.json", "summary.txt"} {
+		if _, err := os.Stat(filepath.Join(cfg.Reports.Output, name)); err != nil {
+			t.Fatalf("%s missing: %v", name, err)
+		}
+	}
+}
+
 func TestWriteFileAtomicAndPrepareOverlayMutationBranches(t *testing.T) {
 	dir := t.TempDir()
 	target := filepath.Join(dir, "report.json")

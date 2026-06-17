@@ -1,0 +1,219 @@
+<!doctype html><html><head><meta charset="utf-8"><title>cervomut survivor review workbench</title><style>
+body{margin:0;font-family:Segoe UI,Arial,sans-serif;background:#f5f7fb;color:#162033}
+.page{max-width:1600px;margin:0 auto;padding:24px}
+.hero{display:grid;gap:16px;margin-bottom:20px}
+.hero h1{margin:0;font-size:30px}
+.hero p{margin:0;color:#44506a;max-width:960px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.card{background:#fff;border:1px solid #d9e1f2;border-radius:14px;padding:14px 16px;box-shadow:0 4px 18px rgba(22,32,51,.05)}
+.card-label{display:block;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#61708e}
+.card-value{display:block;margin-top:8px;font-size:28px;font-weight:700}
+.toolbar,.table-shell,.summary-shell{background:#fff;border:1px solid #d9e1f2;border-radius:14px;box-shadow:0 4px 18px rgba(22,32,51,.05)}
+.toolbar{padding:16px;margin-bottom:20px}
+.toolbar h2,.table-shell h2{margin:0 0 12px 0;font-size:18px}
+.toolbar-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;align-items:end}
+.toolbar label{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#34415c}
+.toolbar input,.toolbar select,.toolbar button{font:inherit}
+.toolbar input,.toolbar select{padding:9px 10px;border:1px solid #bec9df;border-radius:10px;background:#fff}
+.toolbar button{padding:10px 12px;border:0;border-radius:10px;background:#163b73;color:#fff;font-weight:700;cursor:pointer}
+.toolbar button.quick-filter{background:#eaf0fb;color:#163b73}
+.toolbar button:hover{filter:brightness(.98)}
+.checkbox-label{justify-content:flex-end}
+.checkbox-label input{margin-right:8px}
+.quick-nav{display:grid;gap:10px;margin-top:16px}
+.chip-row{display:flex;flex-wrap:wrap;gap:8px}
+.chip-row strong{display:inline-flex;align-items:center;font-size:13px;color:#44506a}
+.results-meta{margin-top:16px;font-size:13px;color:#44506a}
+.table-shell{padding:16px}
+table{width:100%;border-collapse:collapse}
+th,td{padding:12px 10px;border-top:1px solid #e2e8f4;vertical-align:top;text-align:left}
+thead th{border-top:0;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:#61708e}
+tbody tr:hover{background:#f8fafe}
+.badge{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;font-size:12px;font-weight:700;background:#edf2ff;color:#27457a}
+.badge-survived{background:#fce8cc;color:#8a5100}
+.badge-killed{background:#dff7e5;color:#176338}
+.badge-timed_out,.badge-memory_killed,.badge-compile_error{background:#fde2e1;color:#8d261d}
+.badge-not_covered,.badge-pending_budget,.badge-skipped_resource,.badge-cached,.badge-quarantined,.badge-ignored,.badge-skipped{background:#eceff5;color:#55637d}
+.mutant-id{font-family:Consolas,monospace;font-size:12px;color:#49556e}
+.mutant-main{display:grid;gap:4px}
+.mutant-file{font-weight:700}
+.mutant-meta{font-size:12px;color:#61708e}
+.mutant-swap{font-family:Consolas,monospace;font-size:12px;color:#24314a}
+.mutant-reason{font-size:12px;color:#44506a;max-width:360px}
+.diff-shell details{min-width:320px}
+.diff-shell summary{cursor:pointer;font-weight:600;color:#163b73}
+.diff-shell pre{margin:8px 0 0 0;padding:10px;border-radius:10px;background:#0f1727;color:#e5eefc;overflow:auto;font-size:12px}
+.summary-shell{margin-top:20px;padding:16px}
+.summary-shell details summary{cursor:pointer;font-weight:700;color:#163b73}
+.summary-shell pre{white-space:pre-wrap}
+@media (max-width:960px){.page{padding:16px}.table-shell{overflow:auto}}
+</style></head><body><div class="page"><section class="hero"><div><h1>cervomut survivor review workbench</h1><p>Survivors stay first-class, but the full raw run remains in the table below. Use the filters to narrow review by actionability, semantic grouping, operator, equivalent risk, survivor history, age, and timing signal without mutating the underlying report.</p></div><div class="cards"><div class="card"><span class="card-label">Survivors</span><span class="card-value">2</span></div><div class="card"><span class="card-label">Actionable score</span><span class="card-value">50.00%</span></div><div class="card"><span class="card-label">True actionable survivors</span><span class="card-value">1</span></div><div class="card"><span class="card-label">Semantic review units</span><span class="card-value">1</span></div><div class="card"><span class="card-label">Long-standing survivors</span><span class="card-value">1</span></div><div class="card"><span class="card-label">Slow timing signals</span><span class="card-value">2</span></div><div class="card"><span class="card-label">Raw score</span><span class="card-value">50.00%</span></div></div></section><section class="toolbar"><h2>Filters</h2><div class="toolbar-grid"><label for="filter-search"><span>Search</span><input id="filter-search" type="search" placeholder="mutant id, file, operator, tests, reason"></label><label for="filter-status"><span>Status</span><select id="filter-status"><option value="all">All statuses</option><option value="killed">killed (1)</option><option value="not_covered">not covered (1)</option><option value="survived">survived (2)</option><option value="timed_out">timed out (1)</option></select></label><label for="filter-actionability"><span>Actionability</span><select id="filter-actionability"><option value="all">All actionability</option><option value="high">high (1)</option><option value="medium">medium (1)</option><option value="unknown">unknown (3)</option></select></label><label for="filter-operator"><span>Operator</span><select id="filter-operator"><option value="all">All operators</option><option value="conditionals-boundary">conditionals-boundary (1)</option><option value="inc-dec">inc-dec (1)</option><option value="logical">logical (1)</option><option value="numeric-literals">numeric-literals (2)</option></select></label><label for="filter-risk"><span>Equivalent risk</span><select id="filter-risk"><option value="all">All risk levels</option><option value="high">high (1)</option><option value="medium">medium (4)</option></select></label><label for="filter-group"><span>Semantic group</span><select id="filter-group"><option value="all">All groups</option><option value="sort comparator boundary">sort comparator boundary (1)</option><option value="ungrouped">ungrouped (4)</option></select></label><label for="filter-history"><span>History</span><select id="filter-history"><option value="all">All history</option><option value="long_standing_survivor">long standing survivor (1)</option><option value="new_survivor">new survivor (1)</option><option value="resolved_survivor">resolved survivor (1)</option><option value="unknown">unknown (2)</option></select></label><label for="filter-age"><span>Survivor age</span><select id="filter-age"><option value="all">All age bands</option><option value="long-standing">long-standing (5+ runs) (2)</option><option value="new">new (1 run) (1)</option><option value="unknown">unknown (2)</option></select></label><label for="filter-timing"><span>Timing signal</span><select id="filter-timing"><option value="all">All timing signals</option><option value="fast">fast (&lt;500ms) (2)</option><option value="medium">medium (0.5-2s) (1)</option><option value="slow">slow (&gt;2s) (2)</option></select></label><label class="checkbox-label"><span>Primary queue</span><span><input id="filter-survivors-only" type="checkbox" checked>Survivors only</span></label><label><span>Reset</span><button id="filter-reset" type="button">Reset filters</button></label></div><div class="quick-nav"><div class="chip-row"><strong>Group shortcuts</strong><button class="quick-filter" type="button" data-filter-target="filter-group" data-filter-value="ungrouped">ungrouped (4)</button><button class="quick-filter" type="button" data-filter-target="filter-group" data-filter-value="sort comparator boundary">sort comparator boundary (1)</button></div></div><div class="quick-nav"><div class="chip-row"><strong>Operator shortcuts</strong><button class="quick-filter" type="button" data-filter-target="filter-operator" data-filter-value="numeric-literals">numeric-literals (2)</button><button class="quick-filter" type="button" data-filter-target="filter-operator" data-filter-value="conditionals-boundary">conditionals-boundary (1)</button><button class="quick-filter" type="button" data-filter-target="filter-operator" data-filter-value="inc-dec">inc-dec (1)</button><button class="quick-filter" type="button" data-filter-target="filter-operator" data-filter-value="logical">logical (1)</button></div></div><div class="results-meta">Showing <strong id="visible-count">2</strong> of <strong id="total-count">5</strong> mutants. Visible survivors: <strong id="visible-survivors">2</strong>. Visible semantic groups: <strong id="visible-groups">1</strong>.</div></section><section class="table-shell"><h2>Review queue</h2><table id="mutant-table"><thead><tr><th>Rank</th><th>Mutant</th><th>Status</th><th>Review signal</th><th>History and timing</th><th>Reason and skip guidance</th><th>Diff</th></tr></thead><tbody><tr data-mutant-row data-status="survived" data-survivor="true" data-actionability="high" data-operator="conditionals-boundary" data-risk="high" data-group="sort comparator boundary" data-history="new_survivor" data-age="new" data-timing="slow" data-search="pkg/review.go:19:conditionals-boundary:123456789abc pkg/review.go ReviewIDs conditionals-boundary Changed &lt; to &lt;= in ReviewIDs. tests passed with mutant applied risk=high recommendation=fast-ci nearby_tests=2 sort comparator boundary new_survivor new (1 run) slow (&gt;2s) ./pkg/review review once for this semantic group before treating each survivor independently pkg/review_test.go pkg/review_sort_test.go"><td><span class="badge">#1</span></td><td><div class="mutant-main"><div class="mutant-file">pkg/review.go:19</div><div class="mutant-meta">function=ReviewIDs</div><div class="mutant-swap">&lt; -> &lt;=</div><div class="mutant-id">pkg/review.go:19:conditionals-boundary:123456789abc</div><div class="mutant-meta">Changed &lt; to &lt;= in ReviewIDs.</div></div></td><td><span class="badge badge-survived">survived</span></td><td><div class="mutant-meta">actionability=high</div><div class="mutant-meta">operator=conditionals-boundary</div><div class="mutant-meta">equivalent_risk=high</div><div class="mutant-meta">group=sort comparator boundary</div><div class="mutant-meta">suggested_scope=./pkg/review</div><div class="mutant-meta">nearby_tests=pkg/review_test.go, pkg/review_sort_test.go</div></td><td><div class="mutant-meta">history=new survivor</div><div class="mutant-meta">age=new (1 run)</div><div class="mutant-meta">duration=3.5s</div><div class="mutant-meta">timing_signal=slow (&gt;2s)</div></td><td><div class="mutant-reason">tests passed with mutant applied</div><div class="mutant-meta">rank=risk=high recommendation=fast-ci nearby_tests=2</div><div class="mutant-meta">skip=review once for this semantic group before treating each survivor independently</div></td><td class="diff-shell"><details><summary>Show diff</summary><pre>--- pkg/review.go
++++ pkg/review.go
+@@
+-return ids[i] &lt; ids[j]
++return ids[i] &lt;= ids[j]
+</pre></details></td></tr><tr data-mutant-row data-status="survived" data-survivor="true" data-actionability="medium" data-operator="numeric-literals" data-risk="medium" data-group="ungrouped" data-history="long_standing_survivor" data-age="long-standing" data-timing="medium" data-search="pkg/fs.go:41:numeric-literals:ff00ff00aa11 pkg/fs.go EnsureDir numeric-literals Changed 0o755 to 0 in EnsureDir. tests passed on Windows permission-mode mutation risk=medium recommendation=nightly platform-sensitive windows ungrouped long_standing_survivor long-standing (5+ runs) medium (0.5-2s) ./pkg/fs review on the target OS before treating this permission-mode mutant as actionable pkg/fs_test.go"><td><span class="badge">#2</span></td><td><div class="mutant-main"><div class="mutant-file">pkg/fs.go:41</div><div class="mutant-meta">function=EnsureDir</div><div class="mutant-swap">0o755 -> 0</div><div class="mutant-id">pkg/fs.go:41:numeric-literals:ff00ff00aa11</div><div class="mutant-meta">Changed 0o755 to 0 in EnsureDir.</div></div></td><td><span class="badge badge-survived">survived</span></td><td><div class="mutant-meta">actionability=medium</div><div class="mutant-meta">operator=numeric-literals</div><div class="mutant-meta">equivalent_risk=medium</div><div class="mutant-meta">group=ungrouped</div><div class="mutant-meta">platform-sensitive</div><div class="mutant-meta">suggested_scope=./pkg/fs</div><div class="mutant-meta">nearby_tests=pkg/fs_test.go</div></td><td><div class="mutant-meta">history=long standing survivor</div><div class="mutant-meta">age=long-standing (5+ runs)</div><div class="mutant-meta">duration=1.1s</div><div class="mutant-meta">timing_signal=medium (0.5-2s)</div></td><td><div class="mutant-reason">tests passed on Windows permission-mode mutation</div><div class="mutant-meta">rank=risk=medium recommendation=nightly platform-sensitive windows</div><div class="mutant-meta">skip=review on the target OS before treating this permission-mode mutant as actionable</div></td><td class="diff-shell"><details><summary>Show diff</summary><pre>--- pkg/fs.go
++++ pkg/fs.go
+@@
+-os.MkdirAll(path, 0o755)
++os.MkdirAll(path, 0)
+</pre></details></td></tr><tr data-mutant-row data-status="not_covered" data-survivor="false" data-actionability="unknown" data-operator="numeric-literals" data-risk="medium" data-group="ungrouped" data-history="unknown" data-age="unknown" data-timing="fast" data-search="pkg/fs.go:50:numeric-literals:001122334455 pkg/fs.go EnsureDir numeric-literals Changed 2 to 1 in EnsureDir. coverage profile did not match mutant file  ungrouped unknown unknown fast (&lt;500ms)   "><td><span class="badge">-</span></td><td><div class="mutant-main"><div class="mutant-file">pkg/fs.go:50</div><div class="mutant-meta">function=EnsureDir</div><div class="mutant-swap">2 -> 1</div><div class="mutant-id">pkg/fs.go:50:numeric-literals:001122334455</div><div class="mutant-meta">Changed 2 to 1 in EnsureDir.</div></div></td><td><span class="badge badge-not_covered">not covered</span></td><td><div class="mutant-meta">actionability=unknown</div><div class="mutant-meta">operator=numeric-literals</div><div class="mutant-meta">equivalent_risk=medium</div><div class="mutant-meta">group=ungrouped</div></td><td><div class="mutant-meta">history=unknown</div><div class="mutant-meta">age=unknown</div><div class="mutant-meta">duration=100ms</div><div class="mutant-meta">timing_signal=fast (&lt;500ms)</div></td><td><div class="mutant-reason">coverage profile did not match mutant file</div></td><td class="diff-shell"><details><summary>Show diff</summary><pre>--- pkg/fs.go
++++ pkg/fs.go
+@@
+-return 2
++return 1
+</pre></details></td></tr><tr data-mutant-row data-status="timed_out" data-survivor="false" data-actionability="unknown" data-operator="inc-dec" data-risk="medium" data-group="ungrouped" data-history="unknown" data-age="unknown" data-timing="slow" data-search="pkg/loop.go:12:inc-dec:998877665544 pkg/loop.go Walk inc-dec Changed i++ to i-- in Walk. loop variable stopped making progress  ungrouped unknown unknown slow (&gt;2s)  reviewed-skip or quarantine if timeout confirms a non-progress loop "><td><span class="badge">-</span></td><td><div class="mutant-main"><div class="mutant-file">pkg/loop.go:12</div><div class="mutant-meta">function=Walk</div><div class="mutant-swap">i++ -> i--</div><div class="mutant-id">pkg/loop.go:12:inc-dec:998877665544</div><div class="mutant-meta">Changed i++ to i-- in Walk.</div></div></td><td><span class="badge badge-timed_out">timed out</span><div class="mutant-meta">failure=non_progress_loop</div></td><td><div class="mutant-meta">actionability=unknown</div><div class="mutant-meta">operator=inc-dec</div><div class="mutant-meta">equivalent_risk=medium</div><div class="mutant-meta">group=ungrouped</div><div class="mutant-meta">non_progress_risk=high</div></td><td><div class="mutant-meta">history=unknown</div><div class="mutant-meta">age=unknown</div><div class="mutant-meta">duration=2.8s</div><div class="mutant-meta">timing_signal=slow (&gt;2s)</div></td><td><div class="mutant-reason">loop variable stopped making progress</div><div class="mutant-meta">skip=reviewed-skip or quarantine if timeout confirms a non-progress loop</div></td><td class="diff-shell"><details><summary>Show diff</summary><pre>--- pkg/loop.go
++++ pkg/loop.go
+@@
+-for i := 0; i &lt; len(xs); i++ {
++for i := 0; i &lt; len(xs); i-- {
+</pre></details></td></tr><tr data-mutant-row data-status="killed" data-survivor="false" data-actionability="unknown" data-operator="logical" data-risk="medium" data-group="ungrouped" data-history="resolved_survivor" data-age="long-standing" data-timing="fast" data-search="pkg/review.go:27:logical:abc123def456 pkg/review.go ReviewIDs logical Changed &amp;&amp; to || in ReviewIDs. test TestReviewIDs failed  ungrouped resolved_survivor long-standing (5+ runs) fast (&lt;500ms)   "><td><span class="badge">-</span></td><td><div class="mutant-main"><div class="mutant-file">pkg/review.go:27</div><div class="mutant-meta">function=ReviewIDs</div><div class="mutant-swap">&amp;&amp; -> ||</div><div class="mutant-id">pkg/review.go:27:logical:abc123def456</div><div class="mutant-meta">Changed &amp;&amp; to || in ReviewIDs.</div></div></td><td><span class="badge badge-killed">killed</span></td><td><div class="mutant-meta">actionability=unknown</div><div class="mutant-meta">operator=logical</div><div class="mutant-meta">equivalent_risk=medium</div><div class="mutant-meta">group=ungrouped</div></td><td><div class="mutant-meta">history=resolved survivor</div><div class="mutant-meta">age=long-standing (5+ runs)</div><div class="mutant-meta">duration=240ms</div><div class="mutant-meta">timing_signal=fast (&lt;500ms)</div></td><td><div class="mutant-reason">test TestReviewIDs failed</div></td><td class="diff-shell"><details><summary>Show diff</summary><pre>--- pkg/review.go
++++ pkg/review.go
+@@
+-if ready &amp;&amp; strict {
++if ready || strict {
+</pre></details></td></tr></tbody></table></section><section class="summary-shell"><details><summary>Raw summary</summary><pre>Effective mutation score: 33.33%
+Raw mutation score: 50.00%
+Generated mutants: 5
+Covered mutants: 4
+Executed mutants: 4
+Effective mutants: 3
+Score denominator: 4
+Killed: 1
+Survived: 2
+Not covered: 1
+Pending budget: 0
+Skipped resource: 0
+Quarantined: 0
+Timed out: 1
+Memory killed: 0
+Compile errors: 0
+Test efficacy: 33.33%
+Mutation coverage: 80.00%
+Actionable score: 50.00%
+Actionable survivors: 1
+True actionable survivors: 1
+Equivalent-risk survivors: 1
+Semantic review units: 1
+Collapsed semantic duplicates: 0
+High-risk survivors: 1
+New survivors: 1
+Long-standing survivors: 1
+Platform-sensitive survivors: 1
+Non-progress timeouts: 1
+Suppression audits: report_only=1 lower_priority=1 suppress=0 quarantine_required=1
+Denominator health: healthy=false generated=5 covered=4 executed=4 effective=3 score_denominator=4 killed=1 survived=2 not_covered=1 pending_budget=0 skipped_resource=0 timed_out=1 memory_killed=0 compile_error=0
+Denominator warnings: timed_out_exceeds_effective
+Equivalent-risk statistics:
+- high: 1
+- medium: 2
+Mutator statistics:
+- conditionals-boundary: total=2 killed=0 survived=2 not_covered=0 pending_budget=0 skipped_resource=0 timed_out=0 memory_killed=0 compile_error=0 recommendation=fast-ci equivalent_risk=high
+- logical: total=1 killed=1 survived=0 not_covered=0 pending_budget=0 skipped_resource=0 timed_out=0 memory_killed=0 compile_error=0 recommendation=conservative equivalent_risk=medium
+- numeric-literals: total=1 killed=0 survived=0 not_covered=1 pending_budget=0 skipped_resource=0 timed_out=0 memory_killed=0 compile_error=0 recommendation=nightly equivalent_risk=medium
+Semantic-group statistics:
+- sort comparator boundary: 2
+Slice: by=package shard=2/4 groups=12 selected_groups=3 files=2 max_files=5 max_mutants_per_package=10 selected_mutants=4
+Stopped reason: completed
+Last completed mutant: pkg/review.go:27:logical:abc123def456
+Environment: os=windows arch=amd64 go=go1.25.6 isolation=overlay workers=2 timeout=30s wsl=false onedrive=true
+Temp root: C:\Users\tester\AppData\Local\CervoMutants\tmp
+Environment warnings: workspace path contains spaces, temp root overridden away from OneDrive-backed temp
+</pre></details></section><script>
+(function(){
+  const rows = Array.from(document.querySelectorAll('[data-mutant-row]'));
+  const search = document.getElementById('filter-search');
+  const status = document.getElementById('filter-status');
+  const actionability = document.getElementById('filter-actionability');
+  const operator = document.getElementById('filter-operator');
+  const risk = document.getElementById('filter-risk');
+  const group = document.getElementById('filter-group');
+  const history = document.getElementById('filter-history');
+  const age = document.getElementById('filter-age');
+  const timing = document.getElementById('filter-timing');
+  const survivorsOnly = document.getElementById('filter-survivors-only');
+  const reset = document.getElementById('filter-reset');
+  const visibleCount = document.getElementById('visible-count');
+  const totalCount = document.getElementById('total-count');
+  const visibleSurvivors = document.getElementById('visible-survivors');
+  const visibleGroups = document.getElementById('visible-groups');
+  totalCount.textContent = String(rows.length);
+
+  function matches(control, value) {
+    return control.value === 'all' || control.value === value;
+  }
+
+  function normalize(value) {
+    return (value || '').toLowerCase();
+  }
+
+  function applyFilters() {
+    const term = normalize(search.value).trim();
+    let visible = 0;
+    let survivors = 0;
+    const groups = new Set();
+
+    rows.forEach((row) => {
+      const data = row.dataset;
+      const show =
+        matches(status, data.status) &&
+        matches(actionability, data.actionability) &&
+        matches(operator, data.operator) &&
+        matches(risk, data.risk) &&
+        matches(group, data.group) &&
+        matches(history, data.history) &&
+        matches(age, data.age) &&
+        matches(timing, data.timing) &&
+        (!survivorsOnly.checked || data.survivor === 'true') &&
+        (term === '' || normalize(data.search).includes(term));
+
+      row.hidden = !show;
+      if (!show) {
+        return;
+      }
+      visible += 1;
+      if (data.survivor === 'true') {
+        survivors += 1;
+      }
+      if (data.group && data.group !== 'ungrouped') {
+        groups.add(data.group);
+      }
+    });
+
+    visibleCount.textContent = String(visible);
+    visibleSurvivors.textContent = String(survivors);
+    visibleGroups.textContent = String(groups.size);
+  }
+
+  [search, status, actionability, operator, risk, group, history, age, timing].forEach((control) => {
+    control.addEventListener('input', applyFilters);
+    control.addEventListener('change', applyFilters);
+  });
+  survivorsOnly.addEventListener('change', applyFilters);
+
+  reset.addEventListener('click', function() {
+    search.value = '';
+    [status, actionability, operator, risk, group, history, age, timing].forEach((control) => {
+      control.value = 'all';
+    });
+    survivorsOnly.checked = true;
+    applyFilters();
+  });
+
+  Array.from(document.querySelectorAll('[data-filter-target]')).forEach((button) => {
+    button.addEventListener('click', function() {
+      const target = document.getElementById(button.dataset.filterTarget);
+      if (!target) {
+        return;
+      }
+      target.value = button.dataset.filterValue || 'all';
+      if (target.id === 'filter-group' || target.id === 'filter-operator') {
+        survivorsOnly.checked = true;
+      }
+      applyFilters();
+    });
+  });
+
+  applyFilters();
+})();
+</script></div></body></html>

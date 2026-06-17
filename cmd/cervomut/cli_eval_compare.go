@@ -274,7 +274,13 @@ func cmdPoolCompare(args []string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Pool comparison summary: %s\n", run.SummaryPath)
+	fmt.Printf("Pool comparison raw summary: %s\n", run.SummaryPath)
+	if studyJSON := run.Artifacts["study_json"]; studyJSON != "" {
+		fmt.Printf("Pool comparison study JSON: %s\n", studyJSON)
+	}
+	if summaryMarkdown := run.Artifacts["summary_markdown"]; summaryMarkdown != "" {
+		fmt.Printf("Pool comparison summary markdown: %s\n", summaryMarkdown)
+	}
 	return nil
 }
 

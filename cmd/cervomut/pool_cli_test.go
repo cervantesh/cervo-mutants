@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/cervantesh/cervo-mutants/pkg/pool"
@@ -44,11 +45,28 @@ func TestPoolCompareCommandDispatches(t *testing.T) {
 		if len(opts.Tools) != 2 || opts.Tools[0] != "cervomut" || opts.Tools[1] != "gremlins" {
 			t.Fatalf("unexpected tools: %+v", opts.Tools)
 		}
-		return pool.RunSummary[pool.CompareResult]{SummaryPath: "out/summary.json"}, nil
+		return pool.RunSummary[pool.CompareResult]{
+			SummaryPath: "out/summary.json",
+			Artifacts: map[string]string{
+				"study_json":       "out/comparison-study.json",
+				"summary_markdown": "out/comparison-summary.md",
+			},
+		}, nil
 	}
 
-	if err := run([]string{"pool", "compare", "--manifest", "manifest.json", "--work-root", "work", "--output-root", "out", "--tools", "cervomut,gremlins", "--compare-target-mode", "package-root"}); err != nil {
-		t.Fatalf("pool compare returned error: %v", err)
+	output := captureStdout(t, func() {
+		if err := run([]string{"pool", "compare", "--manifest", "manifest.json", "--work-root", "work", "--output-root", "out", "--tools", "cervomut,gremlins", "--compare-target-mode", "package-root"}); err != nil {
+			t.Fatalf("pool compare returned error: %v", err)
+		}
+	})
+	if !strings.Contains(output, "Pool comparison raw summary: out/summary.json") {
+		t.Fatalf("raw summary output missing:\n%s", output)
+	}
+	if !strings.Contains(output, "Pool comparison study JSON: out/comparison-study.json") {
+		t.Fatalf("study json output missing:\n%s", output)
+	}
+	if !strings.Contains(output, "Pool comparison summary markdown: out/comparison-summary.md") {
+		t.Fatalf("summary markdown output missing:\n%s", output)
 	}
 	if !called {
 		t.Fatal("pool compare handler was not called")

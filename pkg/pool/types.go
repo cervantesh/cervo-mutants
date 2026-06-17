@@ -99,6 +99,7 @@ type MemoryMonitor interface {
 type RunSummary[T any] struct {
 	Results     []T
 	SummaryPath string
+	Artifacts   map[string]string
 }
 
 func writeJSON(path string, value any) error {
@@ -144,6 +145,14 @@ func seconds(start time.Time) float64 {
 
 func summaryPath(root string) string {
 	return filepath.Join(root, "summary.json")
+}
+
+func studyJSONPath(root string) string {
+	return filepath.Join(root, "comparison-study.json")
+}
+
+func studyMarkdownPath(root string) string {
+	return filepath.Join(root, "comparison-summary.md")
 }
 
 func requiredBinary(name, value string) (string, error) {

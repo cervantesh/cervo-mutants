@@ -2,8 +2,10 @@ package pool
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/cervantesh/cervo-mutants/internal/testharness"
@@ -67,6 +69,36 @@ func TestRunCompareUsesPartialCervoReportAndResume(t *testing.T) {
 	}
 	if !got.PartialReportUsed || got.Total != 20 || got.Killed != 12 || got.Survived != 8 {
 		t.Fatalf("partial report not used: %+v", got)
+	}
+	if got.TestEfficacy != 60 {
+		t.Fatalf("test efficacy = %.2f, want 60", got.TestEfficacy)
+	}
+	if len(run.Artifacts) == 0 || run.Artifacts["study_json"] == "" || run.Artifacts["summary_markdown"] == "" {
+		t.Fatalf("workflow artifacts missing: %+v", run.Artifacts)
+	}
+	if _, err := os.Stat(run.Artifacts["study_json"]); err != nil {
+		t.Fatalf("study json missing: %v", err)
+	}
+	if _, err := os.Stat(run.Artifacts["summary_markdown"]); err != nil {
+		t.Fatalf("study markdown missing: %v", err)
+	}
+	var study CompareStudy
+	data, err := os.ReadFile(run.Artifacts["study_json"])
+	if err != nil {
+		t.Fatalf("read study json: %v", err)
+	}
+	if err := json.Unmarshal(data, &study); err != nil {
+		t.Fatalf("study json invalid: %v\n%s", err, data)
+	}
+	if len(study.Repos) != 1 || study.Repos[0].ComparabilityLabel != compareLabelManifestShifted {
+		t.Fatalf("study comparability mismatch: %+v", study)
+	}
+	md, err := os.ReadFile(run.Artifacts["summary_markdown"])
+	if err != nil {
+		t.Fatalf("read study markdown: %v", err)
+	}
+	if !strings.Contains(string(md), "Comparison Study") || !strings.Contains(string(md), "`manifest_equivalent=false`") {
+		t.Fatalf("study markdown missing workflow summary:\n%s", md)
 	}
 	if len(runner.specs) != 1 {
 		t.Fatalf("command count = %d, want 1", len(runner.specs))
@@ -181,5 +213,20 @@ func TestRunCompareRecordsMissingRepo(t *testing.T) {
 	}
 	if _, err := os.Stat(run.SummaryPath); err != nil {
 		t.Fatalf("summary missing: %v", err)
+	}
+	studyPath := run.Artifacts["study_json"]
+	if studyPath == "" {
+		t.Fatalf("study artifact missing: %+v", run.Artifacts)
+	}
+	data, err := os.ReadFile(studyPath)
+	if err != nil {
+		t.Fatalf("read study json: %v", err)
+	}
+	var study CompareStudy
+	if err := json.Unmarshal(data, &study); err != nil {
+		t.Fatalf("study json invalid: %v\n%s", err, data)
+	}
+	if len(study.Repos) != 1 || study.Repos[0].ComparabilityLabel != compareLabelNotComparable {
+		t.Fatalf("missing repo study label mismatch: %+v", study)
 	}
 }

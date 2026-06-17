@@ -50,42 +50,48 @@ type CompareOptions struct {
 }
 
 type CompareResult struct {
-	Repo               string  `json:"repo"`
-	Target             string  `json:"target"`
-	EffectiveTarget    string  `json:"effective_target"`
-	TargetMode         string  `json:"target_mode"`
-	ManifestEquivalent bool    `json:"manifest_equivalent"`
-	ApplesToApplesKey  string  `json:"apples_to_apples_key"`
-	Lane               string  `json:"lane"`
-	Domain             string  `json:"domain"`
-	Tool               string  `json:"tool"`
-	Exit               int     `json:"exit"`
-	Seconds            float64 `json:"seconds"`
-	Total              int     `json:"total"`
-	Killed             int     `json:"killed"`
-	Survived           int     `json:"survived"`
-	NotCovered         int     `json:"not_covered"`
-	NotViable          int     `json:"not_viable,omitempty"`
-	Errors             int     `json:"errors"`
-	TimedOut           int     `json:"timed_out"`
-	Score              float64 `json:"score"`
-	PartialReportUsed  bool    `json:"partial_report_used,omitempty"`
-	Status             string  `json:"status"`
-	Note               string  `json:"note"`
-	Log                string  `json:"log"`
+	Repo                string   `json:"repo"`
+	Target              string   `json:"target"`
+	EffectiveTarget     string   `json:"effective_target"`
+	TargetMode          string   `json:"target_mode"`
+	ManifestEquivalent  bool     `json:"manifest_equivalent"`
+	ApplesToApplesKey   string   `json:"apples_to_apples_key"`
+	Lane                string   `json:"lane"`
+	Domain              string   `json:"domain"`
+	Tool                string   `json:"tool"`
+	Exit                int      `json:"exit"`
+	Seconds             float64  `json:"seconds"`
+	Total               int      `json:"total"`
+	Killed              int      `json:"killed"`
+	Survived            int      `json:"survived"`
+	NotCovered          int      `json:"not_covered"`
+	NotViable           int      `json:"not_viable,omitempty"`
+	Errors              int      `json:"errors"`
+	TimedOut            int      `json:"timed_out"`
+	Score               float64  `json:"score"`
+	TestEfficacy        float64  `json:"test_efficacy,omitempty"`
+	MutationCoverage    float64  `json:"mutation_coverage,omitempty"`
+	DenominatorWarnings []string `json:"denominator_warnings,omitempty"`
+	PartialReportUsed   bool     `json:"partial_report_used,omitempty"`
+	Status              string   `json:"status"`
+	Note                string   `json:"note"`
+	Log                 string   `json:"log"`
 }
 
 type compareMetrics struct {
-	Total             int
-	Killed            int
-	Survived          int
-	NotCovered        int
-	NotViable         int
-	Errors            int
-	TimedOut          int
-	Score             float64
-	PartialReportUsed bool
-	Status            string
+	Total               int
+	Killed              int
+	Survived            int
+	NotCovered          int
+	NotViable           int
+	Errors              int
+	TimedOut            int
+	Score               float64
+	TestEfficacy        float64
+	MutationCoverage    float64
+	DenominatorWarnings []string
+	PartialReportUsed   bool
+	Status              string
 }
 
 type toolSpec struct {
@@ -194,29 +200,32 @@ func RunCompare(ctx context.Context, opts CompareOptions) (RunSummary[CompareRes
 			}
 			status, note := classifyCompareStatus(tool.parser, exit, metrics, logPath, tool.report)
 			results = append(results, CompareResult{
-				Repo:               repo.Name,
-				Target:             repo.Target,
-				EffectiveTarget:    tool.effectiveTarget,
-				TargetMode:         tool.targetMode,
-				ManifestEquivalent: repo.Target == tool.effectiveTarget,
-				ApplesToApplesKey:  tool.targetMode + ":" + tool.effectiveTarget,
-				Lane:               repo.Lane,
-				Domain:             repo.Domain,
-				Tool:               tool.name,
-				Exit:               exit,
-				Seconds:            roundSeconds(started),
-				Total:              metrics.Total,
-				Killed:             metrics.Killed,
-				Survived:           metrics.Survived,
-				NotCovered:         metrics.NotCovered,
-				NotViable:          metrics.NotViable,
-				Errors:             metrics.Errors,
-				TimedOut:           metrics.TimedOut,
-				Score:              metrics.Score,
-				PartialReportUsed:  metrics.PartialReportUsed,
-				Status:             status,
-				Note:               note,
-				Log:                logPath,
+				Repo:                repo.Name,
+				Target:              repo.Target,
+				EffectiveTarget:     tool.effectiveTarget,
+				TargetMode:          tool.targetMode,
+				ManifestEquivalent:  repo.Target == tool.effectiveTarget,
+				ApplesToApplesKey:   tool.targetMode + ":" + tool.effectiveTarget,
+				Lane:                repo.Lane,
+				Domain:              repo.Domain,
+				Tool:                tool.name,
+				Exit:                exit,
+				Seconds:             roundSeconds(started),
+				Total:               metrics.Total,
+				Killed:              metrics.Killed,
+				Survived:            metrics.Survived,
+				NotCovered:          metrics.NotCovered,
+				NotViable:           metrics.NotViable,
+				Errors:              metrics.Errors,
+				TimedOut:            metrics.TimedOut,
+				Score:               metrics.Score,
+				TestEfficacy:        metrics.TestEfficacy,
+				MutationCoverage:    metrics.MutationCoverage,
+				DenominatorWarnings: append([]string{}, metrics.DenominatorWarnings...),
+				PartialReportUsed:   metrics.PartialReportUsed,
+				Status:              status,
+				Note:                note,
+				Log:                 logPath,
 			})
 			if err := writeJSON(summaryPath, results); err != nil {
 				return RunSummary[CompareResult]{}, err
@@ -227,7 +236,11 @@ func RunCompare(ctx context.Context, opts CompareOptions) (RunSummary[CompareRes
 	if err := writeJSON(summaryPath, results); err != nil {
 		return RunSummary[CompareResult]{}, err
 	}
-	return RunSummary[CompareResult]{Results: results, SummaryPath: summaryPath}, nil
+	artifacts, err := writeCompareWorkflowArtifacts(opts.ManifestPath, opts.OutputRoot, results)
+	if err != nil {
+		return RunSummary[CompareResult]{Results: results, SummaryPath: summaryPath}, err
+	}
+	return RunSummary[CompareResult]{Results: results, SummaryPath: summaryPath, Artifacts: artifacts}, nil
 }
 
 func buildToolSpecs(repo Repo, repoOut string, opts CompareOptions) []toolSpec {
@@ -297,7 +310,19 @@ func parseToolMetrics(tool toolSpec, repoOut, logPath string) (compareMetrics, e
 		if err != nil {
 			return compareMetrics{}, err
 		}
-		return compareMetrics{Total: parsed.Total, Killed: parsed.Killed, Survived: parsed.Survived, NotCovered: parsed.NotCovered, Errors: parsed.Errors, TimedOut: parsed.TimedOut, Score: parsed.Score, PartialReportUsed: partial}, nil
+		return compareMetrics{
+			Total:               parsed.Total,
+			Killed:              parsed.Killed,
+			Survived:            parsed.Survived,
+			NotCovered:          parsed.NotCovered,
+			Errors:              parsed.Errors,
+			TimedOut:            parsed.TimedOut,
+			Score:               parsed.Score,
+			TestEfficacy:        parsed.TestEfficacy,
+			MutationCoverage:    parsed.MutationCoverage,
+			DenominatorWarnings: append([]string{}, parsed.DenominatorHealth.Warnings...),
+			PartialReportUsed:   partial,
+		}, nil
 	case "gremlins":
 		if _, err := os.Stat(tool.report); err != nil {
 			return compareMetrics{}, nil
@@ -306,7 +331,20 @@ func parseToolMetrics(tool toolSpec, repoOut, logPath string) (compareMetrics, e
 		if err != nil {
 			return compareMetrics{}, err
 		}
-		return compareMetrics{Total: parsed.Total, Killed: parsed.Killed, Survived: parsed.Survived, NotCovered: parsed.NotCovered, NotViable: parsed.NotViable, Errors: parsed.Errors, TimedOut: parsed.TimedOut, Score: parsed.Score, Status: parsed.Status}, nil
+		return compareMetrics{
+			Total:               parsed.Total,
+			Killed:              parsed.Killed,
+			Survived:            parsed.Survived,
+			NotCovered:          parsed.NotCovered,
+			NotViable:           parsed.NotViable,
+			Errors:              parsed.Errors,
+			TimedOut:            parsed.TimedOut,
+			Score:               parsed.Score,
+			TestEfficacy:        parsed.TestEfficacy,
+			MutationCoverage:    parsed.MutationCoverage,
+			DenominatorWarnings: append([]string{}, parsed.DenominatorHealth.Warnings...),
+			Status:              parsed.Status,
+		}, nil
 	case "gomu":
 		if _, err := os.Stat(tool.report); err != nil {
 			return compareMetrics{}, nil
@@ -318,7 +356,19 @@ func parseToolMetrics(tool toolSpec, repoOut, logPath string) (compareMetrics, e
 		if err != nil {
 			return compareMetrics{}, err
 		}
-		return compareMetrics{Total: parsed.Total, Killed: parsed.Killed, Survived: parsed.Survived, NotCovered: parsed.NotCovered, NotViable: parsed.NotViable, Errors: parsed.Errors, TimedOut: parsed.TimedOut, Score: parsed.Score}, nil
+		return compareMetrics{
+			Total:               parsed.Total,
+			Killed:              parsed.Killed,
+			Survived:            parsed.Survived,
+			NotCovered:          parsed.NotCovered,
+			NotViable:           parsed.NotViable,
+			Errors:              parsed.Errors,
+			TimedOut:            parsed.TimedOut,
+			Score:               parsed.Score,
+			TestEfficacy:        parsed.TestEfficacy,
+			MutationCoverage:    parsed.MutationCoverage,
+			DenominatorWarnings: append([]string{}, parsed.DenominatorHealth.Warnings...),
+		}, nil
 	case "go-mutesting":
 		if _, err := os.Stat(tool.report); err != nil {
 			return compareMetrics{}, nil
@@ -330,7 +380,19 @@ func parseToolMetrics(tool toolSpec, repoOut, logPath string) (compareMetrics, e
 		if err != nil {
 			return compareMetrics{}, err
 		}
-		return compareMetrics{Total: parsed.Total, Killed: parsed.Killed, Survived: parsed.Survived, NotCovered: parsed.NotCovered, NotViable: parsed.NotViable, Errors: parsed.Errors, TimedOut: parsed.TimedOut, Score: parsed.Score}, nil
+		return compareMetrics{
+			Total:               parsed.Total,
+			Killed:              parsed.Killed,
+			Survived:            parsed.Survived,
+			NotCovered:          parsed.NotCovered,
+			NotViable:           parsed.NotViable,
+			Errors:              parsed.Errors,
+			TimedOut:            parsed.TimedOut,
+			Score:               parsed.Score,
+			TestEfficacy:        parsed.TestEfficacy,
+			MutationCoverage:    parsed.MutationCoverage,
+			DenominatorWarnings: append([]string{}, parsed.DenominatorHealth.Warnings...),
+		}, nil
 	default:
 		return compareMetrics{}, nil
 	}

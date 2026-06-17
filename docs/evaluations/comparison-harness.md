@@ -3,7 +3,9 @@
 This document describes the local mutation-tool comparison harness so a future
 agent can run it without relying on thread memory.
 
-Tracking issue: https://github.com/cervantesh/cervo-mutants/issues/13
+Original pool-study tracker: https://github.com/cervantesh/cervo-mutants/issues/13
+
+Workflow productization tracker: https://github.com/cervantesh/cervo-mutants/issues/83
 
 ## Purpose
 
@@ -157,13 +159,53 @@ inspect when a full partial mutant list is large.
 Each run writes:
 
 - `summary.json` at `OutputRoot`;
+- `comparison-study.json` at `OutputRoot`;
+- `comparison-summary.md` at `OutputRoot`;
 - per-repo logs under `OutputRoot/<repo>/<tool>.log`;
 - CervoMutants reports under `OutputRoot/<repo>/cervomut`;
 - Gremlins JSON under `OutputRoot/<repo>/gremlins.json`;
 - copied external reports for gomu and go-mutesting when available.
 
-`summary.json` is the first file to inspect. It contains normalized metrics,
-status, target semantics, logs, and whether a partial report was used.
+Use the outputs by layer:
+
+- `summary.json`: machine-friendly normalized row data.
+- `comparison-study.json`: repo-grouped study artifact with comparability,
+  warnings, and per-tool denominator health.
+- `comparison-summary.md`: compact human-readable summary for issue comments,
+  study notes, and quick review.
+
+`summary.json` remains the source of truth for automation. The study JSON and
+markdown are product-facing projections on top of that raw layer.
+
+## Recommended Workflow
+
+Use `cervomut pool compare` as the main study command:
+
+```powershell
+cervomut pool compare `
+  --manifest docs/evaluations/go-repo-pool-40.json `
+  --tools cervomut,gremlins,gomu,go-mutesting `
+  --compare-target-mode package-root `
+  --gremlins-target-mode package-root `
+  --workers 2 `
+  --timeout-seconds 600 `
+  --resume
+```
+
+Then review in this order:
+
+1. `comparison-summary.md` for the quick repo-by-repo picture.
+2. `comparison-study.json` for grouped comparability and warnings.
+3. `summary.json` for exact per-row automation and raw evidence.
+4. Per-tool logs when a row is `panic`, `timeout`, `watchdog_kill`,
+   `no_report`, or `missing_repo`.
+
+Comparability labels are intentionally blunt:
+
+- `apples_to_apples=true`: fair comparison candidate.
+- `manifest_equivalent=false`: same effective target across tools, but at least
+  one tool needed manifest normalization.
+- `not_comparable`: missing repo, missing target metadata, or target mismatch.
 
 ## Normalized Report Parser
 
@@ -203,12 +245,14 @@ Before launching a comparison:
 
 After the run:
 
-1. Inspect `summary.json`.
-2. Check `apples_to_apples_key` before comparing score or speed.
-3. Inspect logs for `panic`, `No results to report`, timeout, or watchdog kill.
-4. Prefer CervoMutants final reports, then partial reports.
-5. Document denominator health warnings, not just score.
-6. Update issue #13 and the findings ledger.
+1. Inspect `comparison-summary.md`.
+2. Check `comparison-study.json` for comparability labels and warnings.
+3. Inspect `summary.json`.
+4. Check `apples_to_apples_key` before comparing score or speed.
+5. Inspect logs for `panic`, `No results to report`, timeout, or watchdog kill.
+6. Prefer CervoMutants final reports, then partial reports.
+7. Document denominator health warnings, not just score.
+8. Update the active workflow issue and the findings ledger.
 
 ## Common Mistakes
 

@@ -424,11 +424,20 @@ The harness records:
 - denominator health;
 - status classification such as `ok`, `no_report`, `no_results`,
   `all_timed_out`, `not_covered_only`, `timeout`, and `watchdog_kill`.
+- workflow study artifacts for review:
+  `comparison-study.json` and `comparison-summary.md`.
 
 Important rule:
 
 > Do not compare `cervomut run ./...` with `gremlins unleash .` as if they were
 > equivalent unless the harness records target normalization explicitly.
+
+`cervomut pool compare` now writes three layers on purpose:
+
+- `summary.json`: raw normalized row data for automation.
+- `comparison-study.json`: repo-grouped study view with comparability labels.
+- `comparison-summary.md`: quick human review summary for issue comments, PRs,
+  and study notes.
 
 Docs:
 

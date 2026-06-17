@@ -96,6 +96,7 @@ Important files:
 | `.cervomut/reports/partial-summary.json` | Small checkpoint summary. |
 | `.cervomut/history.json` | Historical survivor/cache signal. |
 | `.cervomut/baseline.json` | Accepted baseline for regression gates. |
+| `.cervomut/baseline.candidate.json` | Optional accepted baseline candidate waiting for promotion. |
 | `.cervomut/quarantine.json` | Temporary audited quarantine entries. |
 
 The public JSON, JUnit, and HTML report formats are treated as compatibility
@@ -116,6 +117,15 @@ Then store or compare the baseline:
 ```powershell
 cervomut baseline update
 cervomut baseline compare
+```
+
+For a more review-oriented flow, accept a candidate and then promote it
+intentionally:
+
+```powershell
+cervomut baseline diff
+cervomut baseline accept
+cervomut baseline promote
 ```
 
 The default `ci.fail_under` is `0`. CI should usually fail on:
@@ -163,6 +173,9 @@ More detail: [docs/policy-presets.md](docs/policy-presets.md).
 | `cervomut compare ...` | Normalize external tool reports. |
 | `cervomut baseline update` | Save current report as baseline. |
 | `cervomut baseline compare` | Compare current report to baseline. |
+| `cervomut baseline diff` | Show a review-oriented diff between the baseline and the current report or accepted candidate. |
+| `cervomut baseline accept` | Save the current report as an accepted baseline candidate. |
+| `cervomut baseline promote` | Promote the accepted candidate into the official baseline file. |
 | `cervomut report summary --out DIR` | Print report summary. |
 | `cervomut report survivors --out DIR` | Print ranked surviving mutants. |
 | `cervomut report survivors --out DIR --actionable-only` | Print only the actionable survivor review set, with equivalent/platform-sensitive duplicates collapsed. |
@@ -200,6 +213,10 @@ cervomut run ./... `
 and the normal `survivors.txt` remain complete; the actionable projection is
 printed to stdout for `run`, available in `report survivors --actionable-only`,
 and written to `.cervomut/reports/survivors-actionable.txt`.
+
+`baseline update` remains the direct path for replacing the baseline in one
+step. `baseline accept` plus `baseline promote` is the safer review flow when
+you want a candidate file and an explicit promotion action.
 
 `mutation-report.json` also carries an additive `summary.actionable` block so
 consumers can read actionable score and triage-weighted survivor counts without

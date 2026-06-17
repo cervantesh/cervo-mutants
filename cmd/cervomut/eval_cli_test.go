@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/cervantesh/cervo-mutants/internal/testharness"
+	"github.com/cervantesh/cervo-mutants/pkg/baseline"
 	"github.com/cervantesh/cervo-mutants/pkg/config"
 	"github.com/cervantesh/cervo-mutants/pkg/engine"
 	evalpkg "github.com/cervantesh/cervo-mutants/pkg/eval"
@@ -115,8 +116,92 @@ func TestDoctorAffectedFastAndBaselineCommands(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, configFileName), []byte("version: 1\nreports:\n  output: "+filepath.ToSlash(out)+"\nbaseline:\n  path: "+filepath.ToSlash(filepath.Join(out, "baseline.json"))+"\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
+	baselinePath := filepath.Join(out, "baseline.json")
+	previous := engine.RunResult{
+		SchemaVersion: "1",
+		Summary: engine.Summary{
+			Score:      80,
+			Actionable: engine.ActionableSummary{ActionableScore: 84},
+		},
+		Mutants: []engine.MutantResult{
+			{MutantID: "keep", Status: engine.StatusSurvived},
+			{MutantID: "flip", Status: engine.StatusKilled},
+		},
+	}
+	writeRunReportForTest(t, out, previous)
 	if err := cmdBaseline([]string{"update"}); err != nil {
 		t.Fatalf("baseline update returned error: %v", err)
+	}
+	current := engine.RunResult{
+		SchemaVersion: "1",
+		Summary: engine.Summary{
+			Score:      70,
+			Actionable: engine.ActionableSummary{ActionableScore: 75},
+		},
+		Mutants: []engine.MutantResult{
+			{MutantID: "keep", Status: engine.StatusSurvived},
+			{MutantID: "flip", Status: engine.StatusSurvived},
+			{MutantID: "new-survivor", Status: engine.StatusSurvived},
+		},
+	}
+	writeRunReportForTest(t, out, current)
+	compareOutput := captureStdout(t, func() {
+		if err := cmdBaseline([]string{"compare"}); err != nil {
+			t.Fatalf("baseline compare returned error: %v", err)
+		}
+	})
+	if !strings.Contains(compareOutput, `"new_survivors":["flip","new-survivor"]`) {
+		t.Fatalf("baseline compare output mismatch:\n%s", compareOutput)
+	}
+	diffOutput := captureStdout(t, func() {
+		if err := cmdBaseline([]string{"diff"}); err != nil {
+			t.Fatalf("baseline diff returned error: %v", err)
+		}
+	})
+	for _, want := range []string{
+		"Raw score: 80.00% -> 70.00% (-10.00)",
+		"Actionable score: 84.00% -> 75.00% (-9.00)",
+		"New survivors: 2",
+		"- flip: killed -> survived",
+	} {
+		if !strings.Contains(diffOutput, want) {
+			t.Fatalf("baseline diff output missing %q:\n%s", want, diffOutput)
+		}
+	}
+	acceptOutput := captureStdout(t, func() {
+		if err := cmdBaseline([]string{"accept"}); err != nil {
+			t.Fatalf("baseline accept returned error: %v", err)
+		}
+	})
+	candidatePath := baseline.CandidatePath(baselinePath)
+	if _, err := os.Stat(candidatePath); err != nil {
+		t.Fatalf("candidate baseline missing: %v", err)
+	}
+	if !strings.Contains(acceptOutput, filepath.ToSlash(candidatePath)) {
+		t.Fatalf("baseline accept output missing candidate path:\n%s", acceptOutput)
+	}
+	diffCandidateJSON := captureStdout(t, func() {
+		if err := cmdBaseline([]string{"diff", "--candidate", "--json"}); err != nil {
+			t.Fatalf("baseline diff --candidate --json returned error: %v", err)
+		}
+	})
+	if !strings.Contains(diffCandidateJSON, `"status_changes"`) || !strings.Contains(diffCandidateJSON, `"new_survivors":["flip","new-survivor"]`) {
+		t.Fatalf("candidate diff json mismatch:\n%s", diffCandidateJSON)
+	}
+	promoteOutput := captureStdout(t, func() {
+		if err := cmdBaseline([]string{"promote"}); err != nil {
+			t.Fatalf("baseline promote returned error: %v", err)
+		}
+	})
+	if !strings.Contains(promoteOutput, filepath.ToSlash(candidatePath)) {
+		t.Fatalf("baseline promote output missing candidate path:\n%s", promoteOutput)
+	}
+	if _, err := os.Stat(candidatePath); !os.IsNotExist(err) {
+		t.Fatalf("candidate baseline should be removed after promote: %v", err)
+	}
+	promoted, ok, err := baseline.Load(baselinePath)
+	if err != nil || !ok || promoted.Summary.Score != 70 {
+		t.Fatalf("promoted baseline mismatch: ok=%t err=%v result=%+v", ok, err, promoted)
 	}
 	if err := cmdBaseline([]string{"compare"}); err != nil {
 		t.Fatalf("baseline compare returned error: %v", err)
@@ -126,6 +211,9 @@ func TestDoctorAffectedFastAndBaselineCommands(t *testing.T) {
 	}
 	if err := cmdBaseline([]string{"unknown"}); err == nil {
 		t.Fatal("baseline accepted unknown subcommand")
+	}
+	if err := cmdBaseline([]string{"promote"}); err == nil {
+		t.Fatal("baseline promote accepted a missing candidate")
 	}
 }
 
@@ -565,6 +653,20 @@ func readRunReportForTest(t *testing.T, out string) engine.RunResult {
 		t.Fatalf("mutation report is not valid JSON: %v\n%s", err, data)
 	}
 	return result
+}
+
+func writeRunReportForTest(t *testing.T, out string, result engine.RunResult) {
+	t.Helper()
+	data, err := json.MarshalIndent(result, "", "  ")
+	if err != nil {
+		t.Fatalf("marshal mutation report: %v", err)
+	}
+	if err := os.MkdirAll(out, 0o755); err != nil {
+		t.Fatalf("create report dir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(out, mutationReportFileName), data, 0o600); err != nil {
+		t.Fatalf("write mutation report: %v", err)
+	}
 }
 
 func readFailureDebugForTest(t *testing.T, out string) failureDebugArtifact {

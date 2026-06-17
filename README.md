@@ -42,6 +42,7 @@ platform. The project currently includes:
 - Semantic triage v1 for non-progress loop timeouts, permission-mode platform sensitivity, and equivalence-risk survivor groups.
 - Semantic actionability heuristics extracted into `pkg/triage` for shared use across engine, runner, and reporting.
 - Engine orchestration split across dedicated files for execution, checkpointing, history, summary, slicing, and mutation scheduling.
+- CLI orchestration split across command-family files for run/eval, compare/pool, baseline/report, and shared entrypoint dispatch.
 - Daemon/worker JSON-lines contracts for future distributed execution.
 - External-tool comparison normalization for apples-to-apples studies.
 

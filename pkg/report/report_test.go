@@ -413,6 +413,132 @@ func TestWriteFormatsWithActionableViewWritesExtraArtifact(t *testing.T) {
 	}
 }
 
+func TestSARIFAndGitHubSummaryOutputs(t *testing.T) {
+	dir := t.TempDir()
+	workingDir := filepath.Join(dir, "repo")
+	stepSummaryPath := filepath.Join(dir, "step-summary.md")
+	t.Setenv("GITHUB_STEP_SUMMARY", stepSummaryPath)
+	run := engine.RunResult{
+		SchemaVersion: "1",
+		Summary: engine.Summary{
+			Total:                      4,
+			Killed:                     1,
+			Survived:                   1,
+			NotCovered:                 1,
+			TimedOut:                   1,
+			Score:                      50,
+			Actionable:                 engine.ActionableSummary{ActionableScore: 66.67, TrueActionableSurvivors: 1},
+			PlatformSensitiveSurvivors: 1,
+			NonProgressTimeouts:        1,
+			DenominatorHealth: engine.DenominatorHealth{
+				Warnings: []string{"timed_out_exceeds_effective"},
+			},
+		},
+		Environment: engine.Environment{
+			WorkingDir:  workingDir,
+			ToolVersion: "v0.3.0",
+		},
+		Baseline: engine.BaselineComparison{
+			Enabled:      true,
+			Regression:   true,
+			NewSurvivors: []string{"m-survived"},
+		},
+		Mutants: []engine.MutantResult{
+			{
+				MutantID:            "m-survived",
+				Status:              engine.StatusSurvived,
+				StatusReason:        "tests passed",
+				Actionability:       "high",
+				SurvivorRank:        1,
+				SuggestedTestScope:  "./pkg",
+				SuggestedSkipReason: "review once",
+				Mutant: engine.Mutant{
+					File:           filepath.Join(workingDir, "pkg", "foo.go"),
+					Line:           12,
+					Operator:       "conditionals-boundary",
+					Original:       "<",
+					Mutated:        "<=",
+					EquivalentRisk: "high",
+				},
+			},
+			{
+				MutantID:     "m-timeout",
+				Status:       engine.StatusTimedOut,
+				FailureKind:  "non_progress_loop",
+				StatusReason: "loop variable stopped making progress",
+				Mutant: engine.Mutant{
+					File:            filepath.Join(workingDir, "pkg", "loop.go"),
+					Line:            21,
+					Operator:        "inc-dec",
+					Original:        "i++",
+					Mutated:         "i--",
+					NonProgressRisk: "high",
+				},
+			},
+			{
+				MutantID: "m-uncovered",
+				Status:   engine.StatusNotCovered,
+				Mutant: engine.Mutant{
+					File:     filepath.Join(workingDir, "pkg", "miss.go"),
+					Line:     7,
+					Operator: "logical",
+					Original: "&&",
+					Mutated:  "||",
+				},
+			},
+		},
+	}
+
+	sarifData, err := SARIF(run)
+	if err != nil {
+		t.Fatalf("SARIF returned error: %v", err)
+	}
+	text := string(sarifData)
+	for _, want := range []string{
+		`"version": "2.1.0"`,
+		`"ruleId": "survived"`,
+		`"ruleId": "timed_out.non_progress_loop"`,
+		`"ruleId": "not_covered"`,
+		`"uri": "pkg/foo.go"`,
+		`"mutant_id": "m-survived"`,
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("sarif output missing %q:\n%s", want, text)
+		}
+	}
+
+	summary := GitHubSummary(run)
+	for _, want := range []string{
+		"## CervoMutants Mutation Summary",
+		"Raw score: **50.00%**",
+		"Actionable score: **66.67%**",
+		"Baseline regression: **true**",
+		"| Rank | Mutant | Actionability | Operator | Location | Skip guidance |",
+		"`m-survived`",
+		"| timed out | 1 |",
+	} {
+		if !strings.Contains(summary, want) {
+			t.Fatalf("github summary missing %q:\n%s", want, summary)
+		}
+	}
+
+	if err := WriteFormats(dir, run, []string{"sarif", "github-summary"}); err != nil {
+		t.Fatalf("WriteFormats with GitHub-native outputs returned error: %v", err)
+	}
+	for _, want := range []string{"mutation-report.sarif", "github-summary.md", "semantic-triage-ledger.json"} {
+		if _, err := os.Stat(filepath.Join(dir, want)); err != nil {
+			t.Fatalf("missing %s: %v", want, err)
+		}
+	}
+	stepSummary, err := os.ReadFile(stepSummaryPath)
+	if err != nil {
+		t.Fatalf("step summary missing: %v", err)
+	}
+	if string(stepSummary) != summary {
+		t.Fatalf("step summary mismatch:\nwant:\n%s\n\ngot:\n%s", summary, stepSummary)
+	}
+}
+
 func TestJUnitHTMLAndWriteAll(t *testing.T) {
 	dir := t.TempDir()
 	run := engine.RunResult{
@@ -514,7 +640,7 @@ func TestJUnitHTMLAndWriteAll(t *testing.T) {
 	if err := WriteAll(dir, run); err != nil {
 		t.Fatalf("WriteAll returned error: %v", err)
 	}
-	for _, want := range []string{"summary.txt", "survivors.txt", "mutation-report.json", "semantic-triage-ledger.json", "junit.xml", "index.html"} {
+	for _, want := range []string{"summary.txt", "survivors.txt", "mutation-report.json", "semantic-triage-ledger.json", "junit.xml", "index.html", "mutation-report.sarif", "github-summary.md"} {
 		if _, err := os.Stat(filepath.Join(dir, want)); err != nil {
 			t.Fatalf("missing %s: %v", want, err)
 		}

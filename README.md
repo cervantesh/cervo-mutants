@@ -90,6 +90,8 @@ Important files:
 | `.cervomut/reports/summary.txt` | Human-readable run summary. |
 | `.cervomut/reports/junit.xml` | CI test report format. |
 | `.cervomut/reports/index.html` | Filterable survivor review workbench with raw-report fallback, diff browsing, and client-side triage filters. |
+| `.cervomut/reports/mutation-report.sarif` | GitHub code-scanning friendly mutation findings. |
+| `.cervomut/reports/github-summary.md` | Compact GitHub step summary markdown for PR/Actions views. |
 | `.cervomut/reports/survivors-actionable.txt` | Optional actionable-only survivor review view. |
 | `.cervomut/reports/semantic-triage-ledger.json` | Auditable skip/quarantine suggestions for known noisy patterns. |
 | `.cervomut/reports/partial-mutation-report.json` | Checkpoint report for timeout/interrupted runs. |
@@ -155,6 +157,7 @@ cervomut run ./... --policy ci-balanced --max-mutants 100 --sample deterministic
 cervomut run . --policy comparison-safe
 cervomut run ./... --policy nightly --budget 30m
 cervomut run ./... --policy campaign --out .cervomut/campaign
+cervomut run ./... --policy ci-fast --report summary,json,junit,sarif,github-summary
 ```
 
 More detail: [docs/policy-presets.md](docs/policy-presets.md).
@@ -179,6 +182,8 @@ More detail: [docs/policy-presets.md](docs/policy-presets.md).
 | `cervomut report summary --out DIR` | Print report summary. |
 | `cervomut report survivors --out DIR` | Print ranked surviving mutants. |
 | `cervomut report survivors --out DIR --actionable-only` | Print only the actionable survivor review set, with equivalent/platform-sensitive duplicates collapsed. |
+| `cervomut report sarif --out DIR` | Print GitHub code-scanning SARIF for the stored report. |
+| `cervomut report github-summary --out DIR` | Print compact GitHub summary markdown for the stored report. |
 | `cervomut report open` | Open the HTML survivor review workbench. |
 | `cervomut show MUTANT_ID --out DIR` | Show a mutant diff/context. |
 | `cervomut explain MUTANT_ID --format text\|json` | Explain what a survivor means. |
@@ -221,6 +226,11 @@ you want a candidate file and an explicit promotion action.
 `mutation-report.json` also carries an additive `summary.actionable` block so
 consumers can read actionable score and triage-weighted survivor counts without
 changing the meaning of the existing raw score fields.
+
+When `sarif` is included in `reports.formats` or `--report`, CervoMutants writes
+`mutation-report.sarif` for GitHub code scanning. When `github-summary` is
+included, it writes `github-summary.md` and, if `GITHUB_STEP_SUMMARY` is set,
+also publishes the same markdown directly into the GitHub Actions step summary.
 
 `semantic-triage-ledger.json` is a companion artifact. It groups equivalent-risk
 survivors, flags Windows-only permission-mode noise, and suggests quarantine

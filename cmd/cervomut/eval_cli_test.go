@@ -261,6 +261,22 @@ func TestReportAndShowAcceptOutputDirectory(t *testing.T) {
 	if err := run([]string{"report", "survivors", "--out", out}); err != nil {
 		t.Fatalf("report survivors --out returned error: %v", err)
 	}
+	sarifOutput := captureStdout(t, func() {
+		if err := run([]string{"report", "sarif", "--out", out}); err != nil {
+			t.Fatalf("report sarif --out returned error: %v", err)
+		}
+	})
+	if !strings.Contains(sarifOutput, `"version": "2.1.0"`) || !strings.Contains(sarifOutput, `"ruleId": "survived"`) {
+		t.Fatalf("report sarif output unexpected:\n%s", sarifOutput)
+	}
+	githubSummaryOutput := captureStdout(t, func() {
+		if err := run([]string{"report", "github-summary", "--out", out}); err != nil {
+			t.Fatalf("report github-summary --out returned error: %v", err)
+		}
+	})
+	if !strings.Contains(githubSummaryOutput, "## CervoMutants Mutation Summary") || !strings.Contains(githubSummaryOutput, "Top Survivor Queue") {
+		t.Fatalf("report github-summary output unexpected:\n%s", githubSummaryOutput)
+	}
 	if err := run([]string{"show", id, "--out", out}); err != nil {
 		t.Fatalf("show --out returned error: %v", err)
 	}

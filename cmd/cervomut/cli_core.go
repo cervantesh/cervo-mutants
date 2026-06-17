@@ -69,7 +69,7 @@ func cmdReport(args []string) error {
 		return err
 	}
 	if fs.NArg() == 0 {
-		return fmt.Errorf("report requires summary, survivors, or open")
+		return fmt.Errorf("report requires summary, survivors, sarif, github-summary, or open")
 	}
 	cfg := loadConfigIfPresent()
 	if *out != "" {
@@ -89,6 +89,14 @@ func cmdReport(args []string) error {
 		fmt.Print(report.Summary(result))
 	case "survivors":
 		fmt.Print(report.SurvivorsWithOptions(result, report.SurvivorsOptions{ActionableOnly: *actionableOnly}))
+	case "sarif":
+		data, err := report.SARIF(result)
+		if err != nil {
+			return err
+		}
+		fmt.Println(string(data))
+	case "github-summary":
+		fmt.Print(report.GitHubSummary(result))
 	case "open":
 		path := filepath.Join(cfg.Reports.Output, "index.html")
 		return exec.Command("rundll32", "url.dll,FileProtocolHandler", path).Start()

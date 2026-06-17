@@ -1105,7 +1105,7 @@ func JUnit(result engine.RunResult) ([]byte, error) {
 }
 
 func WriteAll(dir string, result engine.RunResult) error {
-	return WriteFormats(dir, result, []string{"summary", "json", "junit", "html"})
+	return WriteFormats(dir, result, []string{"summary", "json", "junit", "html", "sarif", "github-summary"})
 }
 
 func WriteFormats(dir string, result engine.RunResult, formats []string) error {
@@ -1139,6 +1139,18 @@ func WriteFormatsWithOptions(dir string, result engine.RunResult, formats []stri
 			files["junit.xml"] = junitData
 		case "html":
 			files["index.html"] = []byte(HTML(result))
+		case "sarif":
+			sarifData, err := SARIF(result)
+			if err != nil {
+				return err
+			}
+			files["mutation-report.sarif"] = sarifData
+		case "github-summary":
+			summary := GitHubSummary(result)
+			files["github-summary.md"] = []byte(summary)
+			if err := writeGitHubStepSummary(summary); err != nil {
+				return err
+			}
 		}
 	}
 	if opts.ActionableOnly {

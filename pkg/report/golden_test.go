@@ -22,6 +22,10 @@ func TestGoldenPublicReportFormats(t *testing.T) {
 	if err != nil {
 		t.Fatalf("JUnit returned error: %v", err)
 	}
+	sarifData, err := SARIF(run)
+	if err != nil {
+		t.Fatalf("SARIF returned error: %v", err)
+	}
 
 	cases := []struct {
 		name string
@@ -31,6 +35,8 @@ func TestGoldenPublicReportFormats(t *testing.T) {
 		{name: "json", path: filepath.Join("testdata", "public-report.json.golden"), data: jsonData},
 		{name: "junit", path: filepath.Join("testdata", "public-report.junit.xml.golden"), data: junitData},
 		{name: "html", path: filepath.Join("testdata", "public-report.index.html.golden"), data: []byte(HTML(run))},
+		{name: "sarif", path: filepath.Join("testdata", "public-report.sarif.golden"), data: sarifData},
+		{name: "github-summary", path: filepath.Join("testdata", "public-report.github-summary.md.golden"), data: []byte(GitHubSummary(run))},
 	}
 
 	for _, tc := range cases {

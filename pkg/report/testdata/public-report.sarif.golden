@@ -1,0 +1,222 @@
+{
+  "version": "2.1.0",
+  "$schema": "https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.5.json",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "cervomut",
+          "version": "v0.2.0",
+          "informationUri": "https://github.com/cervantesh/cervo-mutants",
+          "rules": [
+            {
+              "id": "not_covered",
+              "name": "mutation not covered",
+              "shortDescription": {
+                "text": "mutation not covered"
+              },
+              "fullDescription": {
+                "text": "No selected test covered this mutation."
+              },
+              "helpUri": "https://github.com/cervantesh/cervo-mutants",
+              "properties": {
+                "status": "not_covered"
+              }
+            },
+            {
+              "id": "survived",
+              "name": "survived mutation",
+              "shortDescription": {
+                "text": "survived mutation"
+              },
+              "fullDescription": {
+                "text": "Tests passed with the mutation applied, so the changed behavior still lacks a killing assertion."
+              },
+              "helpUri": "https://github.com/cervantesh/cervo-mutants",
+              "properties": {
+                "status": "survived"
+              }
+            },
+            {
+              "id": "timed_out.non_progress_loop",
+              "name": "non-progress loop timeout",
+              "shortDescription": {
+                "text": "non-progress loop timeout"
+              },
+              "fullDescription": {
+                "text": "The mutation likely broke loop progress and the test run timed out."
+              },
+              "helpUri": "https://github.com/cervantesh/cervo-mutants",
+              "properties": {
+                "status": "timed_out"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "survived",
+          "level": "warning",
+          "message": {
+            "text": "conditionals-boundary in pkg/review.go:19 mutated `\u003c` to `\u003c=` with status `survived`. tests passed with mutant applied actionability=high."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "pkg/review.go"
+                },
+                "region": {
+                  "startLine": 19
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "mutant_id": "pkg/review.go:19:conditionals-boundary:123456789abc"
+          },
+          "properties": {
+            "actionability": "high",
+            "equivalent_risk": "high",
+            "mutant_id": "pkg/review.go:19:conditionals-boundary:123456789abc",
+            "operator": "conditionals-boundary",
+            "semantic_group": "sort-boundary:pkg/review.go:19",
+            "status": "survived",
+            "suggested_test_scope": "./pkg/review"
+          }
+        },
+        {
+          "ruleId": "survived",
+          "level": "warning",
+          "message": {
+            "text": "numeric-literals in pkg/fs.go:41 mutated `0o755` to `0` with status `survived`. tests passed on Windows permission-mode mutation actionability=medium."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "pkg/fs.go"
+                },
+                "region": {
+                  "startLine": 41
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "mutant_id": "pkg/fs.go:41:numeric-literals:ff00ff00aa11"
+          },
+          "properties": {
+            "actionability": "medium",
+            "equivalent_risk": "medium",
+            "mutant_id": "pkg/fs.go:41:numeric-literals:ff00ff00aa11",
+            "operator": "numeric-literals",
+            "platform_sensitive": true,
+            "status": "survived",
+            "suggested_test_scope": "./pkg/fs"
+          }
+        },
+        {
+          "ruleId": "timed_out.non_progress_loop",
+          "level": "warning",
+          "message": {
+            "text": "inc-dec in pkg/loop.go:12 mutated `i++` to `i--` with status `timed_out`. loop variable stopped making progress"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "pkg/loop.go"
+                },
+                "region": {
+                  "startLine": 12
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "mutant_id": "pkg/loop.go:12:inc-dec:998877665544"
+          },
+          "properties": {
+            "actionability": "",
+            "equivalent_risk": "medium",
+            "mutant_id": "pkg/loop.go:12:inc-dec:998877665544",
+            "non_progress_risk": "high",
+            "operator": "inc-dec",
+            "status": "timed_out",
+            "suggested_test_scope": ""
+          }
+        },
+        {
+          "ruleId": "not_covered",
+          "level": "note",
+          "message": {
+            "text": "numeric-literals in pkg/fs.go:50 mutated `2` to `1` with status `not_covered`. coverage profile did not match mutant file"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "pkg/fs.go"
+                },
+                "region": {
+                  "startLine": 50
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "mutant_id": "pkg/fs.go:50:numeric-literals:001122334455"
+          },
+          "properties": {
+            "actionability": "",
+            "equivalent_risk": "medium",
+            "mutant_id": "pkg/fs.go:50:numeric-literals:001122334455",
+            "operator": "numeric-literals",
+            "status": "not_covered",
+            "suggested_test_scope": ""
+          }
+        }
+      ],
+      "artifacts": [
+        {
+          "location": {
+            "uri": "pkg/fs.go"
+          }
+        },
+        {
+          "location": {
+            "uri": "pkg/loop.go"
+          }
+        },
+        {
+          "location": {
+            "uri": "pkg/review.go"
+          }
+        }
+      ],
+      "invocations": [
+        {
+          "executionSuccessful": true,
+          "commandLine": "go test ./pkg/review",
+          "workingDirectory": {
+            "uri": "C:/dev/CervoSoft/CervoMutant"
+          }
+        }
+      ],
+      "properties": {
+        "actionable_score": 50,
+        "not_covered": 1,
+        "raw_score": 50,
+        "survived": 2,
+        "timed_out": 1
+      },
+      "originalUriBaseIds": {
+        "SRCROOT": {
+          "uri": "C:/dev/CervoSoft/CervoMutant"
+        }
+      }
+    }
+  ]
+}

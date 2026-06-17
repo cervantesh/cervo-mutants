@@ -111,9 +111,11 @@ young testing tools.
 - The higher-order semantic triage layer is not yet a first-class shipped
   feature. Survivor ranking exists, but semantic equivalence-risk grouping,
   actionable-only filtering, and richer triage heuristics are still gaps.
-- Public adoption evidence is minimal. On 2026-06-17 the repository had no
-  stars, forks, or watchers, so functional maturity is currently demonstrated
-  mostly by internal implementation depth rather than market validation.
+- Public adoption evidence is still early, but it is no longer purely internal.
+  A 2026-06-17 external validation wave succeeded across five public Go
+  repositories using committed `pool campaign` artifacts. The remaining gap is
+  direct maintainer adoption or production rollout feedback, not simple
+  first-run viability.
 
 ## Code And Engineering Maturity
 

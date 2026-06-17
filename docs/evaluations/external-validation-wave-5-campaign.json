@@ -1,0 +1,23 @@
+{
+  "schema_version": "1",
+  "tracking_issue": "#95",
+  "description": "First external validation wave across five public Go repositories using bounded mutation runs.",
+  "work_root": "../../.cervomut/external-validation-wave/work",
+  "output_root": "../../.cervomut/external-validation-wave/results",
+  "jobs": [
+    {
+      "name": "public-wave-smoke",
+      "kind": "smoke",
+      "manifest_path": "go-repo-pool-40.json",
+      "names": ["cobra", "pflag", "logrus", "uuid", "gjson"],
+      "run_mutation": true,
+      "max_mutants": 10,
+      "workers": 2,
+      "clone_timeout_seconds": 180,
+      "test_timeout_seconds": 90,
+      "dry_run_timeout_seconds": 120,
+      "mutation_timeout_seconds": 300,
+      "notes": "Bounded public-repo adoption wave focused on small and medium libraries with established tests."
+    }
+  ]
+}

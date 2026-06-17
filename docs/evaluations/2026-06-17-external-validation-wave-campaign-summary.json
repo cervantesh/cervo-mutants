@@ -1,0 +1,30 @@
+{
+  "schema_version": "1",
+  "campaign_path": "C:\\dev\\CervoSoft\\CervoMutant\\docs\\evaluations\\external-validation-wave-5-campaign.json",
+  "tracking_issue": "#95",
+  "description": "First external validation wave across five public Go repositories using bounded mutation runs.",
+  "generated_at": "2026-06-17T14:31:49.9373808Z",
+  "totals": {
+    "jobs": 1,
+    "succeeded": 1,
+    "failed": 0,
+    "skipped": 0,
+    "resumed": 0
+  },
+  "results": [
+    {
+      "name": "public-wave-smoke",
+      "kind": "smoke",
+      "status": "ok",
+      "manifest_path": "C:\\dev\\CervoSoft\\CervoMutant\\docs\\evaluations\\go-repo-pool-40.json",
+      "work_root": "C:\\dev\\CervoSoft\\CervoMutant\\.cervomut\\external-validation-wave\\work\\public-wave-smoke",
+      "output_root": "C:\\dev\\CervoSoft\\CervoMutant\\.cervomut\\external-validation-wave\\work\\public-wave-smoke",
+      "summary_path": "C:\\dev\\CervoSoft\\CervoMutant\\.cervomut\\external-validation-wave\\work\\public-wave-smoke\\summary.json",
+      "result_count": 5,
+      "elapsed_seconds": 107.261,
+      "notes": [
+        "Bounded public-repo adoption wave focused on small and medium libraries with established tests."
+      ]
+    }
+  ]
+}

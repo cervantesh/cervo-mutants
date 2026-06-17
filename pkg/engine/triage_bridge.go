@@ -38,35 +38,7 @@ func applySemanticResultMetadata(result *MutantResult) {
 }
 
 func rankSurvivors(results []MutantResult) {
-	ranked := triage.RankSurvivors(runtime.GOOS, triageResults(results))
-	byID := make(map[string]triage.RankedSurvivor, len(ranked))
-	for _, survivor := range ranked {
-		byID[survivor.MutantID] = survivor
-	}
-	for i := range results {
-		survivor, ok := byID[results[i].MutantID]
-		if !ok {
-			continue
-		}
-		results[i].SurvivorRank = survivor.SurvivorRank
-		results[i].RankScore = survivor.RankScore
-		results[i].RankReason = survivor.RankReason
-		results[i].Actionability = survivor.Actionability
-		results[i].SuggestedTestScope = survivor.SuggestedTestScope
-		if survivor.TestRecommendation != nil {
-			results[i].TestRecommendation = &TestRecommendation{
-				Priority:            survivor.TestRecommendation.Priority,
-				Strategy:            survivor.TestRecommendation.Strategy,
-				Summary:             survivor.TestRecommendation.Summary,
-				CandidateTests:      append([]string{}, survivor.TestRecommendation.CandidateTests...),
-				SuggestedAssertions: append([]string{}, survivor.TestRecommendation.SuggestedAssertions...),
-				Rationale:           append([]string{}, survivor.TestRecommendation.Rationale...),
-			}
-		}
-		results[i].SuggestedSkipReason = survivor.SuggestedSkip
-		results[i].SemanticGroupSize = survivor.SemanticGroupSize
-		results[i].NearestTests = append([]string{}, survivor.NearestTests...)
-	}
+	applySurvivorRankings(results, defaultSurvivorRankings(runtime.GOOS, results))
 }
 
 func triageResults(results []MutantResult) []triage.Result {

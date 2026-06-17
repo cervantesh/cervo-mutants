@@ -255,7 +255,7 @@ func (e *Engine) writePartialResults(results []MutantResult) {
 		Mutants:       append([]MutantResult{}, results...),
 	}
 	run.StoppedReason, run.LastCompletedMutant = runStopMetadata(run.Mutants)
-	rankSurvivors(run.Mutants)
+	e.applySurvivorRanking(run.Mutants)
 	run.Summary = summarize(run.Mutants)
 	data, err := json.MarshalIndent(run, "", "  ")
 	if err != nil {

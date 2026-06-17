@@ -582,6 +582,47 @@ func findCallByName(root ast.Node, want string) *ast.CallExpr {
 	return found
 }
 
+func TestChainGeneratorsAppendsCustomMutantsAndDedupes(t *testing.T) {
+	base := GeneratorFunc(func(pkg, filename string, src []byte, profile string) ([]Mutant, error) {
+		return []Mutant{{
+			File:     filename,
+			Line:     8,
+			Operator: "logical",
+			Original: "&&",
+			Mutated:  "||",
+		}}, nil
+	})
+	custom := GeneratorFunc(func(pkg, filename string, src []byte, profile string) ([]Mutant, error) {
+		return []Mutant{
+			{
+				File:     filename,
+				Line:     8,
+				Operator: "logical",
+				Original: "&&",
+				Mutated:  "||",
+			},
+			{
+				File:     filename,
+				Line:     11,
+				Operator: "custom-op",
+				Original: "1",
+				Mutated:  "2",
+			},
+		}, nil
+	})
+
+	mutants, err := ChainGenerators(base, nil, custom).Generate("sample", "sample.go", []byte("package sample"), ProfileDefault)
+	if err != nil {
+		t.Fatalf("ChainGenerators returned error: %v", err)
+	}
+	if len(mutants) != 2 {
+		t.Fatalf("ChainGenerators produced %d mutants, want 2: %+v", len(mutants), mutants)
+	}
+	if mutants[1].Operator != "custom-op" {
+		t.Fatalf("expected chained custom mutant to be retained, got %+v", mutants)
+	}
+}
+
 func operatorSet(mutants []Mutant) map[string]bool {
 	operators := map[string]bool{}
 	for _, mutant := range mutants {

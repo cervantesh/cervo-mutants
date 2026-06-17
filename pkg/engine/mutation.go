@@ -23,7 +23,7 @@ func (e *Engine) generateMutants(discovered discover.Result) ([]Mutant, error) {
 		if err != nil {
 			return nil, err
 		}
-		generated, err := mutator.Generate(file.Package, file.Path, data, e.cfg.Mutators.Profile)
+		generated, err := e.mutantGenerator.Generate(file.Package, file.Path, data, e.cfg.Mutators.Profile)
 		if err != nil {
 			return nil, err
 		}
@@ -90,17 +90,10 @@ func (e *Engine) scheduleMutants(mutants []Mutant) {
 }
 
 func (e *Engine) suppressionAudit(mutant mutator.Mutant) []SuppressionAudit {
-	if !e.cfg.Suppression.Enabled {
+	if e.suppressionEvaluator == nil {
 		return nil
 	}
-	var audits []SuppressionAudit
-	for _, rule := range e.cfg.Suppression.Rules {
-		if !suppressionRuleMatches(rule, mutant) {
-			continue
-		}
-		audits = append(audits, suppressionAuditFromRule(rule))
-	}
-	return audits
+	return e.suppressionEvaluator.Evaluate(mutant)
 }
 
 func suppressionRuleMatches(rule config.SuppressionRule, mutant mutator.Mutant) bool {

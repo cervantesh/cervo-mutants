@@ -21,15 +21,19 @@ import (
 	"github.com/cervantesh/cervo-mutants/pkg/config"
 	"github.com/cervantesh/cervo-mutants/pkg/discover"
 	"github.com/cervantesh/cervo-mutants/pkg/isolate"
+	"github.com/cervantesh/cervo-mutants/pkg/mutator"
 	"github.com/cervantesh/cervo-mutants/pkg/quarantine"
 )
 
 type Engine struct {
-	cfg             config.Config
-	timingMu        sync.Mutex
-	checkpointMu    sync.Mutex
-	checkpointScope []Mutant
-	sliceMeta       SliceMetadata
+	cfg                  config.Config
+	mutantGenerator      mutator.Generator
+	suppressionEvaluator SuppressionEvaluator
+	survivorRanker       SurvivorRanker
+	timingMu             sync.Mutex
+	checkpointMu         sync.Mutex
+	checkpointScope      []Mutant
+	sliceMeta            SliceMetadata
 }
 
 var (
@@ -48,7 +52,22 @@ var (
 )
 
 func New(cfg config.Config) *Engine {
-	return &Engine{cfg: cfg}
+	return NewWithOptions(cfg)
+}
+
+func NewWithOptions(cfg config.Config, opts ...EngineOption) *Engine {
+	e := &Engine{
+		cfg:                  cfg,
+		mutantGenerator:      mutator.DefaultGenerator(),
+		suppressionEvaluator: DefaultSuppressionEvaluator(cfg),
+		survivorRanker:       DefaultSurvivorRanker(),
+	}
+	for _, opt := range opts {
+		if opt != nil {
+			opt(e)
+		}
+	}
+	return e
 }
 
 func (e *Engine) Run(ctx context.Context, req RunRequest) (result RunResult, err error) {
@@ -90,7 +109,7 @@ func (e *Engine) Run(ctx context.Context, req RunRequest) (result RunResult, err
 		},
 	}
 	if req.DryRun {
-		return dryRunResult(result, mutants), nil
+		return e.dryRunResult(result, mutants), nil
 	}
 	baselineResult, err := runBaselineForRun(e, ctx, targets)
 	if err != nil && e.cfg.Tests.BaselineRequired {
@@ -104,7 +123,7 @@ func (e *Engine) Run(ctx context.Context, req RunRequest) (result RunResult, err
 	result.Mutants = mutantResults
 	result.StoppedReason, result.LastCompletedMutant = runStopMetadata(result.Mutants)
 	result.History = e.applyHistory(result.Mutants)
-	rankSurvivors(result.Mutants)
+	e.applySurvivorRanking(result.Mutants)
 	result.Summary = summarize(result.Mutants)
 	result.Summary.NewSurvivors = result.History.NewSurvivors
 	result.Summary.LongStandingSurvivors = result.History.LongStandingSurvivors
@@ -136,12 +155,12 @@ func (e *Engine) discoverMutants(targets []string) ([]Mutant, error) {
 	return e.generateMutants(discovered)
 }
 
-func dryRunResult(result RunResult, mutants []Mutant) RunResult {
+func (e *Engine) dryRunResult(result RunResult, mutants []Mutant) RunResult {
 	for _, mutant := range mutants {
 		result.Mutants = append(result.Mutants, MutantResult{MutantID: mutant.ID, Status: StatusSkipped, StatusReason: "dry-run", Mutant: mutant})
 	}
 	result.StoppedReason, result.LastCompletedMutant = runStopMetadata(result.Mutants)
-	rankSurvivors(result.Mutants)
+	e.applySurvivorRanking(result.Mutants)
 	result.Summary = summarize(result.Mutants)
 	return result
 }

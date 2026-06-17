@@ -1448,6 +1448,92 @@ func TestRankSurvivorsDeprioritizesSemanticGroups(t *testing.T) {
 	}
 }
 
+func TestNewWithOptionsUsesCustomMutantGeneratorAndSuppressionEvaluator(t *testing.T) {
+	dir := writeFixture(t)
+	cfg := config.Defaults()
+	isolateArtifacts(&cfg, dir)
+	customGenerator := mutator.GeneratorFunc(func(pkg, filename string, src []byte, profile string) ([]mutator.Mutant, error) {
+		return []mutator.Mutant{{
+			File:             filename,
+			Line:             4,
+			Operator:         "custom-op",
+			Original:         ">=",
+			Mutated:          "<",
+			StartOffset:      45,
+			EndOffset:        47,
+			Diff:             "--- calc.go\n+++ calc.go\n@@\n-return n >= 0\n+return n < 0\n",
+			Hint:             "custom hint",
+			Description:      "custom mutation",
+			EquivalentRisk:   "low",
+			Recommendation:   "custom",
+			CompileErrorRisk: "low",
+		}}, nil
+	})
+	customSuppression := SuppressionEvaluatorFunc(func(mutant mutator.Mutant) []SuppressionAudit {
+		return []SuppressionAudit{{Name: "custom-suppression", Action: config.SuppressionReportOnly, Reason: "custom audit", EvidenceLevel: "heuristic"}}
+	})
+	e := NewWithOptions(cfg,
+		WithMutantGenerator(customGenerator),
+		WithSuppressionEvaluator(ChainSuppressionEvaluators(DefaultSuppressionEvaluator(cfg), customSuppression)),
+	)
+
+	mutants, err := e.discoverMutants([]string{dir})
+	if err != nil {
+		t.Fatalf("discoverMutants returned error: %v", err)
+	}
+	if len(mutants) == 0 {
+		t.Fatal("discoverMutants returned no mutants")
+	}
+	if mutants[0].Operator != "custom-op" {
+		t.Fatalf("custom generator was not used: %+v", mutants[0])
+	}
+	if len(mutants[0].SuppressionAudit) != 1 || mutants[0].SuppressionAudit[0].Name != "custom-suppression" {
+		t.Fatalf("custom suppression evaluator was not used: %+v", mutants[0].SuppressionAudit)
+	}
+}
+
+func TestEngineApplySurvivorRankingUsesCustomRanker(t *testing.T) {
+	cfg := config.Defaults()
+	e := NewWithOptions(cfg, WithSurvivorRanker(SurvivorRankerFunc(func(goos string, results []MutantResult) []SurvivorRanking {
+		return []SurvivorRanking{{
+			MutantID:            "custom",
+			SurvivorRank:        9,
+			RankScore:           211.5,
+			RankReason:          "custom ranking",
+			Actionability:       "high",
+			SuggestedTestScope:  "./custom",
+			SuggestedSkipReason: "custom skip",
+			SemanticGroupSize:   3,
+			NearestTests:        []string{"pkg/custom_test.go"},
+			TestRecommendation: &TestRecommendation{
+				Priority:       "high",
+				Strategy:       "custom-strategy",
+				Summary:        "custom recommendation",
+				CandidateTests: []string{"pkg/custom_test.go"},
+			},
+		}}
+	})))
+	results := []MutantResult{
+		{MutantID: "custom", Status: StatusSurvived, Mutant: Mutant{ID: "custom"}},
+		{MutantID: "other", Status: StatusKilled, Mutant: Mutant{ID: "other"}},
+	}
+
+	e.applySurvivorRanking(results)
+
+	if results[0].SurvivorRank != 9 || results[0].RankScore != 211.5 || results[0].RankReason != "custom ranking" {
+		t.Fatalf("custom ranker did not apply ranking metadata: %+v", results[0])
+	}
+	if results[0].SuggestedTestScope != "./custom" || results[0].SuggestedSkipReason != "custom skip" || results[0].SemanticGroupSize != 3 {
+		t.Fatalf("custom ranker did not apply survivor context: %+v", results[0])
+	}
+	if results[0].TestRecommendation == nil || results[0].TestRecommendation.Strategy != "custom-strategy" {
+		t.Fatalf("custom ranker did not attach test recommendation: %+v", results[0].TestRecommendation)
+	}
+	if results[1].SurvivorRank != 0 {
+		t.Fatalf("non-ranked mutants should remain unchanged: %+v", results[1])
+	}
+}
+
 func TestAffectedAndExplainPublicAPIs(t *testing.T) {
 	dir := writeFixture(t)
 	cfg := config.Defaults()

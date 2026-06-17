@@ -538,6 +538,35 @@ result, err := engine.New(cfg).Run(ctx, engine.RunRequest{
 })
 ```
 
+Advanced integrators can extend the library without forking the core by
+swapping or composing the built-in generator, suppression evaluator, and
+survivor ranker:
+
+```go
+baseRanker := engine.DefaultSurvivorRanker()
+
+custom := engine.NewWithOptions(
+    cfg,
+    engine.WithMutantGenerator(mutator.ChainGenerators(
+        mutator.DefaultGenerator(),
+        myGenerator,
+    )),
+    engine.WithSuppressionEvaluator(engine.ChainSuppressionEvaluators(
+        engine.DefaultSuppressionEvaluator(cfg),
+        mySuppressionEvaluator,
+    )),
+    engine.WithSurvivorRanker(engine.SurvivorRankerFunc(func(goos string, results []engine.MutantResult) []engine.SurvivorRanking {
+        ranked := baseRanker.Rank(goos, results)
+        return ranked
+    })),
+)
+
+result, err := custom.Run(ctx, engine.RunRequest{Targets: []string{"./..."}})
+```
+
+That seam is intentionally programmatic and additive. The CLI behavior stays
+unchanged unless you build a custom binary around the library API.
+
 Important packages:
 
 | Package | Responsibility |
@@ -597,6 +626,8 @@ Latest local Sonar pass after issue #31:
 - [docs/sonar.md](docs/sonar.md): local and CI Sonar workflow.
 - [docs/go-toolchain-compatibility.md](docs/go-toolchain-compatibility.md):
   supported Go versions and `doctor` checks.
+- [docs/extensibility.md](docs/extensibility.md): programmatic extension seams
+  for custom mutators, suppression evaluators, and survivor rankers.
 - [docs/evaluations/multi-repo-calibration.md](docs/evaluations/multi-repo-calibration.md):
   multi-repo calibration plan.
 - [docs/evaluations/tool-comparison-protocol.md](docs/evaluations/tool-comparison-protocol.md):

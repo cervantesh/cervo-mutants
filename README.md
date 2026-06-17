@@ -147,6 +147,9 @@ The default `ci.fail_under` is `0`. CI should usually fail on:
 - expired quarantine entries;
 - timeouts or compile errors if configured.
 
+For GitHub Actions, the first-party integration path is
+[docs/github-action.md](docs/github-action.md).
+
 ## Policy Presets
 
 Policies are adoption modes. They set mutator breadth, selection behavior,
@@ -668,6 +671,8 @@ Latest local Sonar pass after issue #31:
   PR and CI review model using the maintained GitHub workflow examples.
 - [docs/history-data.md](docs/history-data.md): storage, export, retention, and
   audit contract for persisted mutation history and history dashboard outputs.
+- [docs/github-action.md](docs/github-action.md): first-party GitHub Action for
+  bounded `cervomut run` CI lanes.
 - [docs/extensibility.md](docs/extensibility.md): programmatic extension seams
   for custom mutators, suppression evaluators, and survivor rankers.
 - [docs/daemon-worker.md](docs/daemon-worker.md): experimental daemon/worker

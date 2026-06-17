@@ -29,5 +29,5 @@ cervomut run ./... --policy nightly --budget 20m --report summary,json,junit,htm
 
 - coverage-aware selection cuts irrelevant tests earlier
 - HTML and recommendations matter once survivors stop being trivial
-- the workflow shows how to keep PR and nightly lanes distinct without inventing
-  separate configs for every job
+- the workflow shows how to keep PR and nightly lanes distinct with the
+  first-party GitHub Action instead of custom install steps per job

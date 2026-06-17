@@ -12,19 +12,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - name: Run CervoMutants PR lane
+        uses: cervantesh/cervo-mutants@main
         with:
-          go-version: "1.25.6"
-      - run: go install github.com/cervantesh/cervo-mutants/cmd/cervomut@latest
-      - run: cervomut run ./... --policy ci-balanced --budget 10m --coverage-prefilter --report summary,json,junit,github-summary --out .cervomut/pr
+          policy: ci-balanced
+          budget: 10m
+          coverage-prefilter: "true"
+          report: summary,json,junit,github-summary
+          out: .cervomut/pr
 
   nightly-lane:
     if: github.event_name == 'schedule'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - name: Run CervoMutants nightly lane
+        uses: cervantesh/cervo-mutants@main
         with:
-          go-version: "1.25.6"
-      - run: go install github.com/cervantesh/cervo-mutants/cmd/cervomut@latest
-      - run: cervomut run ./... --policy nightly --budget 20m --report summary,json,junit,html,sarif,github-summary --out .cervomut/nightly
+          policy: nightly
+          budget: 20m
+          report: summary,json,junit,html,sarif,github-summary
+          out: .cervomut/nightly

@@ -20,6 +20,9 @@ All future tool runs must follow the
 summarize speed or score as a fairness claim unless the compared rows share the
 same `effective_target` and `target_mode`.
 
+Recurring comparison gaps and their current tracked follow-up status live in
+[follow-up-ledger.md](follow-up-ledger.md).
+
 ## Gremlins
 
 Primary references in this repo:

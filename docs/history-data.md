@@ -109,3 +109,5 @@ The current implementation does not yet guarantee:
 
 Those gaps are intentional and keep the contract honest. They are part of the
 remaining scope for branch/release comparison work rather than hidden behavior.
+Use [docs/branch-release-comparisons.md](branch-release-comparisons.md) for the
+current supported workflow.

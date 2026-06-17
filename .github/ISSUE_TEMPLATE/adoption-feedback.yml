@@ -1,0 +1,96 @@
+name: Adoption feedback
+description: Record external adoption findings about signal quality, review UX, runtime, and rollout friction.
+title: "[Adoption Feedback] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template when CervoMutants is being tried on a real repository and you want the result to become actionable product feedback instead of a one-off note.
+  - type: input
+    id: repo
+    attributes:
+      label: Repository
+      description: Repo name or URL.
+      placeholder: github.com/example/service
+    validations:
+      required: true
+  - type: input
+    id: target
+    attributes:
+      label: Mutation target
+      description: Effective target used for the run.
+      placeholder: ./...
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Go version, and whether the run was local or CI.
+      placeholder: windows amd64, go1.25.6, GitHub Actions
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: CervoMutants version
+      description: Release tag, commit SHA, or local build identifier.
+      placeholder: v0.3.0
+    validations:
+      required: true
+  - type: textarea
+    id: workflow
+    attributes:
+      label: Workflow shape
+      description: Policy, budget, workers, reports, and baseline/quarantine posture.
+      placeholder: |
+        policy=ci-fast
+        budget=5m
+        workers=2
+        reports=summary,json,junit,github-summary
+        baseline-first=true
+    validations:
+      required: true
+  - type: textarea
+    id: signal
+    attributes:
+      label: Mutation signal quality
+      description: Which survivors were useful, noisy, equivalent-risk, or unclear?
+      placeholder: The top survivors were actionable except comparator-boundary duplicates in package foo.
+    validations:
+      required: true
+  - type: textarea
+    id: review_ux
+    attributes:
+      label: Review UX
+      description: Did the HTML report, survivor list, GitHub summary, or recommendations help?
+      placeholder: The HTML filters helped, but nearby tests were still too broad in package foo.
+    validations:
+      required: true
+  - type: textarea
+    id: runtime
+    attributes:
+      label: Runtime and resource behavior
+      description: Timeouts, memory pressure, worker behavior, or stability notes.
+      placeholder: Bounded run completed in 4m30s with two workers and no timeouts.
+    validations:
+      required: true
+  - type: textarea
+    id: rollout
+    attributes:
+      label: Rollout friction
+      description: Setup, config, CI, baseline, or platform friction that slowed adoption.
+      placeholder: Needed one extra exclusion rule for generated mocks; otherwise first run was straightforward.
+    validations:
+      required: true
+  - type: textarea
+    id: artifacts
+    attributes:
+      label: Artifact links or snippets
+      description: Link report directories, CI runs, logs, screenshots, or paste short excerpts.
+      placeholder: |
+        - mutation-report.json
+        - history-dashboard.html
+        - CI run URL
+    validations:
+      required: false

@@ -7,6 +7,9 @@ Date: 2026-06-17
 This document records the first reproducible external validation wave for
 CervoMutants against public Go repositories outside this repository.
 
+Recurring rollout findings from this wave are tracked in
+[follow-up-ledger.md](follow-up-ledger.md).
+
 The goal was not to claim production adoption by upstream maintainers. The goal
 was to prove that the current public release can be applied, without custom
 patches, to a small but real set of public repositories and produce bounded

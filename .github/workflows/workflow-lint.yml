@@ -25,6 +25,7 @@ jobs:
 
           errors = []
           candidates = list(pathlib.Path(".github/workflows").glob("*.y*ml"))
+          candidates.extend(pathlib.Path(".github/ISSUE_TEMPLATE").glob("*.y*ml"))
           candidates.extend(pathlib.Path("examples").glob("*/.github/workflows/*.y*ml"))
           candidates.extend(pathlib.Path(".").glob("action.y*ml"))
 

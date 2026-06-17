@@ -674,10 +674,14 @@ Latest local Sonar pass after issue #31:
   for small, medium, and large-repo adoption patterns.
 - [docs/adoption-guide.md](docs/adoption-guide.md): public fit, rollout,
   limitation, and tradeoff guidance grounded in current validation evidence.
+- [docs/feedback-intake.md](docs/feedback-intake.md): durable external-adoption
+  feedback path and triage expectations.
 - [docs/github-review-workflow.md](docs/github-review-workflow.md): the default
   PR and CI review model using the maintained GitHub workflow examples.
 - [docs/history-data.md](docs/history-data.md): storage, export, retention, and
   audit contract for persisted mutation history and history dashboard outputs.
+- [docs/branch-release-comparisons.md](docs/branch-release-comparisons.md):
+  current supported workflow for branch, release, and time-window comparisons.
 - [docs/github-action.md](docs/github-action.md): first-party GitHub Action for
   bounded `cervomut run` CI lanes.
 - [docs/install.md](docs/install.md): install and upgrade paths for `go install`
@@ -702,6 +706,8 @@ Latest local Sonar pass after issue #31:
   campaign manifests for orchestrating pool smoke, compare, and benchmark jobs.
 - [docs/evaluations/tool-findings.md](docs/evaluations/tool-findings.md):
   findings from Gremlins, gomu, and go-mutesting comparisons.
+- [docs/evaluations/follow-up-ledger.md](docs/evaluations/follow-up-ledger.md):
+  recurring field and comparative findings linked to tracked follow-up work.
 
 ## Design Principles
 

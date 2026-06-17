@@ -85,6 +85,7 @@ See:
 
 - [docs/evaluations/2026-06-17-external-validation-wave.md](evaluations/2026-06-17-external-validation-wave.md)
 - [docs/example-repos.md](example-repos.md)
+- [docs/feedback-intake.md](feedback-intake.md)
 - [docs/go-toolchain-compatibility.md](go-toolchain-compatibility.md)
 - [docs/daemon-worker.md](daemon-worker.md)
 
@@ -105,6 +106,11 @@ The main known limits today are:
   for human review
 - distributed execution is still an experimental path, not a default
   recommendation
+
+When a real rollout surfaces those limits, capture it through the
+[`Adoption feedback`](../.github/ISSUE_TEMPLATE/adoption-feedback.yml) issue
+template so the evidence becomes tracked product feedback instead of a private
+note.
 
 ## Recommended Rollout Path
 

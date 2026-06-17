@@ -44,6 +44,8 @@ Update docs in the same change when you touch:
 
 - CLI behavior or flags:
   `README.md`, [compatibility-policy.md](compatibility-policy.md)
+- pull request review or merge policy:
+  [github-review-workflow.md](github-review-workflow.md)
 - report schema or output contracts:
   `README.md`, [compatibility-policy.md](compatibility-policy.md), relevant
   report docs or golden fixtures
@@ -76,6 +78,8 @@ Then add targeted checks when relevant:
 
 - report changes: report tests and golden fixtures
 - workflow or release changes: workflow YAML parse and release-helper tests
+- PR review gate changes: validate the GitHub workflow plus the live branch
+  protection or ruleset state
 - comparison harness changes: protocol docs plus pool/extcompare tests
 - Windows-sensitive execution changes: `doctor`, runner, and path-sensitive
   tests

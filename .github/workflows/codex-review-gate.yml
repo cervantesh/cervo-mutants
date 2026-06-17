@@ -1,0 +1,267 @@
+name: codex-review-gate
+
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
+  pull_request_review_thread:
+    types:
+      - resolved
+      - unresolved
+
+permissions:
+  actions: read
+  contents: read
+  issues: read
+  pull-requests: read
+
+jobs:
+  codex-review-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Wait for Codex response and verify review threads are resolved
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const botLogins = new Set([
+              "chatgpt-codex-connector[bot]",
+              "chatgpt-codex-connector",
+            ]);
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const number = context.issue.number;
+            const maxWaitMs = 8 * 60 * 1000;
+            const pollMs = 15000;
+            const workflowID = "codex-review-gate.yml";
+            let cachedReviewFloor = null;
+            let cachedReviewHead = null;
+
+            function isCodex(login) {
+              return Boolean(login) && botLogins.has(login);
+            }
+
+            function sleep(ms) {
+              return new Promise((resolve) => setTimeout(resolve, ms));
+            }
+
+            async function getReviewFloor(headSha) {
+              if (cachedReviewFloor !== null && cachedReviewHead === headSha) {
+                return cachedReviewFloor;
+              }
+
+              const workflowRuns = await github.paginate(github.rest.actions.listWorkflowRuns, {
+                owner,
+                repo,
+                workflow_id: workflowID,
+                event: "pull_request",
+                per_page: 100,
+              });
+
+              const matchingRunTimes = workflowRuns
+                .filter((run) => {
+                  if (run.head_sha !== headSha) {
+                    return false;
+                  }
+                  if (!Array.isArray(run.pull_requests) || run.pull_requests.length === 0) {
+                    return true;
+                  }
+                  return run.pull_requests.some((pullRequest) => pullRequest.number === number);
+                })
+                .map((run) => Date.parse(run.created_at))
+                .filter((value) => Number.isFinite(value));
+
+              if (matchingRunTimes.length === 0) {
+                const currentRun = await github.rest.actions.getWorkflowRun({
+                  owner,
+                  repo,
+                  run_id: context.runId,
+                });
+                matchingRunTimes.push(Date.parse(currentRun.data.created_at));
+              }
+
+              cachedReviewHead = headSha;
+              cachedReviewFloor = Math.min(...matchingRunTimes);
+              return cachedReviewFloor;
+            }
+
+            async function fetchGateState() {
+              const query = `
+                query($owner:String!, $repo:String!, $number:Int!) {
+                  repository(owner:$owner, name:$repo) {
+                    pullRequest(number:$number) {
+                      number
+                      isDraft
+                      headRefOid
+                      reviews(last:50) {
+                        nodes {
+                          author { login }
+                          state
+                          submittedAt
+                          url
+                          commit { oid }
+                        }
+                      }
+                      reviewThreads(first:100) {
+                        nodes {
+                          isResolved
+                          isOutdated
+                          comments(first:20) {
+                            nodes {
+                              author { login }
+                              body
+                              path
+                              line
+                              url
+                              pullRequestReview {
+                                state
+                                submittedAt
+                                url
+                                author { login }
+                                commit { oid }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              `;
+
+              const result = await github.graphql(query, { owner, repo, number });
+              const pr = result.repository.pullRequest;
+              if (!pr) {
+                throw new Error(`pull request #${number} not found`);
+              }
+
+              if (pr.isDraft) {
+                return {
+                  draft: true,
+                  responseSeen: true,
+                  unresolvedThreads: [],
+                  headSha: pr.headRefOid,
+                };
+              }
+
+              const unresolvedThreads = [];
+              let codexThreadCount = 0;
+              const reviewFloor = await getReviewFloor(pr.headRefOid);
+
+              for (const thread of pr.reviewThreads.nodes) {
+                if (thread.isOutdated) {
+                  continue;
+                }
+                let codexComment = null;
+                for (const comment of thread.comments.nodes) {
+                  const review = comment.pullRequestReview;
+                  if (!isCodex(comment.author?.login)) {
+                    continue;
+                  }
+                  if (!review || review.commit?.oid !== pr.headRefOid) {
+                    continue;
+                  }
+                  codexComment = comment;
+                  codexThreadCount += 1;
+                  break;
+                }
+                if (codexComment && !thread.isResolved) {
+                  unresolvedThreads.push({
+                    path: codexComment.path || "unknown",
+                    line: codexComment.line || "",
+                    url: codexComment.url,
+                    body: codexComment.body || "",
+                  });
+                }
+              }
+
+              const codexReviews = pr.reviews.nodes.filter((review) => {
+                return isCodex(review.author?.login) && review.commit?.oid === pr.headRefOid;
+              });
+
+              const reactions = await github.paginate(github.rest.reactions.listForIssue, {
+                owner,
+                repo,
+                issue_number: number,
+                per_page: 100,
+              });
+              const freshCodexReaction = reactions.find((reaction) => {
+                return (
+                  isCodex(reaction.user?.login) &&
+                  reaction.content === "+1" &&
+                  Date.parse(reaction.created_at) >= reviewFloor
+                );
+              });
+
+              return {
+                draft: false,
+                headSha: pr.headRefOid,
+                responseSeen:
+                  unresolvedThreads.length > 0 ||
+                  codexThreadCount > 0 ||
+                  codexReviews.length > 0 ||
+                  Boolean(freshCodexReaction),
+                unresolvedThreads,
+                codexReviews,
+                freshCodexReaction,
+              };
+            }
+
+            const deadline = Date.now() + maxWaitMs;
+            while (Date.now() <= deadline) {
+              const state = await fetchGateState();
+              if (state.draft) {
+                await core.summary
+                  .addHeading("Codex review gate")
+                  .addRaw("Draft pull request detected; the gate will run when the PR is ready for review.\n")
+                  .write();
+                return;
+              }
+
+              if (state.unresolvedThreads.length > 0) {
+                await core.summary.addHeading("Unresolved Codex review findings");
+                for (const thread of state.unresolvedThreads) {
+                  const location = thread.line ? `${thread.path}:${thread.line}` : thread.path;
+                  await core.summary.addList([
+                    `${location} -> ${thread.url}`,
+                  ]);
+                }
+                await core.summary.addRaw(
+                  "Resolve the Codex review conversation in GitHub after addressing the feedback. If a finding is intentionally declined, document that in the thread before resolving it.\n"
+                ).write();
+                core.setFailed(
+                  `Found ${state.unresolvedThreads.length} unresolved Codex review thread(s) on the current head commit.`
+                );
+                return;
+              }
+
+              if (state.responseSeen) {
+                const evidence = [];
+                if (state.codexReviews?.length) {
+                  evidence.push(`reviews=${state.codexReviews.length}`);
+                }
+                if (state.freshCodexReaction) {
+                  evidence.push(`reaction=${state.freshCodexReaction.content}`);
+                }
+                await core.summary
+                  .addHeading("Codex review gate")
+                  .addRaw(
+                    `Codex responded for head \`${state.headSha.slice(0, 10)}\` and there are no unresolved Codex review threads. ${evidence.join(" ")}\n`
+                  )
+                  .write();
+                return;
+              }
+
+              await sleep(pollMs);
+            }
+
+            await core.summary
+              .addHeading("Codex review gate timed out")
+              .addRaw(
+                "No Codex response was detected for the current head commit within the wait window. Wait for Codex to react or comment, or request a fresh review with `@codex review`, then re-run this check before merge.\n"
+              )
+              .write();
+            core.setFailed("Timed out waiting for a Codex response on the current head commit.");

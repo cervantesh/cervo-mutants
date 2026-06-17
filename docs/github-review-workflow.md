@@ -110,6 +110,34 @@ For scheduled or campaign review, add:
 2. HTML workbench for grouped survivor review
 3. history or governance artifacts when the repo is already using those layers
 
+## Codex Review Gate On Main
+
+Pull requests into `main` are expected to wait for Codex review before merge.
+
+The repository now enforces this in two layers:
+
+- a required `codex-review-gate` check waits for a Codex response on the
+  current PR head
+- unresolved Codex review threads must be resolved before merge
+
+That means a pull request should not merge while:
+
+- Codex has not yet responded to the current head commit, or
+- Codex has an unresolved review thread on the current head commit
+
+The intended workflow is:
+
+1. wait for Codex to react or comment on the current head
+2. address the feedback or explicitly document why it is being declined
+3. resolve the Codex review conversation in GitHub
+4. merge only after `codex-review-gate` is green
+
+If Codex leaves a no-finding thumbs-up reaction, the gate accepts that as the
+review response for the current head commit.
+
+If Codex leaves a review comment, resolving the conversation is required after
+the feedback is handled. Do not merge while the thread is still open.
+
 ## Baseline Rule
 
 The GitHub workflow should stay baseline-first by default.

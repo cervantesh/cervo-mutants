@@ -1,0 +1,147 @@
+name: CervoMutants
+description: Run bounded CervoMutants mutation testing in GitHub Actions.
+
+inputs:
+  go-version:
+    description: Go toolchain version used to install and run CervoMutants.
+    required: false
+    default: "1.25.6"
+  go-cache:
+    description: Whether to enable the Go module and build cache in setup-go.
+    required: false
+    default: "true"
+  go-cache-dependency-path:
+    description: Dependency path glob forwarded to actions/setup-go cache-dependency-path.
+    required: false
+    default: "**/go.sum"
+  cervomut-version:
+    description: Version suffix passed to go install, for example latest or v0.3.0.
+    required: false
+    default: "latest"
+  working-directory:
+    description: Working directory where the mutation command should run.
+    required: false
+    default: "."
+  targets:
+    description: Space-separated mutation targets passed after cervomut run.
+    required: false
+    default: "./..."
+  policy:
+    description: Policy preset used for the run.
+    required: false
+    default: "ci-fast"
+  budget:
+    description: Optional mutation budget such as 5m or 20m.
+    required: false
+    default: "5m"
+  report:
+    description: Report formats passed to --report.
+    required: false
+    default: "summary,json,junit,github-summary"
+  out:
+    description: Report output directory.
+    required: false
+    default: ".cervomut/reports"
+  sample:
+    description: Optional sample mode, for example deterministic.
+    required: false
+    default: ""
+  slice-by:
+    description: Optional slice key such as package or file.
+    required: false
+    default: ""
+  shard:
+    description: Optional shard expression such as 1/4.
+    required: false
+    default: ""
+  max-files-per-run:
+    description: Optional max files per run cap.
+    required: false
+    default: ""
+  max-mutants-per-package:
+    description: Optional max mutants per package cap.
+    required: false
+    default: ""
+  max-mutants:
+    description: Optional max mutants cap.
+    required: false
+    default: ""
+  workers:
+    description: Optional worker count override.
+    required: false
+    default: ""
+  coverage-prefilter:
+    description: Whether to add --coverage-prefilter.
+    required: false
+    default: "false"
+  actionable-only:
+    description: Whether to add --actionable-only to the run output view.
+    required: false
+    default: "false"
+
+outputs:
+  report-dir:
+    description: Report directory written by the action.
+    value: ${{ inputs.out }}
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: ${{ inputs.go-version }}
+        cache: ${{ inputs.go-cache }}
+        cache-dependency-path: ${{ inputs.go-cache-dependency-path }}
+
+    - name: Install CervoMutants
+      shell: pwsh
+      run: |
+        $version = '${{ inputs.cervomut-version }}'
+        if ([string]::IsNullOrWhiteSpace($version)) {
+          $version = 'latest'
+        }
+        go install "github.com/cervantesh/cervo-mutants/cmd/cervomut@$version"
+
+    - name: Run CervoMutants
+      shell: pwsh
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        function Add-ArgPair([ref]$ArgsRef, [string]$Flag, [string]$Value) {
+          if (-not [string]::IsNullOrWhiteSpace($Value)) {
+            $ArgsRef.Value += @($Flag, $Value)
+          }
+        }
+
+        $cmdArgs = @('run')
+        $targets = @('${{ inputs.targets }}' -split '\s+' | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+        if ($targets.Count -eq 0) {
+          $targets = @('./...')
+        }
+        $cmdArgs += $targets
+
+        Add-ArgPair ([ref]$cmdArgs) '--policy' '${{ inputs.policy }}'
+        Add-ArgPair ([ref]$cmdArgs) '--budget' '${{ inputs.budget }}'
+        Add-ArgPair ([ref]$cmdArgs) '--report' '${{ inputs.report }}'
+        Add-ArgPair ([ref]$cmdArgs) '--out' '${{ inputs.out }}'
+        Add-ArgPair ([ref]$cmdArgs) '--sample' '${{ inputs.sample }}'
+        Add-ArgPair ([ref]$cmdArgs) '--slice-by' '${{ inputs.slice-by }}'
+        Add-ArgPair ([ref]$cmdArgs) '--shard' '${{ inputs.shard }}'
+        Add-ArgPair ([ref]$cmdArgs) '--max-files-per-run' '${{ inputs.max-files-per-run }}'
+        Add-ArgPair ([ref]$cmdArgs) '--max-mutants-per-package' '${{ inputs.max-mutants-per-package }}'
+        Add-ArgPair ([ref]$cmdArgs) '--max-mutants' '${{ inputs.max-mutants }}'
+        Add-ArgPair ([ref]$cmdArgs) '--workers' '${{ inputs.workers }}'
+
+        if ('${{ inputs.coverage-prefilter }}' -eq 'true') {
+          $cmdArgs += '--coverage-prefilter'
+        }
+        if ('${{ inputs.actionable-only }}' -eq 'true') {
+          $cmdArgs += '--actionable-only'
+        }
+
+        Write-Host ('Running: cervomut ' + ($cmdArgs -join ' '))
+        & cervomut @cmdArgs
+
+        if ($env:GITHUB_OUTPUT) {
+          "report-dir=${{ inputs.out }}" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+        }

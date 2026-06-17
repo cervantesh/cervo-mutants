@@ -9,6 +9,9 @@ The goal is not to promote one universal pipeline. The goal is to give teams a
 clear default operating model that is already represented by committed example
 workflows.
 
+For the first-party installation and run wrapper itself, see
+[docs/github-action.md](github-action.md).
+
 ## Validated Workflow Shapes
 
 The current public workflow guidance is grounded in three maintained examples:

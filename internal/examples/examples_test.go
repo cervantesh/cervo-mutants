@@ -51,8 +51,9 @@ func TestExampleWorkspacesStayRunnableAndDocumented(t *testing.T) {
 			if err != nil {
 				t.Fatalf("example workflow missing: %v", err)
 			}
-			if !strings.Contains(string(workflowData), "cervomut run") {
-				t.Fatalf("example workflow should invoke cervomut run: %s", workflowPath)
+			workflowText := string(workflowData)
+			if !strings.Contains(workflowText, "cervomut run") && !strings.Contains(workflowText, "uses: cervantesh/cervo-mutants@") {
+				t.Fatalf("example workflow should invoke cervomut run directly or through the first-party action: %s", workflowPath)
 			}
 
 			cmd := exec.Command("go", "test", "./...")

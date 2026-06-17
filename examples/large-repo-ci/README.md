@@ -35,5 +35,5 @@ cervomut run ./pkg/catalog ./pkg/pricing --policy campaign --workers 2 --out .ce
 
 - sharding stays deterministic and reviewable
 - file and package caps keep the denominator meaningful under CI budgets
-- the workflow demonstrates matrix slicing without claiming that every large
-  repo should mutate the exact same scope
+- the workflow demonstrates matrix slicing with the first-party GitHub Action
+  without claiming that every large repo should mutate the exact same scope

@@ -24,7 +24,11 @@ jobs:
           import yaml
 
           errors = []
-          for path in sorted(pathlib.Path(".github/workflows").glob("*.y*ml")):
+          candidates = list(pathlib.Path(".github/workflows").glob("*.y*ml"))
+          candidates.extend(pathlib.Path("examples").glob("*/.github/workflows/*.y*ml"))
+          candidates.extend(pathlib.Path(".").glob("action.y*ml"))
+
+          for path in sorted(candidates):
               try:
                   yaml.safe_load(path.read_text(encoding="utf-8"))
               except Exception as exc:  # pragma: no cover - workflow guard script

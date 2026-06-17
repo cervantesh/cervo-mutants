@@ -26,7 +26,8 @@ Use this template when:
    cervomut baseline update
    ```
 
-3. Use the workflow in `.github/workflows/cervomut.yml` for PR feedback.
+3. Use the first-party workflow in `.github/workflows/cervomut.yml` for PR
+   feedback.
 
 ## Why this shape
 

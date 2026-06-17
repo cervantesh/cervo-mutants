@@ -61,7 +61,7 @@ func JSON(result engine.RunResult) ([]byte, error) {
 
 func Summary(result engine.RunResult) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "Effective mutation score: %.2f%%\nRaw mutation score: %.2f%%\nGenerated mutants: %d\nCovered mutants: %d\nExecuted mutants: %d\nEffective mutants: %d\nScore denominator: %d\nKilled: %d\nSurvived: %d\nNot covered: %d\nPending budget: %d\nSkipped resource: %d\nQuarantined: %d\nTimed out: %d\nMemory killed: %d\nCompile errors: %d\nTest efficacy: %.2f%%\nMutation coverage: %.2f%%\nHigh-risk survivors: %d\nNew survivors: %d\nLong-standing survivors: %d\nPlatform-sensitive survivors: %d\nNon-progress timeouts: %d\nSuppression audits: report_only=%d lower_priority=%d suppress=%d quarantine_required=%d\n",
+	fmt.Fprintf(&b, "Effective mutation score: %.2f%%\nRaw mutation score: %.2f%%\nGenerated mutants: %d\nCovered mutants: %d\nExecuted mutants: %d\nEffective mutants: %d\nScore denominator: %d\nKilled: %d\nSurvived: %d\nNot covered: %d\nPending budget: %d\nSkipped resource: %d\nQuarantined: %d\nTimed out: %d\nMemory killed: %d\nCompile errors: %d\nTest efficacy: %.2f%%\nMutation coverage: %.2f%%\nActionable score: %.2f%%\nActionable survivors: %d\nTrue actionable survivors: %d\nEquivalent-risk survivors: %d\nSemantic review units: %d\nCollapsed semantic duplicates: %d\nHigh-risk survivors: %d\nNew survivors: %d\nLong-standing survivors: %d\nPlatform-sensitive survivors: %d\nNon-progress timeouts: %d\nSuppression audits: report_only=%d lower_priority=%d suppress=%d quarantine_required=%d\n",
 		result.Summary.EffectiveScore,
 		result.Summary.Score,
 		result.Summary.GeneratedMutants,
@@ -80,6 +80,12 @@ func Summary(result engine.RunResult) string {
 		result.Summary.CompileError,
 		result.Summary.TestEfficacy,
 		result.Summary.MutationCoverage,
+		result.Summary.Actionable.ActionableScore,
+		result.Summary.Actionable.ActionableSurvivors,
+		result.Summary.Actionable.TrueActionableSurvivors,
+		result.Summary.Actionable.EquivalentRiskSurvivors,
+		result.Summary.Actionable.SemanticGroupReviewUnits,
+		result.Summary.Actionable.CollapsedSemanticDuplicates,
 		result.Summary.HighRiskSurvivors,
 		result.Summary.NewSurvivors,
 		result.Summary.LongStandingSurvivors,
@@ -541,6 +547,12 @@ func HTML(result engine.RunResult) string {
 		return row.TimingBand, row.TimingLabel
 	})
 	actionableSurvivors, survivorGroups, longStandingSurvivors, slowSignals := htmlSummaryMetrics(rows)
+	if result.Summary.Actionable.TrueActionableSurvivors > 0 || result.Summary.Actionable.ActionableSurvivors > 0 {
+		actionableSurvivors = result.Summary.Actionable.TrueActionableSurvivors
+	}
+	if result.Summary.Actionable.SemanticGroupReviewUnits > 0 {
+		survivorGroups = result.Summary.Actionable.SemanticGroupReviewUnits
+	}
 	initialVisible := 0
 	initialGroups := map[string]bool{}
 	for _, row := range rows {
@@ -612,8 +624,9 @@ tbody tr:hover{background:#f8fafe}
 	b.WriteString("<p>Survivors stay first-class, but the full raw run remains in the table below. Use the filters to narrow review by actionability, semantic grouping, operator, equivalent risk, survivor history, age, and timing signal without mutating the underlying report.</p>")
 	b.WriteString("</div><div class=\"cards\">")
 	writeHTMLCard(&b, "Survivors", result.Summary.Survived)
-	writeHTMLCard(&b, "Actionable survivors", actionableSurvivors)
-	writeHTMLCard(&b, "Semantic groups", survivorGroups)
+	writeHTMLCard(&b, "Actionable score", fmt.Sprintf("%.2f%%", result.Summary.Actionable.ActionableScore))
+	writeHTMLCard(&b, "True actionable survivors", actionableSurvivors)
+	writeHTMLCard(&b, "Semantic review units", survivorGroups)
 	writeHTMLCard(&b, "Long-standing survivors", longStandingSurvivors)
 	writeHTMLCard(&b, "Slow timing signals", slowSignals)
 	writeHTMLCard(&b, "Raw score", fmt.Sprintf("%.2f%%", result.Summary.Score))

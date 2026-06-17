@@ -201,6 +201,10 @@ and the normal `survivors.txt` remain complete; the actionable projection is
 printed to stdout for `run`, available in `report survivors --actionable-only`,
 and written to `.cervomut/reports/survivors-actionable.txt`.
 
+`mutation-report.json` also carries an additive `summary.actionable` block so
+consumers can read actionable score and triage-weighted survivor counts without
+changing the meaning of the existing raw score fields.
+
 `semantic-triage-ledger.json` is a companion artifact. It groups equivalent-risk
 survivors, flags Windows-only permission-mode noise, and suggests quarantine
 review for confirmed non-progress loop timeouts without mutating the raw report.

@@ -4,17 +4,21 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/cervantesh/cervo-mutants/pkg/config"
+	"github.com/cervantesh/cervo-mutants/pkg/triage"
 )
 
 func summarize(results []MutantResult) Summary {
 	s := Summary{MutatorStats: map[string]MutatorStat{}, EquivalentRiskStats: map[string]int{}, TimeoutRiskStats: map[string]int{}, SemanticGroupStats: map[string]int{}}
 	s.Total = len(results)
 	s.GeneratedMutants = len(results)
+	triageResults := make([]triage.Result, 0, len(results))
 	for _, result := range results {
 		applySemanticResultMetadata(&result)
+		triageResults = append(triageResults, triageResult(result))
 		operator := result.Mutant.Operator
 		if operator == "" {
 			operator = "unknown"
@@ -65,6 +69,19 @@ func summarize(results []MutantResult) Summary {
 	coverable := s.Total - s.Ignored - s.Quarantined - s.Skipped - s.SkippedResource - s.PendingBudget
 	if coverable > 0 {
 		s.MutationCoverage = float64(coverable-s.NotCovered) / float64(coverable) * 100
+	}
+	actionable := triage.BuildActionableSummary(runtime.GOOS, s.Score, s.Killed, triageResults)
+	s.Actionable = ActionableSummary{
+		RawScore:                    actionable.RawScore,
+		ActionableScore:             actionable.ActionableScore,
+		Survivors:                   actionable.Survivors,
+		ActionableSurvivors:         actionable.ActionableSurvivors,
+		TrueActionableSurvivors:     actionable.TrueActionableSurvivors,
+		EquivalentRiskSurvivors:     actionable.EquivalentRiskSurvivors,
+		PlatformSensitiveSurvivors:  actionable.PlatformSensitiveSurvivors,
+		NonProgressTimeouts:         actionable.NonProgressTimeouts,
+		SemanticGroupReviewUnits:    actionable.SemanticGroupReviewUnits,
+		CollapsedSemanticDuplicates: actionable.CollapsedSemanticDuplicates,
 	}
 	s.DenominatorHealth = denominatorHealth(s)
 	return s

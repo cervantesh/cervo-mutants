@@ -24,6 +24,18 @@
     "effective_score": 33.33,
     "test_efficacy": 33.33,
     "mutation_coverage": 80,
+    "actionable": {
+      "raw_score": 50,
+      "actionable_score": 50,
+      "survivors": 2,
+      "actionable_survivors": 1,
+      "true_actionable_survivors": 1,
+      "equivalent_risk_survivors": 1,
+      "platform_sensitive_survivors": 1,
+      "non_progress_timeouts": 1,
+      "semantic_group_review_units": 1,
+      "collapsed_semantic_duplicates": 0
+    },
     "denominator_health": {
       "generated": 5,
       "covered": 4,

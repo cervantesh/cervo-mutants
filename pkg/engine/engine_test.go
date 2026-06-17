@@ -1323,12 +1323,15 @@ func TestSummarizeIncludesTimeoutRiskStats(t *testing.T) {
 }
 
 func TestSummarizeIncludesSemanticTriageStats(t *testing.T) {
-	result := summarize([]MutantResult{
+	results := []MutantResult{
 		{MutantID: "loop", Status: StatusTimedOut, Mutant: Mutant{ID: "loop", Operator: "inc-dec", NonProgressRisk: "high"}},
-		{MutantID: "perm", Status: StatusSurvived, Mutant: Mutant{ID: "perm", PlatformSensitive: true}},
-		{MutantID: "group-a", Status: StatusSurvived, Mutant: Mutant{ID: "group-a", SemanticGroup: "sort:1", GroupLabel: "sort comparator boundary"}},
-		{MutantID: "group-b", Status: StatusSurvived, Mutant: Mutant{ID: "group-b", SemanticGroup: "sort:1", GroupLabel: "sort comparator boundary"}},
-	})
+		{MutantID: "perm", Status: StatusSurvived, Actionability: "medium", Mutant: Mutant{ID: "perm", PlatformSensitive: true}},
+		{MutantID: "group-a", Status: StatusSurvived, Actionability: "high", Mutant: Mutant{ID: "group-a", EquivalentRisk: "high", SemanticGroup: "sort:1", GroupLabel: "sort comparator boundary"}},
+		{MutantID: "group-b", Status: StatusSurvived, Actionability: "high", Mutant: Mutant{ID: "group-b", EquivalentRisk: "high", SemanticGroup: "sort:1", GroupLabel: "sort comparator boundary"}},
+		{MutantID: "keep", Status: StatusSurvived, Actionability: "medium", Mutant: Mutant{ID: "keep", Operator: "logical"}},
+		{MutantID: "killed", Status: StatusKilled, Mutant: Mutant{ID: "killed", Operator: "logical"}},
+	}
+	result := summarize(results)
 	if result.NonProgressTimeouts != 1 {
 		t.Fatalf("non-progress timeouts = %d, want 1", result.NonProgressTimeouts)
 	}
@@ -1337,6 +1340,21 @@ func TestSummarizeIncludesSemanticTriageStats(t *testing.T) {
 	}
 	if result.SemanticGroupStats["sort comparator boundary"] != 2 {
 		t.Fatalf("semantic group stats = %+v", result.SemanticGroupStats)
+	}
+	if result.Actionable.RawScore == 0 || result.Actionable.ActionableScore == 0 {
+		t.Fatalf("actionable score block missing scores: %+v", result.Actionable)
+	}
+	if result.Actionable.Survivors != 4 || result.Actionable.ActionableSurvivors != 3 || result.Actionable.TrueActionableSurvivors != 2 {
+		t.Fatalf("unexpected actionable survivor counts: %+v", result.Actionable)
+	}
+	if result.Actionable.EquivalentRiskSurvivors != 2 || result.Actionable.SemanticGroupReviewUnits != 1 || result.Actionable.CollapsedSemanticDuplicates != 1 {
+		t.Fatalf("unexpected actionable grouping counters: %+v", result.Actionable)
+	}
+	if result.Actionable.PlatformSensitiveSurvivors != 1 || result.Actionable.NonProgressTimeouts != 1 {
+		t.Fatalf("unexpected actionable platform/timeout counters: %+v", result.Actionable)
+	}
+	if result.Actionable.ActionableScore != 33.33333333333333 {
+		t.Fatalf("actionable score = %.14f", result.Actionable.ActionableScore)
 	}
 }
 

@@ -21,6 +21,7 @@ func TestJSONReportSchemaV1IncludesActionableFields(t *testing.T) {
 			Total:                      1,
 			Survived:                   1,
 			Score:                      0,
+			Actionable:                 engine.ActionableSummary{RawScore: 0, ActionableScore: 0, Survivors: 1, ActionableSurvivors: 1, TrueActionableSurvivors: 1, EquivalentRiskSurvivors: 1, SemanticGroupReviewUnits: 1},
 			Quarantined:                0,
 			PlatformSensitiveSurvivors: 1,
 			NonProgressTimeouts:        1,
@@ -94,7 +95,7 @@ func TestJSONReportSchemaV1IncludesActionableFields(t *testing.T) {
 		t.Fatalf("schema_version = %v", decoded["schema_version"])
 	}
 	text := string(data)
-	for _, want := range []string{"environment", "go_version", "temp_root", "warnings", "slice", "slice_by", "shard_index", "shard_count", "selected_files", "max_mutants_per_package", "isolation", "checkpoint", "fingerprint", "includes_file_digests", "failure_kind", "memory_peak_bytes", "baseline", "cache", "quarantine", "history", "unified_diff", "status_reason", "selection_reason", "coverage_source", "selected_tests", "description", "nearby_tests", "equivalent_risk", "recommendation", "compile_error_risk", "semantic_tags", "semantic_group", "group_label", "group_reason", "suggested_skip_reason", "semantic_group_size", "semantic_group_statistics", "platform_sensitive_survivors", "non_progress_timeouts", "suppression_audit", "evidence_level", "survivor_rank", "rank_score", "rank_reason", "actionability", "suggested_test_scope", "nearest_tests", "previous_status", "first_seen", "survivor_age_runs", "operator_historical_yield"} {
+	for _, want := range []string{"environment", "go_version", "temp_root", "warnings", "slice", "slice_by", "shard_index", "shard_count", "selected_files", "max_mutants_per_package", "isolation", "checkpoint", "fingerprint", "includes_file_digests", "failure_kind", "memory_peak_bytes", "baseline", "cache", "quarantine", "history", "unified_diff", "status_reason", "selection_reason", "coverage_source", "selected_tests", "description", "nearby_tests", "equivalent_risk", "recommendation", "compile_error_risk", "semantic_tags", "semantic_group", "group_label", "group_reason", "suggested_skip_reason", "semantic_group_size", "semantic_group_statistics", "platform_sensitive_survivors", "non_progress_timeouts", "actionable", "raw_score", "actionable_score", "true_actionable_survivors", "equivalent_risk_survivors", "semantic_group_review_units", "collapsed_semantic_duplicates", "suppression_audit", "evidence_level", "survivor_rank", "rank_score", "rank_reason", "actionability", "suggested_test_scope", "nearest_tests", "previous_status", "first_seen", "survivor_age_runs", "operator_historical_yield"} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("JSON report missing %q: %s", want, text)
 		}
@@ -114,6 +115,18 @@ func TestSummaryIncludesGremlinsStyleCoverageMetricsAndMutatorStats(t *testing.T
 			ScoreDenominator: 2,
 			TestEfficacy:     50,
 			MutationCoverage: 66.66666666666666,
+			Actionable: engine.ActionableSummary{
+				RawScore:                    50,
+				ActionableScore:             75,
+				Survivors:                   1,
+				ActionableSurvivors:         1,
+				TrueActionableSurvivors:     1,
+				EquivalentRiskSurvivors:     1,
+				PlatformSensitiveSurvivors:  1,
+				NonProgressTimeouts:         1,
+				SemanticGroupReviewUnits:    1,
+				CollapsedSemanticDuplicates: 1,
+			},
 			DenominatorHealth: engine.DenominatorHealth{
 				Generated:        3,
 				Covered:          2,
@@ -151,6 +164,12 @@ func TestSummaryIncludesGremlinsStyleCoverageMetricsAndMutatorStats(t *testing.T
 		"Score denominator: 2",
 		"Test efficacy: 50.00%",
 		"Mutation coverage: 66.67%",
+		"Actionable score: 75.00%",
+		"Actionable survivors: 1",
+		"True actionable survivors: 1",
+		"Equivalent-risk survivors: 1",
+		"Semantic review units: 1",
+		"Collapsed semantic duplicates: 1",
 		"Denominator health: healthy=true generated=3 covered=2 executed=2 effective=2 score_denominator=2 killed=1 survived=1 not_covered=1 pending_budget=0 skipped_resource=0 timed_out=0 memory_killed=0 compile_error=0",
 		"High-risk survivors: 1",
 		"New survivors: 1",
@@ -398,7 +417,20 @@ func TestJUnitHTMLAndWriteAll(t *testing.T) {
 	dir := t.TempDir()
 	run := engine.RunResult{
 		SchemaVersion: "1",
-		Summary:       engine.Summary{Total: 3, Killed: 1, Survived: 2, Score: 50, LongStandingSurvivors: 1},
+		Summary: engine.Summary{
+			Total:                 3,
+			Killed:                1,
+			Survived:              2,
+			Score:                 50,
+			LongStandingSurvivors: 1,
+			Actionable: engine.ActionableSummary{
+				RawScore:                50,
+				ActionableScore:         33.33,
+				Survivors:               2,
+				ActionableSurvivors:     2,
+				TrueActionableSurvivors: 2,
+			},
+		},
 		Mutants: []engine.MutantResult{
 			{MutantID: "killed", Status: engine.StatusKilled, Mutant: engine.Mutant{Diff: "-a\n+b\n"}},
 			{
@@ -467,7 +499,8 @@ func TestJUnitHTMLAndWriteAll(t *testing.T) {
 		`data-survivor="true"`,
 		`data-actionability="high"`,
 		`data-group="sort comparator boundary"`,
-		"Actionable survivors",
+		"Actionable score",
+		"True actionable survivors",
 		"long-standing (5+ runs)",
 		"slow (&gt;2s)",
 	} {

@@ -75,4 +75,24 @@ func TestActionableViewAndSummaryHelpers(t *testing.T) {
 	if IsActionableSurvivor("linux", Result{Status: StatusSurvived, Actionability: "low", Mutant: Mutant{}}) {
 		t.Fatal("low actionability survivor should not stay actionable")
 	}
+
+	summary := BuildActionableSummary("windows", 50, 3, []Result{
+		{MutantID: "group-lead", Status: StatusSurvived, Actionability: "high", Mutant: Mutant{EquivalentRisk: "high", SemanticGroup: "sort:1"}},
+		{MutantID: "group-dup", Status: StatusSurvived, Actionability: "high", Mutant: Mutant{EquivalentRisk: "high", SemanticGroup: "sort:1"}},
+		{MutantID: "platform", Status: StatusSurvived, Actionability: "medium", Mutant: Mutant{PlatformSensitive: true}},
+		{MutantID: "keep", Status: StatusSurvived, Actionability: "medium", Mutant: Mutant{}},
+		{MutantID: "timeout", Status: StatusTimedOut, Mutant: Mutant{NonProgressRisk: "high"}},
+	})
+	if summary.RawScore != 50 || summary.ActionableSurvivors != 3 || summary.TrueActionableSurvivors != 2 {
+		t.Fatalf("unexpected actionable summary counts: %+v", summary)
+	}
+	if summary.EquivalentRiskSurvivors != 2 || summary.PlatformSensitiveSurvivors != 1 || summary.NonProgressTimeouts != 1 {
+		t.Fatalf("unexpected actionable summary risk counters: %+v", summary)
+	}
+	if summary.SemanticGroupReviewUnits != 1 || summary.CollapsedSemanticDuplicates != 1 {
+		t.Fatalf("unexpected semantic review-unit counters: %+v", summary)
+	}
+	if summary.ActionableScore != 60 {
+		t.Fatalf("actionable score = %.2f, want 60", summary.ActionableScore)
+	}
 }

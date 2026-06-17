@@ -61,6 +61,19 @@ type RankedSurvivor struct {
 	NearestTests       []string
 }
 
+type ActionableSummary struct {
+	RawScore                    float64
+	ActionableScore             float64
+	Survivors                   int
+	ActionableSurvivors         int
+	TrueActionableSurvivors     int
+	EquivalentRiskSurvivors     int
+	PlatformSensitiveSurvivors  int
+	NonProgressTimeouts         int
+	SemanticGroupReviewUnits    int
+	CollapsedSemanticDuplicates int
+}
+
 func RecommendationPriority(recommendation string) int {
 	switch recommendation {
 	case "fast-ci":
@@ -214,6 +227,52 @@ func IsActionableSurvivor(goos string, result Result) bool {
 		return false
 	}
 	return true
+}
+
+func BuildActionableSummary(goos string, rawScore float64, killed int, results []Result) ActionableSummary {
+	summary := ActionableSummary{RawScore: rawScore}
+	seenGroups := map[string]bool{}
+	countedActionableGroups := map[string]bool{}
+	for _, result := range results {
+		normalized := NormalizeResult(result)
+		switch normalized.Status {
+		case StatusSurvived:
+			summary.Survivors++
+			group := normalized.Mutant.SemanticGroup
+			if group != "" {
+				if seenGroups[group] {
+					summary.CollapsedSemanticDuplicates++
+				} else {
+					seenGroups[group] = true
+					summary.SemanticGroupReviewUnits++
+				}
+			}
+			if strings.EqualFold(normalized.Mutant.EquivalentRisk, "high") || group != "" {
+				summary.EquivalentRiskSurvivors++
+			}
+			if normalized.Mutant.PlatformSensitive {
+				summary.PlatformSensitiveSurvivors++
+			}
+			if IsActionableSurvivor(goos, normalized) {
+				summary.ActionableSurvivors++
+				if group == "" {
+					summary.TrueActionableSurvivors++
+				} else if !countedActionableGroups[group] {
+					countedActionableGroups[group] = true
+					summary.TrueActionableSurvivors++
+				}
+			}
+		case StatusTimedOut:
+			if normalized.FailureKind == FailureKindNonProgressLoop {
+				summary.NonProgressTimeouts++
+			}
+		}
+	}
+	denominator := killed + summary.TrueActionableSurvivors
+	if denominator > 0 {
+		summary.ActionableScore = float64(killed) / float64(denominator) * 100
+	}
+	return summary
 }
 
 func survivorRankScore(goos string, result Result, groupSize int) (float64, string) {

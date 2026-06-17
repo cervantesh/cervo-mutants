@@ -98,6 +98,10 @@ Important files:
 | `.cervomut/baseline.json` | Accepted baseline for regression gates. |
 | `.cervomut/quarantine.json` | Temporary audited quarantine entries. |
 
+The public JSON, JUnit, and HTML report formats are treated as compatibility
+surfaces. Golden fixtures in `pkg/report/testdata/` lock those outputs so
+schema or rendering drift fails tests before release.
+
 ## Recommended CI Flow
 
 Start baseline-first. Do not fail existing projects on a raw score threshold on

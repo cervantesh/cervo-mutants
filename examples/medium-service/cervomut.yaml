@@ -1,0 +1,35 @@
+version: 1
+policy: ci-balanced
+scope:
+  mode: all
+  include: ["./..."]
+tests:
+  command: ["go", "test", "./..."]
+  timeout: 30s
+  baseline_required: true
+mutators:
+  profile: conservative
+execution:
+  workers: 2
+  isolation: overlay
+selection:
+  mode: coverage
+  prefilter: true
+  coverage_profile: .cervomut/coverage.out
+history:
+  enabled: true
+  path: .cervomut/history.json
+baseline:
+  enabled: true
+  path: .cervomut/baseline.json
+  fail_on_regression: true
+  fail_on_new_survivors: true
+quarantine:
+  enabled: true
+  path: .cervomut/quarantine.json
+  expire_after: 720h
+  require_reason: true
+  require_owner: true
+  require_issue: true
+reports:
+  formats: [summary, json, junit, html, github-summary]

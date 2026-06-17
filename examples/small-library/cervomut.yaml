@@ -1,0 +1,28 @@
+version: 1
+policy: ci-fast
+scope:
+  mode: all
+  include: ["./..."]
+tests:
+  command: ["go", "test", "./..."]
+  timeout: 20s
+  baseline_required: true
+mutators:
+  profile: conservative-fast
+execution:
+  workers: 2
+  isolation: overlay
+selection:
+  mode: package
+history:
+  enabled: true
+  path: .cervomut/history.json
+baseline:
+  enabled: true
+  path: .cervomut/baseline.json
+  fail_on_regression: true
+  fail_on_new_survivors: true
+ci:
+  fail_under: 0
+reports:
+  formats: [summary, json, junit, github-summary]

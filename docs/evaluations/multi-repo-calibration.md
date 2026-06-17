@@ -141,6 +141,9 @@ This run confirms that `ci-balanced` is operationally stable across the first
 four calibration targets. The main remaining calibration need is qualitative:
 review survivor rankings and suppression candidates against human judgement.
 
+That manual review is now recorded in
+[2026-06-17-survivor-ranking-calibration.md](2026-06-17-survivor-ranking-calibration.md).
+
 ## 2026-05-26 Anti-Fitting Pool
 
 Issue #13 added a 40-repository Go calibration pool and a smoke runner:

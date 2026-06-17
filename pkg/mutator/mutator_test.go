@@ -280,6 +280,9 @@ func TestSmallMutationHelpersCoverFallbackBranches(t *testing.T) {
 	if operatorEnabled("unknown", ProfileAggressive) {
 		t.Fatal("unknown operator should not be enabled")
 	}
+	if equivalentRisk("conditionals-boundary") != "high" {
+		t.Fatalf("conditionals-boundary equivalent risk = %q, want high", equivalentRisk("conditionals-boundary"))
+	}
 	if equivalentRisk("unknown") != "unknown" || recommendation("unknown") != "review" || compileErrorRisk("unknown") != "unknown" {
 		t.Fatal("unknown operator metadata fallbacks changed")
 	}

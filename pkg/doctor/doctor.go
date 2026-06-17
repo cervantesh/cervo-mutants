@@ -12,9 +12,9 @@ import (
 )
 
 const (
-	minSupportedGoMinor     = 24
+	minSupportedGoMinor     = 25
 	currentTestedGoMinor    = 25
-	compatibilityMatrixText = "supported Go versions: 1.24.x compatible, 1.25.x tested; newer versions warn until validated"
+	compatibilityMatrixText = "supported Go versions: 1.25.x validated on Linux, Windows, and macOS; newer versions warn until validated"
 )
 
 type Check struct {

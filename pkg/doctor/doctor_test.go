@@ -75,6 +75,10 @@ func TestGoVersionCompatibilityChecks(t *testing.T) {
 	if !ok.OK || ok.Severity != "ok" {
 		t.Fatalf("go1.25 should be supported: %+v", ok)
 	}
+	previous := goVersionCompatibilityCheck("go version go1.24.9 linux/amd64")
+	if previous.OK || previous.Severity != "fail" {
+		t.Fatalf("go1.24 should fail compatibility under the current matrix: %+v", previous)
+	}
 	old := goVersionCompatibilityCheck("go version go1.23.9 linux/amd64")
 	if old.OK || old.Severity != "fail" {
 		t.Fatalf("old Go should fail compatibility: %+v", old)

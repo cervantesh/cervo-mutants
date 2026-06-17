@@ -466,9 +466,9 @@ func equivalentRisk(operator string) string {
 	switch operator {
 	case opArithmeticBasic, opBooleanLiterals:
 		return "low"
-	case opConditionalsNegation, opConditionalsBoundary, opLogical, opStringEmptyLiterals, opNumericLiterals, opReturnBoolLiterals, opAssignmentArithmetic, opIncDec, opSliceMapLenBoundary:
+	case opConditionalsNegation, opLogical, opStringEmptyLiterals, opNumericLiterals, opReturnBoolLiterals, opAssignmentArithmetic, opIncDec, opSliceMapLenBoundary:
 		return "medium"
-	case opNilChecks, opErrorReturns, opLiterals, opReturns, opLoopControl:
+	case opConditionalsBoundary, opNilChecks, opErrorReturns, opLiterals, opReturns, opLoopControl:
 		return "high"
 	default:
 		return "unknown"

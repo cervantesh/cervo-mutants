@@ -41,6 +41,7 @@ platform. The project currently includes:
 - Survivor ranking and denominator-health reporting.
 - Semantic triage v1 for non-progress loop timeouts, permission-mode platform sensitivity, and equivalence-risk survivor groups.
 - Semantic actionability heuristics extracted into `pkg/triage` for shared use across engine, runner, and reporting.
+- Engine orchestration split across dedicated files for execution, checkpointing, history, summary, slicing, and mutation scheduling.
 - Daemon/worker JSON-lines contracts for future distributed execution.
 - External-tool comparison normalization for apples-to-apples studies.
 

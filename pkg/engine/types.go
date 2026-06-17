@@ -8,15 +8,18 @@ import (
 type Status string
 
 const (
-	StatusKilled       Status = "killed"
-	StatusSurvived     Status = "survived"
-	StatusTimedOut     Status = "timed_out"
-	StatusCompileError Status = "compile_error"
-	StatusSkipped      Status = "skipped"
-	StatusNotCovered   Status = "not_covered"
-	StatusIgnored      Status = "ignored"
-	StatusQuarantined  Status = "quarantined"
-	StatusCached       Status = "cached"
+	StatusKilled          Status = "killed"
+	StatusSurvived        Status = "survived"
+	StatusTimedOut        Status = "timed_out"
+	StatusMemoryKilled    Status = "memory_killed"
+	StatusCompileError    Status = "compile_error"
+	StatusSkipped         Status = "skipped"
+	StatusSkippedResource Status = "skipped_resource"
+	StatusPendingBudget   Status = "pending_budget"
+	StatusNotCovered      Status = "not_covered"
+	StatusIgnored         Status = "ignored"
+	StatusQuarantined     Status = "quarantined"
+	StatusCached          Status = "cached"
 )
 
 type Mutant struct {
@@ -62,6 +65,7 @@ type MutantResult struct {
 	MutantID           string        `json:"mutant_id"`
 	Status             Status        `json:"status"`
 	FailureKind        string        `json:"failure_kind,omitempty"`
+	MemoryPeakBytes    int64         `json:"memory_peak_bytes,omitempty"`
 	Duration           time.Duration `json:"duration"`
 	TestCommand        []string      `json:"selected_tests"`
 	StatusReason       string        `json:"status_reason"`
@@ -89,8 +93,11 @@ type Summary struct {
 	Survived                      int                    `json:"survived"`
 	NotCovered                    int                    `json:"not_covered"`
 	TimedOut                      int                    `json:"timed_out"`
+	MemoryKilled                  int                    `json:"memory_killed"`
 	CompileError                  int                    `json:"compile_error"`
 	Skipped                       int                    `json:"skipped"`
+	SkippedResource               int                    `json:"skipped_resource"`
+	PendingBudget                 int                    `json:"pending_budget"`
 	Ignored                       int                    `json:"ignored"`
 	Quarantined                   int                    `json:"quarantined"`
 	Cached                        int                    `json:"cached"`
@@ -127,8 +134,11 @@ type DenominatorHealth struct {
 	Survived         int      `json:"survived"`
 	NotCovered       int      `json:"not_covered"`
 	TimedOut         int      `json:"timed_out"`
+	MemoryKilled     int      `json:"memory_killed"`
 	CompileError     int      `json:"compile_error"`
 	Skipped          int      `json:"skipped"`
+	SkippedResource  int      `json:"skipped_resource"`
+	PendingBudget    int      `json:"pending_budget"`
 	Ignored          int      `json:"ignored"`
 	Quarantined      int      `json:"quarantined"`
 	Healthy          bool     `json:"healthy"`
@@ -136,18 +146,21 @@ type DenominatorHealth struct {
 }
 
 type MutatorStat struct {
-	Total          int    `json:"total"`
-	Killed         int    `json:"killed"`
-	Survived       int    `json:"survived"`
-	NotCovered     int    `json:"not_covered"`
-	TimedOut       int    `json:"timed_out"`
-	CompileError   int    `json:"compile_error"`
-	Skipped        int    `json:"skipped"`
-	Ignored        int    `json:"ignored"`
-	Quarantined    int    `json:"quarantined"`
-	Cached         int    `json:"cached"`
-	Recommendation string `json:"recommendation,omitempty"`
-	EquivalentRisk string `json:"equivalent_risk,omitempty"`
+	Total           int    `json:"total"`
+	Killed          int    `json:"killed"`
+	Survived        int    `json:"survived"`
+	NotCovered      int    `json:"not_covered"`
+	TimedOut        int    `json:"timed_out"`
+	MemoryKilled    int    `json:"memory_killed"`
+	CompileError    int    `json:"compile_error"`
+	Skipped         int    `json:"skipped"`
+	SkippedResource int    `json:"skipped_resource"`
+	PendingBudget   int    `json:"pending_budget"`
+	Ignored         int    `json:"ignored"`
+	Quarantined     int    `json:"quarantined"`
+	Cached          int    `json:"cached"`
+	Recommendation  string `json:"recommendation,omitempty"`
+	EquivalentRisk  string `json:"equivalent_risk,omitempty"`
 }
 
 type BaselineComparison struct {
@@ -179,16 +192,18 @@ type HistoryStats struct {
 }
 
 type RunResult struct {
-	SchemaVersion string             `json:"schema_version"`
-	Summary       Summary            `json:"summary"`
-	Environment   Environment        `json:"environment"`
-	Checkpoint    Checkpoint         `json:"checkpoint,omitempty"`
-	Thresholds    map[string]any     `json:"thresholds"`
-	Baseline      BaselineComparison `json:"baseline"`
-	Cache         CacheStats         `json:"cache"`
-	Quarantine    QuarantineStats    `json:"quarantine"`
-	History       HistoryStats       `json:"history"`
-	Mutants       []MutantResult     `json:"mutants"`
+	SchemaVersion       string             `json:"schema_version"`
+	Summary             Summary            `json:"summary"`
+	Environment         Environment        `json:"environment"`
+	Checkpoint          Checkpoint         `json:"checkpoint,omitempty"`
+	StoppedReason       string             `json:"stopped_reason,omitempty"`
+	LastCompletedMutant string             `json:"last_completed_mutant,omitempty"`
+	Thresholds          map[string]any     `json:"thresholds"`
+	Baseline            BaselineComparison `json:"baseline"`
+	Cache               CacheStats         `json:"cache"`
+	Quarantine          QuarantineStats    `json:"quarantine"`
+	History             HistoryStats       `json:"history"`
+	Mutants             []MutantResult     `json:"mutants"`
 }
 
 type Checkpoint struct {

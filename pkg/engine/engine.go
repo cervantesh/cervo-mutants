@@ -73,6 +73,7 @@ func (e *Engine) Run(ctx context.Context, req RunRequest) (RunResult, error) {
 		return RunResult{}, err
 	}
 	result.Mutants = mutantResults
+	result.StoppedReason, result.LastCompletedMutant = runStopMetadata(result.Mutants)
 	result.History = e.applyHistory(result.Mutants)
 	rankSurvivors(result.Mutants)
 	result.Summary = summarize(result.Mutants)
@@ -110,6 +111,7 @@ func dryRunResult(result RunResult, mutants []Mutant) RunResult {
 	for _, mutant := range mutants {
 		result.Mutants = append(result.Mutants, MutantResult{MutantID: mutant.ID, Status: StatusSkipped, StatusReason: "dry-run", Mutant: mutant})
 	}
+	result.StoppedReason, result.LastCompletedMutant = runStopMetadata(result.Mutants)
 	rankSurvivors(result.Mutants)
 	result.Summary = summarize(result.Mutants)
 	return result
@@ -176,7 +178,7 @@ func (e *Engine) runMutantsSerial(ctx context.Context, mutants []Mutant, quarant
 			continue
 		}
 		if e.budgetExhausted(start) {
-			result := MutantResult{MutantID: mutant.ID, Status: StatusSkipped, StatusReason: "budget exhausted", Mutant: mutant}
+			result := MutantResult{MutantID: mutant.ID, Status: StatusPendingBudget, FailureKind: "budget_exhausted", StatusReason: "budget exhausted before mutant execution", Mutant: mutant}
 			results = append(results, result)
 			e.recordProgress(start, i+1, len(mutants), result)
 			e.writePartialResults(results)
@@ -250,7 +252,7 @@ func dispatchParallelJobs(e *Engine, mutants []Mutant, quarantined map[string]bo
 			continue
 		}
 		if e.budgetExhausted(start) {
-			results[i] = MutantResult{MutantID: mutant.ID, Status: StatusSkipped, StatusReason: "budget exhausted", Mutant: mutant}
+			results[i] = MutantResult{MutantID: mutant.ID, Status: StatusPendingBudget, FailureKind: "budget_exhausted", StatusReason: "budget exhausted before mutant execution", Mutant: mutant}
 			continue
 		}
 		jobs <- indexedMutant{index: i, mutant: mutant}
@@ -357,8 +359,14 @@ func (e *Engine) environment(mutants int) Environment {
 		CGroup:          cgroupSummary(),
 		WindowsOneDrive: runtime.GOOS == "windows" && pathMentionsOneDrive(wd),
 	}
-	if e.cfg.Execution.Resources.MaxProcessMemoryMB > 0 {
-		env.Extra = map[string]string{"max_process_memory_mb": strconv.Itoa(e.cfg.Execution.Resources.MaxProcessMemoryMB)}
+	if e.cfg.Execution.Resources.MaxProcessMemoryMB > 0 || e.cfg.Execution.Resources.MaxProcesses > 0 {
+		env.Extra = map[string]string{}
+		if e.cfg.Execution.Resources.MaxProcessMemoryMB > 0 {
+			env.Extra["max_process_memory_mb"] = strconv.Itoa(e.cfg.Execution.Resources.MaxProcessMemoryMB)
+		}
+		if e.cfg.Execution.Resources.MaxProcesses > 0 {
+			env.Extra["max_processes"] = strconv.Itoa(e.cfg.Execution.Resources.MaxProcesses)
+		}
 	}
 	if e.cfg.Execution.Budget > 0 {
 		env.Budget = e.cfg.Execution.Budget.String()
@@ -642,6 +650,7 @@ func (e *Engine) writePartialResults(results []MutantResult) {
 		Thresholds:    map[string]any{"fail_under": e.cfg.CI.FailUnder, "partial": true},
 		Mutants:       append([]MutantResult{}, results...),
 	}
+	run.StoppedReason, run.LastCompletedMutant = runStopMetadata(run.Mutants)
 	rankSurvivors(run.Mutants)
 	run.Summary = summarize(run.Mutants)
 	data, err := json.MarshalIndent(run, "", "  ")
@@ -1214,9 +1223,9 @@ func (e *Engine) runTest(ctx context.Context, job MutantJob) (MutantResult, erro
 	cmd.Stdout = &output
 	cmd.Stderr = &output
 	err := cmd.Start()
-	var cleanup func()
+	handle := noopProcessLimitHandle()
 	if err == nil {
-		cleanup, err = applyProcessLimits(cmd, e.cfg.Execution.Resources)
+		handle, err = applyProcessLimits(cmd, e.cfg.Execution.Resources)
 		if err != nil && cmd.Process != nil {
 			_ = cmd.Process.Kill()
 			_ = cmd.Wait()
@@ -1225,9 +1234,8 @@ func (e *Engine) runTest(ctx context.Context, job MutantJob) (MutantResult, erro
 	if err == nil {
 		err = cmd.Wait()
 	}
-	if cleanup != nil {
-		cleanup()
-	}
+	limitStats := handle.Stats()
+	handle.Cleanup()
 	text := output.String()
 	if max := e.cfg.Reports.MaxOutputBytes; max > 0 && len(text) > max {
 		text = text[:max]
@@ -1235,7 +1243,11 @@ func (e *Engine) runTest(ctx context.Context, job MutantJob) (MutantResult, erro
 	status := StatusKilled
 	failureKind := ""
 	reason := "tests failed with mutant applied"
-	if runCtx.Err() == context.DeadlineExceeded {
+	if memoryLimitExceeded(err, cmd.ProcessState, e.cfg.Execution.Resources, text) {
+		status = StatusMemoryKilled
+		failureKind = "memory_limit_exceeded"
+		reason = "test process exceeded the configured memory limit"
+	} else if runCtx.Err() == context.DeadlineExceeded {
 		status = StatusTimedOut
 		failureKind = "timeout"
 		reason = "test command timed out"
@@ -1243,23 +1255,24 @@ func (e *Engine) runTest(ctx context.Context, job MutantJob) (MutantResult, erro
 		status = StatusSurvived
 		reason = "tests passed with mutant applied"
 	} else if errors.Is(err, errProcessLimitUnsupported) {
-		status = StatusCompileError
+		status = StatusSkippedResource
 		failureKind = "resource_limit_unsupported"
-		reason = err.Error()
+		reason = "configured process resource limits are not supported on this platform"
 	} else if !strings.Contains(text, "FAIL") {
 		status = StatusCompileError
 		failureKind = classifyFailure(text, err)
 		reason = "test command failed before running assertions"
 	}
 	return MutantResult{
-		MutantID:     job.Mutant.ID,
-		Status:       status,
-		FailureKind:  failureKind,
-		Duration:     time.Since(start),
-		TestCommand:  job.TestCommand,
-		StatusReason: reason,
-		Output:       text,
-		Mutant:       job.Mutant,
+		MutantID:        job.Mutant.ID,
+		Status:          status,
+		FailureKind:     failureKind,
+		MemoryPeakBytes: limitStats.PeakProcessMemoryBytes,
+		Duration:        time.Since(start),
+		TestCommand:     job.TestCommand,
+		StatusReason:    reason,
+		Output:          text,
+		Mutant:          job.Mutant,
 	}, nil
 }
 
@@ -1334,7 +1347,7 @@ func summarize(results []MutantResult) Summary {
 		applySuppressionAudits(&s, result.Mutant.SuppressionAudit)
 		s.MutatorStats[operator] = stat
 	}
-	eligible := s.Total - s.Ignored - s.Quarantined - s.Skipped - s.NotCovered
+	eligible := s.Total - s.Ignored - s.Quarantined - s.Skipped - s.SkippedResource - s.PendingBudget - s.NotCovered
 	s.EffectiveMutants = s.Killed + s.Survived
 	s.ScoreDenominator = eligible
 	if eligible > 0 {
@@ -1344,7 +1357,7 @@ func summarize(results []MutantResult) Summary {
 		s.EffectiveScore = float64(s.Killed) / float64(s.EffectiveMutants) * 100
 		s.TestEfficacy = s.EffectiveScore
 	}
-	coverable := s.Total - s.Ignored - s.Quarantined - s.Skipped
+	coverable := s.Total - s.Ignored - s.Quarantined - s.Skipped - s.SkippedResource - s.PendingBudget
 	if coverable > 0 {
 		s.MutationCoverage = float64(coverable-s.NotCovered) / float64(coverable) * 100
 	}
@@ -1381,6 +1394,11 @@ func applyStatusToSummary(s *Summary, stat *MutatorStat, result MutantResult) {
 		stat.TimedOut++
 		s.ExecutedMutants++
 		s.CoveredMutants++
+	case StatusMemoryKilled:
+		s.MemoryKilled++
+		stat.MemoryKilled++
+		s.ExecutedMutants++
+		s.CoveredMutants++
 	case StatusCompileError:
 		s.CompileError++
 		stat.CompileError++
@@ -1389,6 +1407,12 @@ func applyStatusToSummary(s *Summary, stat *MutatorStat, result MutantResult) {
 	case StatusSkipped:
 		s.Skipped++
 		stat.Skipped++
+	case StatusSkippedResource:
+		s.SkippedResource++
+		stat.SkippedResource++
+	case StatusPendingBudget:
+		s.PendingBudget++
+		stat.PendingBudget++
 	case StatusIgnored:
 		s.Ignored++
 		stat.Ignored++
@@ -1437,8 +1461,11 @@ func denominatorHealth(s Summary) DenominatorHealth {
 		Survived:         s.Survived,
 		NotCovered:       s.NotCovered,
 		TimedOut:         s.TimedOut,
+		MemoryKilled:     s.MemoryKilled,
 		CompileError:     s.CompileError,
 		Skipped:          s.Skipped,
+		SkippedResource:  s.SkippedResource,
+		PendingBudget:    s.PendingBudget,
 		Ignored:          s.Ignored,
 		Quarantined:      s.Quarantined,
 		Healthy:          true,
@@ -1449,17 +1476,88 @@ func denominatorHealth(s Summary) DenominatorHealth {
 	if health.Effective > 0 && health.TimedOut > health.Effective {
 		health.Warnings = append(health.Warnings, "timed_out_exceeds_effective")
 	}
+	if health.Effective > 0 && health.MemoryKilled > health.Effective {
+		health.Warnings = append(health.Warnings, "memory_killed_exceeds_effective")
+	}
 	if health.Effective > 0 && health.NotCovered > health.Effective {
 		health.Warnings = append(health.Warnings, "not_covered_exceeds_effective")
 	}
 	if health.Effective > 0 && health.ScoreDenominator > health.Effective*2 {
 		health.Warnings = append(health.Warnings, "score_denominator_dwarfs_effective")
 	}
+	if health.Effective > 0 && (health.TimedOut+health.MemoryKilled+health.SkippedResource+health.PendingBudget) > health.Effective {
+		health.Warnings = append(health.Warnings, "resource_limited_exceeds_effective")
+	}
 	if health.Effective > 0 && s.TestEfficacy >= 90 && (health.TimedOut > health.Effective || health.NotCovered > health.Effective) {
 		health.Warnings = append(health.Warnings, "high_score_poor_denominator_health")
 	}
 	health.Healthy = len(health.Warnings) == 0
 	return health
+}
+
+func memoryLimitExceeded(err error, state *os.ProcessState, resources config.Resources, output string) bool {
+	if err == nil || resources.MaxProcessMemoryMB <= 0 {
+		return false
+	}
+	text := strings.ToLower(output)
+	if strings.Contains(text, "out of memory") {
+		return true
+	}
+	if state == nil {
+		return false
+	}
+	if strings.Contains(text, "panic:") || strings.Contains(text, "build failed") || strings.Contains(text, "setup failed") || strings.Contains(text, "undefined:") || strings.Contains(text, "syntax error") || strings.Contains(text, "fail") {
+		return false
+	}
+	return state.ExitCode() == 2
+}
+
+func runStopMetadata(results []MutantResult) (string, string) {
+	if len(results) == 0 {
+		return "", ""
+	}
+	if hasStatus(results, StatusPendingBudget) {
+		return "budget_exhausted", lastCompletedMutant(results)
+	}
+	if allStatus(results, StatusSkippedResource) {
+		return "resource_limits_unavailable", ""
+	}
+	return "", ""
+}
+
+func hasStatus(results []MutantResult, status Status) bool {
+	for _, result := range results {
+		if result.Status == status {
+			return true
+		}
+	}
+	return false
+}
+
+func allStatus(results []MutantResult, status Status) bool {
+	if len(results) == 0 {
+		return false
+	}
+	for _, result := range results {
+		if result.Status != status {
+			return false
+		}
+	}
+	return true
+}
+
+func lastCompletedMutant(results []MutantResult) string {
+	for i := len(results) - 1; i >= 0; i-- {
+		switch results[i].Status {
+		case StatusPendingBudget, StatusSkippedResource:
+			continue
+		default:
+			if results[i].MutantID != "" {
+				return results[i].MutantID
+			}
+		}
+	}
+	return ""
 }
 
 type historyFile struct {

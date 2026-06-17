@@ -22,11 +22,12 @@ const (
 )
 
 var (
-	kernel32                    = syscall.NewLazyDLL("kernel32.dll")
-	procCreateJobObjectW        = kernel32.NewProc("CreateJobObjectW")
-	procSetInformationJobObject = kernel32.NewProc("SetInformationJobObject")
-	procAssignProcessToJob      = kernel32.NewProc("AssignProcessToJobObject")
-	procCloseHandle             = kernel32.NewProc("CloseHandle")
+	kernel32                      = syscall.NewLazyDLL("kernel32.dll")
+	procCreateJobObjectW          = kernel32.NewProc("CreateJobObjectW")
+	procSetInformationJobObject   = kernel32.NewProc("SetInformationJobObject")
+	procQueryInformationJobObject = kernel32.NewProc("QueryInformationJobObject")
+	procAssignProcessToJob        = kernel32.NewProc("AssignProcessToJobObject")
+	procCloseHandle               = kernel32.NewProc("CloseHandle")
 )
 
 type ioCounters struct {
@@ -59,16 +60,16 @@ type jobObjectExtendedLimitInformation struct {
 	PeakJobMemoryUsed     uintptr
 }
 
-func applyProcessLimits(cmd *exec.Cmd, resources config.Resources) (func(), error) {
+func applyProcessLimits(cmd *exec.Cmd, resources config.Resources) (processLimitHandle, error) {
 	if !hasProcessLimits(resources) {
-		return noopProcessLimitCleanup, nil
+		return noopProcessLimitHandle(), nil
 	}
 	if cmd.Process == nil {
-		return noopProcessLimitCleanup, fmt.Errorf("process resource limits require a started process")
+		return noopProcessLimitHandle(), fmt.Errorf("process resource limits require a started process")
 	}
 	job, _, err := procCreateJobObjectW.Call(0, 0)
 	if job == 0 {
-		return noopProcessLimitCleanup, fmt.Errorf("create Windows job object: %w", err)
+		return noopProcessLimitHandle(), fmt.Errorf("create Windows job object: %w", err)
 	}
 	cleanup := func() {
 		procCloseHandle.Call(job)
@@ -91,18 +92,37 @@ func applyProcessLimits(cmd *exec.Cmd, resources config.Resources) (func(), erro
 	)
 	if ok == 0 {
 		cleanup()
-		return noopProcessLimitCleanup, fmt.Errorf("set Windows job object limits: %w", err)
+		return noopProcessLimitHandle(), fmt.Errorf("set Windows job object limits: %w", err)
 	}
 	process, err := syscall.OpenProcess(processSetQuota|processTerminate|processQueryLimitedInformation, false, uint32(cmd.Process.Pid))
 	if err != nil {
 		cleanup()
-		return noopProcessLimitCleanup, fmt.Errorf("open process for Windows job object: %w", err)
+		return noopProcessLimitHandle(), fmt.Errorf("open process for Windows job object: %w", err)
 	}
 	defer syscall.CloseHandle(process)
 	ok, _, err = procAssignProcessToJob.Call(job, uintptr(process))
 	if ok == 0 {
 		cleanup()
-		return noopProcessLimitCleanup, fmt.Errorf("assign process to Windows job object: %w", err)
+		return noopProcessLimitHandle(), fmt.Errorf("assign process to Windows job object: %w", err)
 	}
-	return cleanup, nil
+	return processLimitHandle{
+		cleanup: cleanup,
+		stats: func() processLimitStats {
+			var snapshot jobObjectExtendedLimitInformation
+			ok, _, _ := procQueryInformationJobObject.Call(
+				job,
+				uintptr(jobObjectExtendedLimitInformationClass),
+				uintptr(unsafe.Pointer(&snapshot)),
+				unsafe.Sizeof(snapshot),
+				0,
+			)
+			if ok == 0 {
+				return processLimitStats{}
+			}
+			return processLimitStats{
+				PeakProcessMemoryBytes: int64(snapshot.PeakProcessMemoryUsed),
+				PeakJobMemoryBytes:     int64(snapshot.PeakJobMemoryUsed),
+			}
+		},
+	}, nil
 }

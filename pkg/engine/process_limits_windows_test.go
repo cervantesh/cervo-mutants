@@ -15,7 +15,7 @@ func TestApplyProcessLimitsWindowsBranches(t *testing.T) {
 	if err != nil {
 		t.Fatalf("applyProcessLimits without resources returned error: %v", err)
 	}
-	cleanup()
+	cleanup.Cleanup()
 
 	_, err = applyProcessLimits(cmd, config.Resources{MaxProcessMemoryMB: 64})
 	if err == nil {
@@ -29,7 +29,7 @@ func TestApplyProcessLimitsWindowsStartedProcess(t *testing.T) {
 		t.Fatalf("start command: %v", err)
 	}
 	cleanup, err := applyProcessLimits(cmd, config.Resources{MaxProcessMemoryMB: 128, MaxProcesses: 1})
-	cleanup()
+	cleanup.Cleanup()
 	_ = cmd.Process.Kill()
 	_ = cmd.Wait()
 	if err != nil {

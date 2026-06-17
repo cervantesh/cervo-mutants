@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -751,7 +752,7 @@ func TestSerialRunnerHandlesQuarantineAndBudgetBranches(t *testing.T) {
 	if err != nil {
 		t.Fatalf("runMutantsSerial returned error: %v", err)
 	}
-	if results[0].Status != StatusQuarantined || results[1].Status != StatusSkipped {
+	if results[0].Status != StatusQuarantined || results[1].Status != StatusPendingBudget || results[1].FailureKind != "budget_exhausted" {
 		t.Fatalf("unexpected serial statuses: %+v", results)
 	}
 }
@@ -784,6 +785,18 @@ func TestRunTestClassifiesPassFailureAndTimeout(t *testing.T) {
 	}
 	if timeout.Status != StatusTimedOut {
 		t.Fatalf("timeout status = %q", timeout.Status)
+	}
+
+	if runtime.GOOS != "windows" {
+		cfg := config.Defaults()
+		cfg.Execution.Resources.MaxProcessMemoryMB = 64
+		resourceSkipped, err := New(cfg).runTest(context.Background(), MutantJob{Mutant: Mutant{ID: "resource"}, WorkDir: dir, TestCommand: []string{"go", "test", "."}})
+		if err != nil {
+			t.Fatalf("resource-limited runTest returned error: %v", err)
+		}
+		if resourceSkipped.Status != StatusSkippedResource || resourceSkipped.FailureKind != "resource_limit_unsupported" {
+			t.Fatalf("resource-limited result = %+v", resourceSkipped)
+		}
 	}
 }
 
@@ -1147,7 +1160,10 @@ func TestSummarizeCoversCachedAndSuppressionStatusBranches(t *testing.T) {
 		{Status: StatusCached, PreviousStatus: StatusNotCovered, Mutant: Mutant{Operator: "cached-not-covered"}},
 		{Status: StatusCached, PreviousStatus: StatusCompileError, Mutant: Mutant{Operator: "cached-compile"}},
 		{Status: StatusCached, PreviousStatus: StatusTimedOut, Mutant: Mutant{Operator: "cached-timeout"}},
+		{Status: StatusCached, PreviousStatus: StatusMemoryKilled, Mutant: Mutant{Operator: "cached-memory"}},
 		{Status: StatusCompileError, Mutant: Mutant{Operator: "compile"}},
+		{Status: StatusSkippedResource, Mutant: Mutant{Operator: "resource-skip"}},
+		{Status: StatusPendingBudget, Mutant: Mutant{Operator: "budget-pending"}},
 		{Status: StatusIgnored, Mutant: Mutant{Operator: "ignored"}},
 		{Status: StatusQuarantined, Mutant: Mutant{Operator: "quarantined", SuppressionAudit: []SuppressionAudit{
 			{Action: config.SuppressionReportOnly},
@@ -1156,11 +1172,28 @@ func TestSummarizeCoversCachedAndSuppressionStatusBranches(t *testing.T) {
 			{Action: "quarantine-required"},
 		}}},
 	})
-	if result.Cached != 5 || result.Killed != 1 || result.Survived != 1 || result.NotCovered != 1 || result.CompileError != 2 || result.TimedOut != 1 {
+	if result.Cached != 6 || result.Killed != 1 || result.Survived != 1 || result.NotCovered != 1 || result.CompileError != 2 || result.TimedOut != 1 || result.MemoryKilled != 1 || result.SkippedResource != 1 || result.PendingBudget != 1 {
 		t.Fatalf("cached/status branches not summarized: %+v", result)
 	}
 	if result.SuppressionReportOnly != 1 || result.SuppressionLowerPriority != 1 || result.SuppressionSuppressed != 1 || result.SuppressionQuarantineRequired != 1 {
 		t.Fatalf("suppression audit branches not summarized: %+v", result)
+	}
+}
+
+func TestRunStopMetadata(t *testing.T) {
+	reason, last := runStopMetadata([]MutantResult{
+		{MutantID: "done", Status: StatusKilled},
+		{MutantID: "later", Status: StatusPendingBudget},
+	})
+	if reason != "budget_exhausted" || last != "done" {
+		t.Fatalf("budget stop metadata = %q %q", reason, last)
+	}
+	reason, last = runStopMetadata([]MutantResult{
+		{MutantID: "a", Status: StatusSkippedResource},
+		{MutantID: "b", Status: StatusSkippedResource},
+	})
+	if reason != "resource_limits_unavailable" || last != "" {
+		t.Fatalf("resource stop metadata = %q %q", reason, last)
 	}
 }
 

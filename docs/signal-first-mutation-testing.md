@@ -52,6 +52,9 @@ CervoMutants should classify:
 | `killed` | A selected test observed the behavioral change. |
 | `compile_error` | The mutant did not produce a testable program. |
 | `timed_out` | Execution exceeded the configured timeout. |
+| `memory_killed` | Execution exceeded the configured process memory limit. |
+| `skipped_resource` | The mutant could not be run under the requested resource-control mode. |
+| `pending_budget` | The run budget ended before this mutant was executed. |
 | `not_viable` | The mutant is syntactically valid as a patch idea but not viable for execution. |
 
 Design implications:

@@ -25,7 +25,8 @@ func JSON(result engine.RunResult) ([]byte, error) {
 
 func Summary(result engine.RunResult) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "Mutation score: %.2f%%\nGenerated mutants: %d\nCovered mutants: %d\nExecuted mutants: %d\nEffective mutants: %d\nScore denominator: %d\nKilled: %d\nSurvived: %d\nNot covered: %d\nQuarantined: %d\nTimed out: %d\nCompile errors: %d\nTest efficacy: %.2f%%\nMutation coverage: %.2f%%\nHigh-risk survivors: %d\nNew survivors: %d\nLong-standing survivors: %d\nSuppression audits: report_only=%d lower_priority=%d suppress=%d quarantine_required=%d\n",
+	fmt.Fprintf(&b, "Effective mutation score: %.2f%%\nRaw mutation score: %.2f%%\nGenerated mutants: %d\nCovered mutants: %d\nExecuted mutants: %d\nEffective mutants: %d\nScore denominator: %d\nKilled: %d\nSurvived: %d\nNot covered: %d\nPending budget: %d\nSkipped resource: %d\nQuarantined: %d\nTimed out: %d\nMemory killed: %d\nCompile errors: %d\nTest efficacy: %.2f%%\nMutation coverage: %.2f%%\nHigh-risk survivors: %d\nNew survivors: %d\nLong-standing survivors: %d\nSuppression audits: report_only=%d lower_priority=%d suppress=%d quarantine_required=%d\n",
+		result.Summary.EffectiveScore,
 		result.Summary.Score,
 		result.Summary.GeneratedMutants,
 		result.Summary.CoveredMutants,
@@ -35,8 +36,11 @@ func Summary(result engine.RunResult) string {
 		result.Summary.Killed,
 		result.Summary.Survived,
 		result.Summary.NotCovered,
+		result.Summary.PendingBudget,
+		result.Summary.SkippedResource,
 		result.Summary.Quarantined,
 		result.Summary.TimedOut,
+		result.Summary.MemoryKilled,
 		result.Summary.CompileError,
 		result.Summary.TestEfficacy,
 		result.Summary.MutationCoverage,
@@ -50,7 +54,7 @@ func Summary(result engine.RunResult) string {
 	)
 	if result.Summary.DenominatorHealth.Generated > 0 || len(result.Summary.DenominatorHealth.Warnings) > 0 {
 		health := result.Summary.DenominatorHealth
-		fmt.Fprintf(&b, "Denominator health: healthy=%t generated=%d covered=%d executed=%d effective=%d score_denominator=%d killed=%d survived=%d not_covered=%d timed_out=%d compile_error=%d\n",
+		fmt.Fprintf(&b, "Denominator health: healthy=%t generated=%d covered=%d executed=%d effective=%d score_denominator=%d killed=%d survived=%d not_covered=%d pending_budget=%d skipped_resource=%d timed_out=%d memory_killed=%d compile_error=%d\n",
 			health.Healthy,
 			health.Generated,
 			health.Covered,
@@ -60,7 +64,10 @@ func Summary(result engine.RunResult) string {
 			health.Killed,
 			health.Survived,
 			health.NotCovered,
+			health.PendingBudget,
+			health.SkippedResource,
 			health.TimedOut,
+			health.MemoryKilled,
 			health.CompileError,
 		)
 		if len(health.Warnings) > 0 {
@@ -87,18 +94,27 @@ func Summary(result engine.RunResult) string {
 		sort.Strings(keys)
 		for _, key := range keys {
 			stat := result.Summary.MutatorStats[key]
-			fmt.Fprintf(&b, "- %s: total=%d killed=%d survived=%d not_covered=%d timed_out=%d compile_error=%d recommendation=%s equivalent_risk=%s\n",
+			fmt.Fprintf(&b, "- %s: total=%d killed=%d survived=%d not_covered=%d pending_budget=%d skipped_resource=%d timed_out=%d memory_killed=%d compile_error=%d recommendation=%s equivalent_risk=%s\n",
 				key,
 				stat.Total,
 				stat.Killed,
 				stat.Survived,
 				stat.NotCovered,
+				stat.PendingBudget,
+				stat.SkippedResource,
 				stat.TimedOut,
+				stat.MemoryKilled,
 				stat.CompileError,
 				stat.Recommendation,
 				stat.EquivalentRisk,
 			)
 		}
+	}
+	if result.StoppedReason != "" {
+		fmt.Fprintf(&b, "Stopped reason: %s\n", result.StoppedReason)
+	}
+	if result.LastCompletedMutant != "" {
+		fmt.Fprintf(&b, "Last completed mutant: %s\n", result.LastCompletedMutant)
 	}
 	if result.Environment.OS != "" {
 		fmt.Fprintf(&b, "Environment: os=%s arch=%s go=%s isolation=%s workers=%d timeout=%s wsl=%t onedrive=%t\n",
@@ -145,12 +161,16 @@ func HTML(result engine.RunResult) string {
 	b.WriteString("<h1>cervomut mutation report</h1>")
 	b.WriteString("<pre>")
 	b.WriteString(html.EscapeString(Summary(result)))
-	b.WriteString("</pre><table><thead><tr><th>Status</th><th>Mutant</th><th>Diff</th></tr></thead><tbody>")
+	b.WriteString("</pre><table><thead><tr><th>Status</th><th>Mutant</th><th>Failure Kind</th><th>Reason</th><th>Diff</th></tr></thead><tbody>")
 	for _, mutant := range result.Mutants {
 		b.WriteString("<tr><td>")
 		b.WriteString(html.EscapeString(string(mutant.Status)))
 		b.WriteString("</td><td>")
 		b.WriteString(html.EscapeString(mutant.MutantID))
+		b.WriteString("</td><td>")
+		b.WriteString(html.EscapeString(mutant.FailureKind))
+		b.WriteString("</td><td>")
+		b.WriteString(html.EscapeString(mutant.StatusReason))
 		b.WriteString("</td><td><pre>")
 		b.WriteString(html.EscapeString(mutant.Mutant.Diff))
 		b.WriteString("</pre></td></tr>")
@@ -181,7 +201,7 @@ func JUnit(result engine.RunResult) ([]byte, error) {
 	suite := junitTestsuite{Name: "cervomut", Tests: len(result.Mutants)}
 	for _, mutant := range result.Mutants {
 		tc := junitTestcase{Name: mutant.MutantID}
-		if mutant.Status == engine.StatusSurvived || mutant.Status == engine.StatusTimedOut || mutant.Status == engine.StatusNotCovered {
+		if mutant.Status == engine.StatusSurvived || mutant.Status == engine.StatusTimedOut || mutant.Status == engine.StatusMemoryKilled || mutant.Status == engine.StatusPendingBudget || mutant.Status == engine.StatusSkippedResource || mutant.Status == engine.StatusNotCovered {
 			suite.Failures++
 			tc.Failure = &junitFailure{Message: string(mutant.Status), Text: mutant.StatusReason}
 		}

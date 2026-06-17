@@ -26,6 +26,7 @@ func TestJSONReportSchemaV1IncludesActionableFields(t *testing.T) {
 			MutantID:        "pkg/foo.go:10:conditionals-negation:eq-to-ne",
 			Status:          engine.StatusSurvived,
 			FailureKind:     "runner_error",
+			MemoryPeakBytes: 4096,
 			Duration:        time.Second,
 			TestCommand:     []string{"go", "test", "./pkg"},
 			StatusReason:    "tests passed with mutant applied",
@@ -82,7 +83,7 @@ func TestJSONReportSchemaV1IncludesActionableFields(t *testing.T) {
 		t.Fatalf("schema_version = %v", decoded["schema_version"])
 	}
 	text := string(data)
-	for _, want := range []string{"environment", "go_version", "isolation", "checkpoint", "fingerprint", "includes_file_digests", "failure_kind", "baseline", "cache", "quarantine", "history", "unified_diff", "status_reason", "selection_reason", "coverage_source", "selected_tests", "description", "nearby_tests", "equivalent_risk", "recommendation", "compile_error_risk", "suppression_audit", "evidence_level", "survivor_rank", "rank_score", "rank_reason", "actionability", "suggested_test_scope", "nearest_tests", "previous_status", "first_seen", "survivor_age_runs", "operator_historical_yield"} {
+	for _, want := range []string{"environment", "go_version", "isolation", "checkpoint", "fingerprint", "includes_file_digests", "failure_kind", "memory_peak_bytes", "baseline", "cache", "quarantine", "history", "unified_diff", "status_reason", "selection_reason", "coverage_source", "selected_tests", "description", "nearby_tests", "equivalent_risk", "recommendation", "compile_error_risk", "suppression_audit", "evidence_level", "survivor_rank", "rank_score", "rank_reason", "actionability", "suggested_test_scope", "nearest_tests", "previous_status", "first_seen", "survivor_age_runs", "operator_historical_yield"} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("JSON report missing %q: %s", want, text)
 		}
@@ -97,6 +98,7 @@ func TestSummaryIncludesGremlinsStyleCoverageMetricsAndMutatorStats(t *testing.T
 			Survived:         1,
 			NotCovered:       1,
 			Score:            50,
+			EffectiveScore:   50,
 			EffectiveMutants: 2,
 			ScoreDenominator: 2,
 			TestEfficacy:     50,
@@ -127,20 +129,22 @@ func TestSummaryIncludesGremlinsStyleCoverageMetricsAndMutatorStats(t *testing.T
 
 	text := Summary(run)
 	for _, want := range []string{
+		"Effective mutation score: 50.00%",
+		"Raw mutation score: 50.00%",
 		"Not covered: 1",
 		"Effective mutants: 2",
 		"Score denominator: 2",
 		"Test efficacy: 50.00%",
 		"Mutation coverage: 66.67%",
-		"Denominator health: healthy=true generated=3 covered=2 executed=2 effective=2 score_denominator=2 killed=1 survived=1 not_covered=1 timed_out=0 compile_error=0",
+		"Denominator health: healthy=true generated=3 covered=2 executed=2 effective=2 score_denominator=2 killed=1 survived=1 not_covered=1 pending_budget=0 skipped_resource=0 timed_out=0 memory_killed=0 compile_error=0",
 		"High-risk survivors: 1",
 		"New survivors: 1",
 		"Long-standing survivors: 1",
 		"Suppression audits: report_only=2",
 		"Equivalent-risk statistics:",
-		"conditionals-negation: total=2 killed=1 survived=1 not_covered=0",
+		"conditionals-negation: total=2 killed=1 survived=1 not_covered=0 pending_budget=0 skipped_resource=0 timed_out=0 memory_killed=0 compile_error=0",
 		"recommendation=fast-ci",
-		"logical: total=1 killed=0 survived=0 not_covered=1",
+		"logical: total=1 killed=0 survived=0 not_covered=1 pending_budget=0 skipped_resource=0 timed_out=0 memory_killed=0 compile_error=0",
 		"recommendation=conservative",
 		"Environment: os=linux arch=amd64 go=go1.25.6 isolation=overlay workers=1 timeout=30s",
 	} {

@@ -1,6 +1,6 @@
-# CervoMutant
+# CervoMutants
 
-CervoMutant is a Go mutation testing toolkit built for CI, large Go modules,
+CervoMutants is a Go mutation testing toolkit built for CI, large Go modules,
 and AI-assisted test improvement. It ships as:
 
 - an importable Go library under `pkg`;
@@ -17,14 +17,14 @@ tests either do not execute the behavior, do not assert the changed outcome, or
 that the mutation is equivalent/noisy and should be governed explicitly.
 
 Tracking issue for the original project:  
-https://github.com/cervantesh/cervo-mutants/issues/1
+https://github.com/cervantesh/CervoMutants/issues/1
 
 Current documentation refresh:  
-https://github.com/cervantesh/cervo-mutants/issues/33
+https://github.com/cervantesh/CervoMutants/issues/33
 
 ## Current Status
 
-CervoMutant is usable as a local/CI mutation runner and as an evaluation
+CervoMutants is usable as a local/CI mutation runner and as an evaluation
 platform. The project currently includes:
 
 - AST/source rewrite mutators with stable mutant IDs.
@@ -44,7 +44,7 @@ platform. The project currently includes:
 From a Go workspace:
 
 ```powershell
-go install github.com/cervantesh/cervo-mutants/cmd/cervomut@latest
+go install github.com/cervantesh/CervoMutants/cmd/cervomut@latest
 ```
 
 From this repository:
@@ -249,7 +249,7 @@ The primary score is not enough. Always inspect denominator health:
 - compile errors.
 
 This is intentional. A raw score can look excellent while most mutants are not
-covered or timed out. CervoMutant makes that visible at the top level of the
+covered or timed out. CervoMutants makes that visible at the top level of the
 JSON and summary reports.
 
 Survivors are ranked by actionability using:
@@ -292,7 +292,7 @@ return value == expected
 
 ## External Tool Comparisons
 
-CervoMutant includes a comparison harness because mutation tools do not always
+CervoMutants includes a comparison harness because mutation tools do not always
 mean the same thing by target, coverage, timeout, and score.
 
 The harness records:
@@ -322,7 +322,7 @@ Docs:
 
 Windows-native mutation testing can be slower and more memory-sensitive because
 of process spawning, path handling, file copying, antivirus/OneDrive sync, and
-external tool behavior. CervoMutant mitigates this with:
+external tool behavior. CervoMutants mitigates this with:
 
 - conservative Windows worker defaults;
 - `doctor` warnings for OneDrive, long paths, and network paths;
@@ -397,7 +397,7 @@ Latest local Sonar pass after issue #31:
 - [docs/evaluation-framework.md](docs/evaluation-framework.md): rigorous
   evaluation framework and research basis.
 - [docs/signal-first-mutation-testing.md](docs/signal-first-mutation-testing.md):
-  product framework behind CervoMutant defaults.
+  product framework behind CervoMutants defaults.
 - [docs/policy-presets.md](docs/policy-presets.md): policy preset behavior.
 - [docs/sonar.md](docs/sonar.md): local and CI Sonar workflow.
 - [docs/go-toolchain-compatibility.md](docs/go-toolchain-compatibility.md):
@@ -420,3 +420,12 @@ Latest local Sonar pass after issue #31:
 - Preserve partial data on timeout.
 - Normalize external comparisons before drawing conclusions.
 - Make JSON stable enough for CI and AI agents.
+
+## License And Trademarks
+
+The source code in this repository is licensed under Apache License 2.0. See
+[LICENSE](LICENSE) and [NOTICE](NOTICE).
+
+The CervoMutants name, logos, and project branding are reserved and are not
+granted under the code license. See [TRADEMARKS.md](TRADEMARKS.md).
+

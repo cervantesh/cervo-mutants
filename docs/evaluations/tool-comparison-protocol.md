@@ -33,7 +33,7 @@ written.
 
 ```text
 manifest target: ./...
-CervoMutant effective target: ./...
+CervoMutants effective target: ./...
 Gremlins effective target: ./...
 gomu effective target: ./...
 go-mutesting effective target: ./...
@@ -50,7 +50,7 @@ against Gremlins.
 
 ```text
 manifest target: ./...
-CervoMutant effective target: .
+CervoMutants effective target: .
 Gremlins effective target: .
 gomu effective target: .
 go-mutesting effective target: .
@@ -66,7 +66,7 @@ module campaign.
 Use this only to understand tool behavior. Examples:
 
 ```text
-CervoMutant effective target: ./...
+CervoMutants effective target: ./...
 Gremlins effective target: .
 ```
 
@@ -90,7 +90,7 @@ Every result must carry the denominator components:
 Raw mutation score is not enough. A high score with a tiny effective denominator
 and many timed-out or not-covered mutants is an unhealthy result.
 
-## CervoMutant Partial Reports
+## CervoMutants Partial Reports
 
 When `mutation-report.json` is absent because a run timed out or was killed,
 agents must inspect `partial-mutation-report.json` before recording `no_report`.
@@ -100,7 +100,7 @@ mark `partial_report_used=true`.
 
 ## Harness Defaults
 
-For future CervoMutant-vs-Gremlins studies:
+For future CervoMutants-vs-Gremlins studies:
 
 ```powershell
 .\scripts\compare-tools-pool.ps1 `
@@ -111,7 +111,7 @@ For future CervoMutant-vs-Gremlins studies:
   -TimeoutSeconds 600
 ```
 
-For all-tool studies, use the same `CompareTargetMode` for CervoMutant, gomu,
+For all-tool studies, use the same `CompareTargetMode` for CervoMutants, gomu,
 and go-mutesting. Gremlins may additionally set `GremlinsTargetMode
 package-root` for compatibility, but it must not be the only normalized tool in
 a fairness claim.
@@ -126,3 +126,4 @@ Every comparison summary must include one of these labels:
 - `not_comparable`: effective targets or target modes differ.
 
 When in doubt, mark the row not comparable and explain why.
+

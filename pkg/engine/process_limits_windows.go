@@ -8,7 +8,7 @@ import (
 	"syscall"
 	"unsafe"
 
-	"github.com/cervantesh/cervo-mutants/pkg/config"
+	"github.com/cervantesh/CervoMutants/pkg/config"
 )
 
 const (

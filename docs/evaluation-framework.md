@@ -1,18 +1,18 @@
-# CervoMutant Evaluation Framework
+# CervoMutants Evaluation Framework
 
 Tracking issues:
 
-- https://github.com/cervantesh/cervo-mutants/issues/5
-- https://github.com/cervantesh/cervo-mutants/issues/6
-- https://github.com/cervantesh/cervo-mutants/issues/7
+- https://github.com/cervantesh/CervoMutants/issues/5
+- https://github.com/cervantesh/CervoMutants/issues/6
+- https://github.com/cervantesh/CervoMutants/issues/7
 
 This framework evaluates mutation testing tools for first-party Go repositories
-and decides whether `cervo-mutant` should be the default for application repos
+and decides whether CervoMutants should be the default for application repos
 and shared libraries. It combines published mutation-testing tool comparison
 work with engineering criteria needed for CI, large Go modules, and
 agent-driven test improvement.
 
-For the product framework CervoMutant should use after evaluation, see
+For the product framework CervoMutants should use after evaluation, see
 [Signal-First Mutation Testing Framework](signal-first-mutation-testing.md).
 That document covers the non-operator design areas: coverage semantics, score
 decomposition, CI relevance, history-aware scheduling, equivalence governance,
@@ -142,7 +142,7 @@ Based on commit-relevant mutant research.
 
 ### Actionability And Agent Utility - 15
 
-This layer is product-specific because `cervo-mutant` is intended for both
+This layer is product-specific because CervoMutants is intended for both
 humans and coding agents.
 
 | Criterion | Points | Evidence |
@@ -249,7 +249,7 @@ Use two evaluation levels.
 
 ### Level 1: Tool Comparison
 
-Compare `cervo-mutant` against available Go mutation tools such as Gremlins,
+Compare CervoMutants against available Go mutation tools such as Gremlins,
 go-mutesting variants, and gomu when they can run on the same target.
 
 For each tool:
@@ -281,7 +281,7 @@ For each target:
 
 ### Level 3: Longitudinal Default-Readiness Study
 
-Use this level before declaring `cervo-mutant` the default across your
+Use this level before declaring CervoMutants the default across your
 first-party Go repositories.
 
 1. Keep stable mutant identities across releases when source locations shift
@@ -354,7 +354,7 @@ Track:
 
 ## Acceptance Guidance
 
-`cervo-mutant` can be considered the default only if:
+CervoMutants can be considered the default only if:
 
 - it scores at least 80 overall,
 - it scores at least 18/25 on fault-revealing effectiveness,
@@ -475,3 +475,6 @@ secondary URL.
   DOI: https://doi.org/10.1007/s11219-023-09616-6  
   Springer:
   https://link.springer.com/article/10.1007/s11219-023-09616-6
+
+
+

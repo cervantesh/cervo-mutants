@@ -1,9 +1,9 @@
 # External Mutation Tool Windows Patches
 
-These patches were produced during issue #10 while comparing CervoMutant with
+These patches were produced during issue #10 while comparing CervoMutants with
 other Go mutation-testing tools on Windows/OneDrive.
 
-They are not vendored dependencies of CervoMutant. They document the minimal
+They are not vendored dependencies of CervoMutants. They document the minimal
 local changes needed to make the exact studied versions run in the same Windows
 environment where the upstream binaries failed.
 
@@ -28,4 +28,5 @@ Apply from each upstream repository root:
 git apply path/to/gomu-v0.2.0-windows-paths.patch
 git apply path/to/go-mutesting-v2.6.13-windows-paths.patch
 ```
+
 

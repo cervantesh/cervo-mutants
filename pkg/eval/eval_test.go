@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cervantesh/cervo-mutants/pkg/engine"
+	"github.com/cervantesh/CervoMutants/pkg/engine"
 )
 
 func TestBuildCreatesDecisionCompleteEvaluation(t *testing.T) {
@@ -32,7 +32,7 @@ func TestBuildCreatesDecisionCompleteEvaluation(t *testing.T) {
 	}
 
 	evaluation := Build(BuildRequest{
-		Tool:       "cervo-mutant",
+		Tool:       "cervo-mutants",
 		Target:     "fixture",
 		Commit:     "abc123",
 		Command:    []string{"cervomut", "eval", "./..."},
@@ -75,7 +75,7 @@ func TestBuildCreatesDecisionCompleteEvaluation(t *testing.T) {
 func TestWriteOutputsJSONMarkdownAndSchema(t *testing.T) {
 	dir := t.TempDir()
 	evaluation := Build(BuildRequest{
-		Tool:      "cervo-mutant",
+		Tool:      "cervo-mutants",
 		Target:    "fixture",
 		Commit:    "abc123",
 		Command:   []string{"cervomut", "eval", "./..."},

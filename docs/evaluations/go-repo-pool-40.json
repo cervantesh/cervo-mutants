@@ -1,7 +1,7 @@
 {
   "schema_version": "1",
-  "tracking_issue": "https://github.com/cervantesh/cervo-mutants/issues/13",
-  "selection_policy": "Anti-fitting pool for CervoMutant calibration. Repositories are split into tuning, validation, holdout, and special lanes. Holdout results must not be used to tune defaults before the candidate changes are frozen.",
+  "tracking_issue": "https://github.com/cervantesh/CervoMutants/issues/13",
+  "selection_policy": "Anti-fitting pool for CervoMutants calibration. Repositories are split into tuning, validation, holdout, and special lanes. Holdout results must not be used to tune defaults before the candidate changes are frozen.",
   "repos": [
     {"name": "cobra", "url": "https://github.com/spf13/cobra.git", "target": "./doc", "lane": "tuning", "domain": "cli", "reason": "Existing comparison target and widely used CLI library."},
     {"name": "pflag", "url": "https://github.com/spf13/pflag.git", "target": "./...", "lane": "validation", "domain": "cli", "reason": "Cobra-adjacent but smaller flag parsing library."},
@@ -45,3 +45,4 @@
     {"name": "nats", "url": "https://github.com/nats-io/nats.go.git", "target": "./...", "lane": "holdout", "domain": "messaging", "reason": "Messaging/networking holdout."}
   ]
 }
+

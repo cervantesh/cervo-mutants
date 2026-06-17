@@ -12,15 +12,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cervantesh/cervo-mutants/pkg/baseline"
-	"github.com/cervantesh/cervo-mutants/pkg/config"
-	"github.com/cervantesh/cervo-mutants/pkg/daemon"
-	"github.com/cervantesh/cervo-mutants/pkg/doctor"
-	"github.com/cervantesh/cervo-mutants/pkg/engine"
-	evalpkg "github.com/cervantesh/cervo-mutants/pkg/eval"
-	"github.com/cervantesh/cervo-mutants/pkg/extcompare"
-	"github.com/cervantesh/cervo-mutants/pkg/mutator"
-	"github.com/cervantesh/cervo-mutants/pkg/report"
+	"github.com/cervantesh/CervoMutants/pkg/baseline"
+	"github.com/cervantesh/CervoMutants/pkg/config"
+	"github.com/cervantesh/CervoMutants/pkg/daemon"
+	"github.com/cervantesh/CervoMutants/pkg/doctor"
+	"github.com/cervantesh/CervoMutants/pkg/engine"
+	evalpkg "github.com/cervantesh/CervoMutants/pkg/eval"
+	"github.com/cervantesh/CervoMutants/pkg/extcompare"
+	"github.com/cervantesh/CervoMutants/pkg/mutator"
+	"github.com/cervantesh/CervoMutants/pkg/report"
 )
 
 const (
@@ -358,7 +358,7 @@ func cmdEval(args []string) error {
 		return err
 	}
 	evaluation := evalpkg.Build(evalpkg.BuildRequest{
-		Tool:       "cervo-mutant",
+		Tool:       "cervo-mutants",
 		Target:     strings.Join(targets, " "),
 		Commit:     currentCommit(),
 		Command:    append([]string{"cervomut", "eval"}, args...),
@@ -409,10 +409,10 @@ type compareOptions struct {
 func parseCompareOptions(args []string) (compareOptions, error) {
 	fs := flag.NewFlagSet("compare", flag.ContinueOnError)
 	opts := compareOptions{}
-	cervo := fs.String("cervomut", "", "cervo-mutant "+mutationReportFileName)
-	cervoTarget := fs.String("cervomut-target", "", "original manifest target used for CervoMutant comparison")
-	cervoEffectiveTarget := fs.String("cervomut-effective-target", "", "effective target passed to CervoMutant")
-	cervoTargetMode := fs.String("cervomut-target-mode", "manifest", "CervoMutant target normalization mode: manifest or package-root")
+	cervo := fs.String("cervomut", "", "cervo-mutants "+mutationReportFileName)
+	cervoTarget := fs.String("cervomut-target", "", "original manifest target used for CervoMutants comparison")
+	cervoEffectiveTarget := fs.String("cervomut-effective-target", "", "effective target passed to CervoMutants")
+	cervoTargetMode := fs.String("cervomut-target-mode", "manifest", "CervoMutants target normalization mode: manifest or package-root")
 	gremlins := fs.String("gremlins", "", "Gremlins report JSON")
 	gremlinsTarget := fs.String("gremlins-target", "", "original manifest target used for Gremlins comparison")
 	gremlinsEffectiveTarget := fs.String("gremlins-effective-target", "", "effective target passed to Gremlins")

@@ -1,9 +1,9 @@
 # External Tool Findings Ledger
 
-Tracking issue: https://github.com/cervantesh/cervo-mutants/issues/13
+Tracking issue: https://github.com/cervantesh/CervoMutants/issues/13
 
 Purpose: keep reusable findings from external mutation testing tools in one
-place so CervoMutant can learn from each tool without copying blindly or
+place so CervoMutants can learn from each tool without copying blindly or
 repeating avoidable benchmarking mistakes.
 
 Each tool section should answer:
@@ -12,7 +12,7 @@ Each tool section should answer:
 - where the tool gives strong signal;
 - where its metrics can mislead;
 - operational failure modes;
-- concrete CervoMutant improvements derived from the finding;
+- concrete CervoMutants improvements derived from the finding;
 - comparison harness rules needed for fair future runs.
 
 All future tool runs must follow the
@@ -43,7 +43,7 @@ gremlins unleash . \
   --output gremlins.json
 ```
 
-When the CervoMutant manifest target is `./...`, the comparison harness should
+When the CervoMutants manifest target is `./...`, the comparison harness should
 store both values:
 
 ```text
@@ -51,7 +51,7 @@ target=./...
 effective_target=.
 ```
 
-This is mandatory because Gremlins and CervoMutant do not have identical target
+This is mandatory because Gremlins and CervoMutants do not have identical target
 semantics. Without `effective_target`, later readers can accidentally treat the
 results as apples-to-apples when they are not.
 
@@ -66,8 +66,8 @@ Gremlins is useful as a reference for:
 - simple threshold controls;
 - clear operator families for fast Go feedback.
 
-CervoMutant should keep these concepts visible in CI and agent-oriented reports,
-while preserving CervoMutant's stronger baseline, quarantine, JSON schema,
+CervoMutants should keep these concepts visible in CI and agent-oriented reports,
+while preserving CervoMutants' stronger baseline, quarantine, JSON schema,
 partial reporting, and governance model.
 
 ### Metric Risks
@@ -83,7 +83,7 @@ Example from the 2026-05-29 corrected WSL2 run:
 | `jsonparser` | 8 | 7 | 1 | 848 | 593 | 87.50 |
 
 The score is technically true over `killed + survived`, but it does not tell the
-whole story when timed-out and not-covered mutations dominate the run. CervoMutant
+whole story when timed-out and not-covered mutations dominate the run. CervoMutants
 reports must therefore include a top-level denominator health section:
 
 ```text
@@ -146,9 +146,9 @@ Do not treat `exit 0` as success unless a report exists or the log clearly says
 `No results to report`. A successful process with no JSON is a tool outcome that
 needs classification, not an empty metric row.
 
-### CervoMutant Improvements Derived From Gremlins
+### CervoMutants Improvements Derived From Gremlins
 
-The Gremlins findings imply these CervoMutant improvements:
+The Gremlins findings imply these CervoMutants improvements:
 
 - Add a denominator health block to JSON, summary, and HTML reports.
 - Preserve partial checkpoint metrics on timeout or watchdog termination.
@@ -161,7 +161,7 @@ The Gremlins findings imply these CervoMutant improvements:
 
 Implementation status:
 
-- Implemented denominator health in CervoMutant run summaries and reports.
+- Implemented denominator health in CervoMutants run summaries and reports.
 - Implemented `effective_mutants`, `score_denominator`, and Gremlins-style
   `test_efficacy` over `killed + survived`.
 - Implemented external comparison status classification fields for normalized
@@ -172,11 +172,11 @@ Implementation status:
   output.
 - Implemented study-level `comparability` metadata with `apples_to_apples`,
   `manifest_equivalent`, `effective_targets`, `target_modes`, and warnings.
-- Implemented CervoMutant target metadata in `cervomut compare` so CervoMutant
+- Implemented CervoMutants target metadata in `cervomut compare` so CervoMutants
   and external tools can be normalized together instead of normalizing only
   Gremlins.
 - Updated the pool comparison harness with `CompareTargetMode package-root` so
-  CervoMutant, Gremlins, gomu, and go-mutesting can all receive the same
+  CervoMutants, Gremlins, gomu, and go-mutesting can all receive the same
   package-root effective target when the study is meant to be fair.
 - Added agent-facing comparison protocol instructions to `AGENTS.md`.
 - Implemented budget scheduling tie-breaks that prioritize lower timeout-risk
@@ -185,7 +185,7 @@ Implementation status:
   correctly flagged high-score Gremlins rows with poor effective denominators:
   `pflag`, `decimal`, and `jsonparser`.
 - Implemented atomic partial mutation report writes after the re-run exposed a
-  zero-byte CervoMutant checkpoint on `gjson` under watchdog termination.
+  zero-byte CervoMutants checkpoint on `gjson` under watchdog termination.
 
 Remaining implementation gap:
 
@@ -228,3 +228,5 @@ Current known themes to preserve:
 - avoid implicit Unix tool dependencies;
 - avoid writing reports into target checkouts without a predictable artifact
   contract.
+
+

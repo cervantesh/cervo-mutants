@@ -1,6 +1,6 @@
 # Tool Comparison 12 TODOs
 
-Tracking issue: https://github.com/cervantesh/cervo-mutants/issues/13
+Tracking issue: https://github.com/cervantesh/CervoMutants/issues/13
 
 This file intentionally records the paused 12-repository comparison against the
 three external tools: Gremlins, gomu, and go-mutesting.
@@ -62,7 +62,7 @@ C:\Users\c___h\AppData\Local\Temp\cervomut-tool-comparison-12\summary.json
 
 ## TODO
 
-1. Fix `scripts/compare-tools-pool.ps1` CervoMutant parser so cached/fast reports
+1. Fix `scripts/compare-tools-pool.ps1` CervoMutants parser so cached/fast reports
    do not show `killed=0` and `survived=0` when the report contains real results.
 2. Fix Gremlins parser for repos where Gremlins exits 0 but metrics are null.
 3. Re-run with `-Resume` after parser fixes:
@@ -94,7 +94,7 @@ Issue #13 later expanded the comparison from the paused 12-repository mixed run
 into separated tool phases over 20 repositories, followed by one-at-a-time
 retries for `hugo` and `grpc-go`.
 
-The retry target was to recover metrics for the two non-CervoMutant reference
+The retry target was to recover metrics for the two non-CervoMutants reference
 tools that failed to produce usable metrics for `hugo` and `grpc-go`:
 
 ```text
@@ -138,10 +138,10 @@ Finding:
   retries produced controlled exits but no additional metrics, which limits
   their value for large-project CI comparison.
 
-CervoMutant design implications:
+CervoMutants design implications:
 
 - Keep process-tree memory accounting in the comparison runner and move the same
-  concept into CervoMutant's own execution model where possible.
+  concept into CervoMutants' own execution model where possible.
 - Prefer incremental result checkpoints after each mutant, not only at the end
   of a package/tool run.
 - Treat timeout, memory-watchdog, and skipped-for-resources as first-class
@@ -197,7 +197,7 @@ Same-limit mutation results:
 | `hugo` | `cervomut` | 0 | 14m 58.59s | 452736 KB | Completed with JSON/summary/survivor artifacts. |
 | `grpc-go` | `cervomut` | 0 | 10.38s | 100096 KB | Completed with JSON/summary/survivor artifacts. |
 
-CervoMutant outputs under the same limits:
+CervoMutants outputs under the same limits:
 
 | Repo | Generated | Covered | Executed | Killed | Survived | Not covered | Timed out | Compile errors | Mutation score |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -218,11 +218,11 @@ Additional findings:
 - `gomu` degraded better in WSL2 than in Windows-native retries because the
   machine stayed healthy, but it still failed to return comparable final metrics
   for the two target packages.
-- CervoMutant finished both same-limit runs and produced machine-readable
+- CervoMutants finished both same-limit runs and produced machine-readable
   reports, but it was too quiet during the long `hugo` run. It should emit
   progress and durable checkpoints while running, not only final artifacts.
 
-New CervoMutant design implications:
+New CervoMutants design implications:
 
 - Add first-class WSL/Linux cgroup resource-limit guidance to `doctor` and CI
   documentation for local large-repo experiments.
@@ -372,3 +372,5 @@ Remaining limitations after this pass:
   runs, but a full production-grade claim still needs a longer campaign across
   a broader set of first-party application modules that have clean baselines on
   the selected Go version.
+
+

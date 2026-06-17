@@ -255,7 +255,7 @@ func TestCompareCommandNormalizesExternalToolReports(t *testing.T) {
 	if err != nil {
 		t.Fatalf("comparison output missing: %v", err)
 	}
-	for _, want := range []string{"cervo-mutant", "gremlins", "gomu", "go-mutesting"} {
+	for _, want := range []string{"cervo-mutants", "gremlins", "gomu", "go-mutesting"} {
 		if !strings.Contains(string(data), want) {
 			t.Fatalf("comparison output missing %q: %s", want, data)
 		}

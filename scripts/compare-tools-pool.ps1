@@ -26,7 +26,7 @@ param(
     [int]$GoMaxProcs = 0,
     [string]$GoFlags = "",
     [switch]$Resume,
-    [string]$CervoMutant = "$env:TEMP/cervomut-pool.exe",
+    [string]$CervoMutants = "$env:TEMP/cervomut-pool.exe",
     [string]$Gremlins = "$env:TEMP/cervomut-study-cobra/tools/gremlins.exe",
     [string]$Gomu = "$env:TEMP/cervomut-study-cobra/tools/gomu-patched.exe",
     [string]$GoMutesting = "$env:TEMP/cervomut-study-cobra/tools/go-mutesting-patched.exe"
@@ -353,7 +353,7 @@ foreach ($repo in $repos) {
     New-Item -ItemType Directory -Path $repoOut -Force | Out-Null
     $toolDefs = New-Object System.Collections.Generic.List[object]
     $cervoTarget = Get-ComparisonTarget $repo.target
-    $toolDefs.Add([pscustomobject]@{ name = "cervomut"; exe = $CervoMutant; args = @("run", $cervoTarget, "--policy", "comparison-safe", "--workers", "$Workers", "--out", (Join-Path $repoOut "cervomut")); report = Join-Path $repoOut "cervomut/mutation-report.json"; partialReport = Join-Path $repoOut "cervomut/partial-mutation-report.json"; parser = "cervo"; effectiveTarget = $cervoTarget; targetMode = (Get-TargetMode "cervomut") }) | Out-Null
+    $toolDefs.Add([pscustomobject]@{ name = "cervomut"; exe = $CervoMutants; args = @("run", $cervoTarget, "--policy", "comparison-safe", "--workers", "$Workers", "--out", (Join-Path $repoOut "cervomut")); report = Join-Path $repoOut "cervomut/mutation-report.json"; partialReport = Join-Path $repoOut "cervomut/partial-mutation-report.json"; parser = "cervo"; effectiveTarget = $cervoTarget; targetMode = (Get-TargetMode "cervomut") }) | Out-Null
     $gremlinsTarget = Get-GremlinsTarget $repo.target
     $gremlinsArgs = @("unleash", $gremlinsTarget, "--workers", "$Workers", "--threshold-efficacy", "0", "--threshold-mcover", "0", "--output", (Join-Path $repoOut "gremlins.json"))
     if ($GremlinsTimeoutCoefficient -gt 1) {
@@ -404,7 +404,7 @@ foreach ($repo in $repos) {
             if ($status -eq "timeout" -or $status -eq "watchdog_kill") {
                 $status = "partial_$status"
             }
-            $note = (($note, "partial CervoMutant report used") | Where-Object { $_ -ne "" }) -join "; "
+            $note = (($note, "partial CervoMutants report used") | Where-Object { $_ -ne "" }) -join "; "
         }
         if ($tool.parser -eq "gremlins") {
             $logText = ""
@@ -465,3 +465,4 @@ foreach ($repo in $repos) {
 $results | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $summaryPath
 $results | Format-Table -AutoSize
 Write-Host "Summary: $summaryPath"
+

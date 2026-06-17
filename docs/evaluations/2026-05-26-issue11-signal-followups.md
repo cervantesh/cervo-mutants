@@ -1,12 +1,12 @@
 # Issue #11 Signal Follow-Ups
 
-Tracking issue: https://github.com/cervantesh/cervo-mutants/issues/11
+Tracking issue: https://github.com/cervantesh/CervoMutants/issues/11
 
 Date: 2026-05-26
 
 This document records the first five follow-up actions from issue #11. The goal
 is to reduce the remaining signal gap without copying another tool's behavior:
-use the comparison data, preserve CervoMutant's CI/agent contract, and make the
+use the comparison data, preserve CervoMutants' CI/agent contract, and make the
 semantics stricter where a score can be misread.
 
 ## 1. Cobra Re-Run Against Reference Tools
@@ -32,14 +32,14 @@ Normalized results:
 
 | Tool | Mutants reported | Killed | Survived/lived/escaped | Not covered | Errors | Not viable | Timed out | Score/efficacy | Wall time |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| CervoMutant | 255 | 137 | 118 | 0 | 0 | 0 | 0 | 53.73% | 83.72s |
+| CervoMutants | 255 | 137 | 118 | 0 | 0 | 0 | 0 | 53.73% | 83.72s |
 | Gremlins | 32 effective, 92 generated entries | 31 | 1 | 5 | 0 | 0 | 55 | 96.88% efficacy, 86.49% mutation coverage | 25.81s |
 | gomu patched | 390 | 64 | 99 | 0 | 176 | 51 | 0 | 39.26% over viable executed mutants | 59.67s |
 | go-mutesting patched | 361 | 170 | 191 | 0 | 0 | 0 | 0 | 47.09% MSI | 90.78s |
 
 Interpretation:
 
-- The raw denominators are not equivalent. CervoMutant conservative generated
+- The raw denominators are not equivalent. CervoMutants conservative generated
   substantially more valid mutants than Gremlins' top-level effective total.
 - Gremlins remains much faster in this specific re-run, but it also classifies
   55 generated entries as timed out in the file-level mutation list while its
@@ -47,8 +47,8 @@ Interpretation:
 - gomu still has a high operational/noise burden even after the Windows path
   patch: 176 errors and 51 not viable mutants.
 - go-mutesting remains the strongest breadth reference, but is slower than
-  CervoMutant here and has a lower MSI on the same package.
-- CervoMutant should compare with `ci-fast` or `gremlins-compatible` when the
+  CervoMutants here and has a lower MSI on the same package.
+- CervoMutants should compare with `ci-fast` or `gremlins-compatible` when the
   question is speed; conservative/default/campaign are broader signal modes.
 
 Raw artifacts:
@@ -133,7 +133,7 @@ the profile. That was too coarse. The new behavior requires:
 - execution count is greater than zero;
 - mutant line falls inside the covered start/end line range.
 
-If no parseable coverage entries exist, CervoMutant keeps a compatibility
+If no parseable coverage entries exist, CervoMutants keeps a compatibility
 fallback to the older file-presence behavior. Tests now cover both same-file
 covered and same-file uncovered line ranges.
 
@@ -173,7 +173,7 @@ represented as explicit data capture rather than hidden TODOs.
 | Conservative equivalent-risk suppression | `suppress` rules now require `evidence: confirmed` and `reviewers >= 1`; rules can narrow by operator, file, original token, mutated token, and equivalent risk. | False-suppression audit sample per release. |
 | Advanced history | `.cervomut/history.json` tracks status, first seen, last seen, run counts, survivor age, killed runs, not-covered runs, compile errors, and timeouts by stable mutant ID. | Calibrate history retention and trend dashboards. |
 | Broader operators | Added governed `assignment-arithmetic` and `inc-dec` operators to `default`/`aggressive`, inspired by Go operator breadth in external tools without moving them into fast CI. | Multi-repo operator yield comparison. |
-| External tool revalidation | Re-ran the current `cervomut compare` parser against the Cobra artifacts from CervoMutant, Gremlins, patched gomu, and patched go-mutesting. | Schedule periodic full reruns after operator changes. |
+| External tool revalidation | Re-ran the current `cervomut compare` parser against the Cobra artifacts from CervoMutants, Gremlins, patched gomu, and patched go-mutesting. | Schedule periodic full reruns after operator changes. |
 | Preset UX documentation | Config defaults now expose `history`; docs explain `ci-fast`, `ci-balanced`, `nightly`, and `campaign` as distinct adoption modes. | Expand examples per repo type. |
 | Real CI pipeline | GitHub Actions now run `go vet`, full tests, race tests for core packages, mutator registry smoke, `ci-fast` report smoke, and `ci-balanced` report smoke. | Add protected-branch gating once the repo policy is set. |
 | Final PR/issue hygiene | Issue #11 has progress comments; branch and PR reference `#11`; docs link back to the issue. | Close issue after PR review/merge. |
@@ -220,3 +220,5 @@ reports:
 Both operators are intentionally excluded from `gremlins-compatible`,
 `conservative-fast`, and `conservative` until calibration proves they preserve
 signal across multiple repositories.
+
+

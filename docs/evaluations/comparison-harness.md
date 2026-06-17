@@ -3,11 +3,11 @@
 This document describes the local mutation-tool comparison harness so a future
 agent can run it without relying on thread memory.
 
-Tracking issue: https://github.com/cervantesh/cervo-mutants/issues/13
+Tracking issue: https://github.com/cervantesh/CervoMutants/issues/13
 
 ## Purpose
 
-The harness compares CervoMutant with external Go mutation-testing tools while
+The harness compares CervoMutants with external Go mutation-testing tools while
 preserving enough metadata to avoid invalid claims.
 
 It is designed to answer two different questions:
@@ -25,9 +25,9 @@ rules.
 | --- | --- |
 | `docs/evaluations/go-repo-pool-40.json` | Repository manifest with name, URL, target, lane, domain, and reason. |
 | `scripts/compare-tools-pool.ps1` | Main multi-tool runner for Windows/PowerShell. Supports memory guards, resume, target normalization, and per-tool parsing. |
-| `scripts/calibration-smoke.ps1` | Lighter CervoMutant calibration smoke runner. Useful before expensive external comparisons. |
+| `scripts/calibration-smoke.ps1` | Lighter CervoMutants calibration smoke runner. Useful before expensive external comparisons. |
 | `cmd/cervomut` `compare` | Normalizes existing tool reports into one JSON schema. |
-| `pkg/extcompare` | Parser and comparability logic for CervoMutant, Gremlins, gomu, and go-mutesting reports. |
+| `pkg/extcompare` | Parser and comparability logic for CervoMutants, Gremlins, gomu, and go-mutesting reports. |
 | `docs/evaluations/tool-findings.md` | Ledger of lessons learned from each external tool. |
 | `docs/evaluations/2026-05-28-gremlins-focused-pool.md` | Current Gremlins-focused study and latest results. |
 
@@ -49,7 +49,7 @@ overridden:
   -Manifest docs/evaluations/go-repo-pool-40.json `
   -WorkRoot $env:TEMP/cervomut-go-pool-40 `
   -OutputRoot $env:TEMP/cervomut-tool-comparison `
-  -CervoMutant $env:TEMP/cervomut-pool.exe `
+  -CervoMutants $env:TEMP/cervomut-pool.exe `
   -Gremlins $env:TEMP/cervomut-study-cobra/tools/gremlins.exe
 ```
 
@@ -77,10 +77,10 @@ manifest target is `./...`:
   -Resume
 ```
 
-That makes CervoMutant and Gremlins both receive `.` instead of comparing
+That makes CervoMutants and Gremlins both receive `.` instead of comparing
 `cervomut run ./...` against `gremlins unleash .`.
 
-For all-tool studies, keep the same `CompareTargetMode` for CervoMutant, gomu,
+For all-tool studies, keep the same `CompareTargetMode` for CervoMutants, gomu,
 and go-mutesting. Normalizing only Gremlins creates a diagnostic run, not a fair
 comparison.
 
@@ -90,7 +90,7 @@ The current harness builds command lines as follows.
 
 | Tool | Command shape |
 | --- | --- |
-| CervoMutant | `cervomut run <effective_target> --policy comparison-safe --workers <n> --out <repoOut>/cervomut` |
+| CervoMutants | `cervomut run <effective_target> --policy comparison-safe --workers <n> --out <repoOut>/cervomut` |
 | Gremlins | `gremlins unleash <effective_target> --workers <n> --threshold-efficacy 0 --threshold-mcover 0 --output <repoOut>/gremlins.json` |
 | gomu | `gomu run <effective_target> --workers <n> --timeout <seconds> --threshold 0 --fail-on-gate=false --output json` |
 | go-mutesting | `go-mutesting /noop /quiet /no-diffs /logger-summary-json /logger-agentic-json /exec-timeout:<seconds> /workers:<n> <effective_target>` |
@@ -98,7 +98,7 @@ The current harness builds command lines as follows.
 Gremlins can add `--timeout-coefficient <n>` through
 `GremlinsTimeoutCoefficient`.
 
-CervoMutant's `comparison-safe` policy is the default apples-to-apples lane. It
+CervoMutants' `comparison-safe` policy is the default apples-to-apples lane. It
 uses the Gremlins-compatible operator profile, overlay isolation, deterministic
 sampling, a 10 minute run budget, a 20 second per-mutant timeout, and a default
 250 mutant cap when no explicit cap is provided.
@@ -141,9 +141,9 @@ The harness uses these statuses:
 - `all_timed_out`
 - `not_covered_only`
 
-For CervoMutant, when `mutation-report.json` is absent, the harness now falls
+For CervoMutants, when `mutation-report.json` is absent, the harness now falls
 back to `partial-mutation-report.json` and sets `partial_report_used=true`.
-CervoMutant also writes `partial-summary.json`, which is the first artifact to
+CervoMutants also writes `partial-summary.json`, which is the first artifact to
 inspect when a full partial mutant list is large.
 
 ## Outputs
@@ -152,7 +152,7 @@ Each run writes:
 
 - `summary.json` at `OutputRoot`;
 - per-repo logs under `OutputRoot/<repo>/<tool>.log`;
-- CervoMutant reports under `OutputRoot/<repo>/cervomut`;
+- CervoMutants reports under `OutputRoot/<repo>/cervomut`;
 - Gremlins JSON under `OutputRoot/<repo>/gremlins.json`;
 - copied external reports for gomu and go-mutesting when available.
 
@@ -200,7 +200,7 @@ After the run:
 1. Inspect `summary.json`.
 2. Check `apples_to_apples_key` before comparing score or speed.
 3. Inspect logs for `panic`, `No results to report`, timeout, or watchdog kill.
-4. Prefer CervoMutant final reports, then partial reports.
+4. Prefer CervoMutants final reports, then partial reports.
 5. Document denominator health warnings, not just score.
 6. Update issue #13 and the findings ledger.
 
@@ -209,5 +209,7 @@ After the run:
 - Comparing `cervomut run ./...` to `gremlins unleash .` as a fair result.
 - Reporting high scores without timed-out or not-covered counts.
 - Treating exit code 0 as success when no report exists.
-- Dropping CervoMutant partial data after a timeout.
+- Dropping CervoMutants partial data after a timeout.
 - Running gomu or go-mutesting without memory guards on Windows.
+
+

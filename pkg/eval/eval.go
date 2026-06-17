@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cervantesh/cervo-mutants/pkg/engine"
+	"github.com/cervantesh/CervoMutants/pkg/engine"
 )
 
 const (
@@ -106,7 +106,7 @@ func Build(req BuildRequest) Evaluation {
 		SchemaVersion:        "1",
 		Framework:            defaultString(req.Framework, "generic-go"),
 		GeneratedAt:          time.Now().UTC(),
-		Tool:                 defaultString(req.Tool, "cervo-mutant"),
+		Tool:                 defaultString(req.Tool, "cervo-mutants"),
 		Target:               req.Target,
 		Commit:               req.Commit,
 		Command:              req.Command,
@@ -137,7 +137,7 @@ func Write(dir string, evaluation Evaluation) error {
 
 func Markdown(e Evaluation) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "# CervoMutant Evaluation\n\n")
+	fmt.Fprintf(&b, "# CervoMutants Evaluation\n\n")
 	fmt.Fprintf(&b, "- Tool: `%s`\n- Target: `%s`\n- Commit: `%s`\n- Decision: `%s`\n- Score: `%d/100`\n\n", e.Tool, e.Target, e.Commit, e.Decision, e.Scorecard.Total)
 	fmt.Fprintf(&b, "## Scorecard\n\n")
 	fmt.Fprintf(&b, "| Layer | Score | Evidence |\n| --- | ---: | --- |\n")
@@ -169,8 +169,8 @@ func Markdown(e Evaluation) string {
 func Schema() string {
 	return `{
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/cervantesh/cervo-mutants/schemas/evaluation.schema.json",
-  "title": "CervoMutant Evaluation",
+  "$id": "https://github.com/cervantesh/CervoMutants/schemas/evaluation.schema.json",
+  "title": "CervoMutants Evaluation",
   "type": "object",
   "required": ["schema_version", "framework", "tool", "target", "decision", "scorecard", "metrics", "required_manual_review"],
   "properties": {

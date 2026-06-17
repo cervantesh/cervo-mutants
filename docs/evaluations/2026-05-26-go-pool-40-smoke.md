@@ -1,11 +1,11 @@
 # Go Pool 40 Smoke Run
 
-Tracking issue: https://github.com/cervantesh/cervo-mutants/issues/13
+Tracking issue: https://github.com/cervantesh/CervoMutants/issues/13
 
 Date: 2026-05-26
 
 This is the first anti-fitting calibration run after defining the 40-repository
-pool. The purpose is not to tune CervoMutant yet. The purpose is to classify
+pool. The purpose is not to tune CervoMutants yet. The purpose is to classify
 which repositories are runnable, which need better scopes, and which can support
 bounded mutation runs.
 
@@ -47,7 +47,7 @@ Repos needing scope/setup adjustment:
 | --- | ---: | ---: | --- |
 | `golang/go` | 1 | 2 | Special repo layout; current target is not a normal module invocation. |
 | `kubernetes/kubernetes` | 1 | 2 | Special repo layout / workspace setup needed. |
-| `gin-gonic/gin` | 1 | 0 | CervoMutant discovery works; baseline test scope needs dependency/setup review. |
+| `gin-gonic/gin` | 1 | 0 | CervoMutants discovery works; baseline test scope needs dependency/setup review. |
 | `etcd-io/etcd` | 1 | 0 | Discovery works; target likely needs narrowed package or env. |
 | `go-gitea/gitea` | 124 | 0 | Discovery works; baseline target too broad for 30s. |
 | `rclone/rclone` | 124 | 0 | Discovery works; baseline target too broad for 30s. |
@@ -86,7 +86,7 @@ repo.
 
 ## Conclusions
 
-- The pool is usable: all 40 repos cloned, and 36/40 support CervoMutant dry-run
+- The pool is usable: all 40 repos cloned, and 36/40 support CervoMutants dry-run
   with the initial targets.
 - Cobra is not representative: the first 12 mutation sample already shows very
   different coverage and score shapes across CLI, containers, static-site,
@@ -111,4 +111,5 @@ Recommended 12 for the first 100-mutant calibration, after this smoke:
 | Holdout | `hugo`, `terraform`, `prometheus`, `moby` |
 
 Do not use holdout results to tune defaults until candidate rules are frozen.
+
 

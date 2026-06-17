@@ -1,8 +1,8 @@
 # Sonar Analysis
 
-Tracking issue: https://github.com/cervantesh/cervo-mutants/issues/31
+Tracking issue: https://github.com/cervantesh/CervoMutants/issues/31
 
-CervoMutant includes `sonar-project.properties` so SonarQube or SonarCloud can
+CervoMutants includes `sonar-project.properties` so SonarQube or SonarCloud can
 ingest Go sources, tests, and coverage.
 
 ## Local Preparation
@@ -114,3 +114,4 @@ go test ./... -coverprofile=coverage.out
 go vet ./...
 staticcheck ./...
 ```
+

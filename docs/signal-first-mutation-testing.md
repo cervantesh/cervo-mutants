@@ -1,8 +1,8 @@
 # Signal-First Mutation Testing Framework
 
-Tracking issue: https://github.com/cervantesh/cervo-mutants/issues/10
+Tracking issue: https://github.com/cervantesh/CervoMutants/issues/10
 
-This document captures the non-operator lessons CervoMutant should reuse from
+This document captures the non-operator lessons CervoMutants should reuse from
 Gremlins, recent mutation-testing research, and the Cobra comparison study.
 Operator selection matters, but it is only one part of making mutation testing
 useful in CI and useful for coding agents.
@@ -19,7 +19,7 @@ The central product rule is:
 
 ## Sources And What We Reuse
 
-| Source | What it contributes | CervoMutant decision |
+| Source | What it contributes | CervoMutants decision |
 | --- | --- | --- |
 | Gremlins documentation | Coverage-first execution, explicit `not covered`, separate test efficacy and mutant coverage, simple CI thresholds, concise output. | Keep coverage-gated execution and separate efficacy/coverage metrics as first-class concepts. |
 | Practical mutation testing at scale / Google | Mutants are most valuable as actionable developer guidance. Large systems need selection, ranking, and limited surfaced work rather than all possible mutants. | Prioritize `affected`, baseline comparison, budgets, history, survivor ranking, and compact agent-ready reports. |
@@ -30,7 +30,7 @@ The central product rule is:
 | Ratio of Equivalent Mutants, JSS 2021 | Equivalent risk depends on both program structure and mutation operators. | Track equivalent-risk by repository, package, and operator rather than hard-coding one universal risk. |
 | Commit-relevant mutants research | Mutants close to a change are more relevant for pull-request feedback than all mutants in a codebase. | Make changed-scope execution and periodic full-run backstops part of CI design. |
 | PIT-style history and prioritization | History, timing, and previous outcomes reduce cost while preserving useful feedback. | Treat cache, timing history, and survivor history as core scheduling inputs. |
-| Cobra comparison study | CervoMutant is fast with overlay/parallel execution, but Gremlins has cleaner coverage semantics and a less noisy default. | Keep the speed architecture, but improve coverage prefiltering, score decomposition, and default profile governance. |
+| Cobra comparison study | CervoMutants is fast with overlay/parallel execution, but Gremlins has cleaner coverage semantics and a less noisy default. | Keep the speed architecture, but improve coverage prefiltering, score decomposition, and default profile governance. |
 
 ## Pillars
 
@@ -43,7 +43,7 @@ Coverage is not a quality score by itself, but execution is a prerequisite for a
 test to kill a mutant. If tests never execute the mutated code, the result should
 not be reported as a survivor.
 
-CervoMutant should classify:
+CervoMutants should classify:
 
 | Status | Meaning |
 | --- | --- |
@@ -76,7 +76,7 @@ References: Mutation Coverage is Not Strongly Correlated with Mutation Coverage,
 AST 2024; Gremlins `unleash` metrics; The ratio of equivalent mutants, JSS
 2021.
 
-A single mutation score is too easy to misread. CervoMutant reports must always
+A single mutation score is too easy to misread. CervoMutants reports must always
 show the components behind the score.
 
 Required score context:
@@ -207,7 +207,7 @@ References: Equivalent Mutants in the Wild, ISSTA 2024; Static detection of
 equivalent mutants, 2022; The ratio of equivalent mutants, JSS 2021; An
 Empirical Evaluation of Manually Created Equivalent Mutants, 2024.
 
-Equivalent mutants cannot be fully solved, but CervoMutant can make the burden
+Equivalent mutants cannot be fully solved, but CervoMutants can make the burden
 visible and reduce obvious noise.
 
 Equivalence workflow:
@@ -294,8 +294,8 @@ Required controls:
 
 Claims must use precise language:
 
-- "CervoMutant is faster in this Cobra package run" is valid.
-- "CervoMutant has a better mutation score than tool X" is only meaningful when
+- "CervoMutants is faster in this Cobra package run" is valid.
+- "CervoMutants has a better mutation score than tool X" is only meaningful when
   operator sets and coverage semantics are documented.
 - "This operator belongs in default" requires evidence across more than one repo.
 
@@ -369,3 +369,4 @@ Candidate policy:
 - On the use of commit-relevant mutants, EMSE 2022: https://link.springer.com/article/10.1007/s10664-022-10138-1
 - Mutation Testing Advances: An Analysis and Survey: https://doi.org/10.1016/bs.adcom.2018.03.015
 - PIT mutation testing system: https://pitest.org/
+

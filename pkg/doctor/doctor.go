@@ -88,7 +88,7 @@ func goEnvChecks(ctx context.Context) []Check {
 		checks = append(checks, warning("go-toolchain-auto", "GOTOOLCHAIN=auto can download toolchains during CI; pin toolchains for reproducible mutation runs\n"))
 	}
 	if values["GOFLAGS"] != "" && strings.Contains(values["GOFLAGS"], "-coverprofile") {
-		checks = append(checks, warning("go-flags-coverprofile", "GOFLAGS contains -coverprofile; CervoMutant may override or conflict with coverage profile output\n"))
+		checks = append(checks, warning("go-flags-coverprofile", "GOFLAGS contains -coverprofile; CervoMutants may override or conflict with coverage profile output\n"))
 	}
 	return checks
 }

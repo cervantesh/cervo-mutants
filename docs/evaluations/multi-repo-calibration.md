@@ -1,8 +1,8 @@
 # Multi-Repo Calibration Protocol
 
-Tracking issue: https://github.com/cervantesh/cervo-mutants/issues/10
+Tracking issue: https://github.com/cervantesh/CervoMutants/issues/10
 
-This calibration exists so CervoMutant can become better than a single-repo
+This calibration exists so CervoMutants can become better than a single-repo
 benchmark. Cobra proved the speed architecture is competitive, but policy
 defaults should be calibrated across different Go code shapes.
 
@@ -57,7 +57,7 @@ An operator should move away from fast CI if it repeatedly produces:
 
 ## Current Implementation Support
 
-CervoMutant now supports the calibration hooks needed for this study:
+CervoMutants now supports the calibration hooks needed for this study:
 
 - `--policy ci-fast|ci-balanced|nightly|campaign`
 - `selection.prefilter` for coverage prefiltering
@@ -150,6 +150,7 @@ Issue #13 added a 40-repository Go calibration pool and a smoke runner:
 - [2026-05-26-go-pool-40-smoke.md](2026-05-26-go-pool-40-smoke.md)
 
 Smoke result: all 40 repositories cloned, 23 passed the initial baseline target
-within 30 seconds, and 36 passed CervoMutant dry-run discovery. A selected
+within 30 seconds, and 36 passed CervoMutants dry-run discovery. A selected
 12-repository mutation sample completed successfully in 11/12 repos; `decimal`
 timed out and needs a narrower target before fast calibration.
+

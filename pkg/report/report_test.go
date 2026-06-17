@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cervantesh/cervo-mutants/pkg/engine"
+	"github.com/cervantesh/CervoMutants/pkg/engine"
 )
 
 func TestJSONReportSchemaV1IncludesActionableFields(t *testing.T) {

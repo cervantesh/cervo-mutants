@@ -1,6 +1,6 @@
 # Gremlins-Focused Comparison Pool
 
-Tracking issue: https://github.com/cervantesh/cervo-mutants/issues/13
+Tracking issue: https://github.com/cervantesh/CervoMutants/issues/13
 
 Date: 2026-05-28
 
@@ -10,12 +10,12 @@ Reusable tool-specific lessons from this campaign are maintained in
 This campaign narrows external comparison to:
 
 ```text
-CervoMutant vs Gremlins
+CervoMutants vs Gremlins
 ```
 
 `gomu` and `go-mutesting` remain historical findings only. They repeatedly
 failed to produce stable, comparable metrics under Windows and WSL2 resource
-limits, so they are no longer useful as primary benchmarks for CervoMutant.
+limits, so they are no longer useful as primary benchmarks for CervoMutants.
 
 ## Current Anchors
 
@@ -23,8 +23,8 @@ The useful prior cross-tool anchors are:
 
 | Repository | Target | Size bucket | Why it stays |
 | --- | --- | --- | --- |
-| `cobra` | `./doc` | small | Existing apples-to-apples CLI benchmark; CervoMutant is faster, Gremlins has stronger score. |
-| `grpc-go` | `./metadata` | medium | CervoMutant completed cleanly in WSL2 and beat Gremlins on score. |
+| `cobra` | `./doc` | small | Existing apples-to-apples CLI benchmark; CervoMutants is faster, Gremlins has stronger score. |
+| `grpc-go` | `./metadata` | medium | CervoMutants completed cleanly in WSL2 and beat Gremlins on score. |
 | `hugo` | `./helpers` | large | Stress target where Gremlins currently has better effective coverage/stability. |
 
 `pflag` is kept in the pool but is not a primary anchor because previous runs
@@ -45,7 +45,7 @@ The buckets are pragmatic, not prestige-based:
 
 These are the first 10 to run. They intentionally cover CLI, logging, parsing,
 numeric, validation, and utility domains while staying small enough for a local
-Gremlins-vs-CervoMutant comparison.
+Gremlins-vs-CervoMutants comparison.
 
 | # | Repo | Target | Lane | Domain | Reason |
 | ---: | --- | --- | --- | --- | --- |
@@ -88,8 +88,8 @@ These should run after small-pool parser/stability issues are resolved.
 
 | # | Repo | Target | Lane | Domain | Reason |
 | ---: | --- | --- | --- | --- | --- |
-| 1 | `grpc-go` | `./metadata` | validation | networking | Existing anchor; strong CervoMutant result in WSL2. |
-| 2 | `echo` | `./...` | validation | web | Web framework with prior CervoMutant signal. |
+| 1 | `grpc-go` | `./metadata` | validation | networking | Existing anchor; strong CervoMutants result in WSL2. |
+| 2 | `echo` | `./...` | validation | web | Web framework with prior CervoMutants signal. |
 | 3 | `chi` | `./...` | tuning | web | Smaller router, good fast web target. |
 | 4 | `gin` | `./...` | validation | web | Popular web framework; setup needs review. |
 | 5 | `fiber` | `./...` | validation | web | Alternative web framework with different dependency shape. |
@@ -119,12 +119,12 @@ should be run one at a time or in WSL2/cgroup-protected mode when possible.
 
 ## Evaluation Rules
 
-- Compare only CervoMutant and Gremlins.
+- Compare only CervoMutants and Gremlins.
 - Report denominators explicitly: generated, covered, executed, killed,
   survived, not-covered, timed-out, compile errors.
 - Do not compare scores without noting not-covered and timed-out counts.
 - Track wall time and seconds per executed mutant.
-- Treat controlled watchdog exits as a useful CervoMutant/runner property, but
+- Treat controlled watchdog exits as a useful CervoMutants/runner property, but
   not as a quality win unless partial metrics are preserved.
 - Do not tune from holdout results until a candidate change is frozen.
 
@@ -185,16 +185,16 @@ C:\Users\c___h\AppData\Local\Temp\cervomut-gremlins-small-10\summary.json
    process returned exit 0 in the harness, so the comparison runner must classify
    `panic:` in the log as an execution failure even when the process exit code is
    misleading.
-3. CervoMutant produced complete metrics on 5/10 targets: `cobra`, `pflag`,
+3. CervoMutants produced complete metrics on 5/10 targets: `cobra`, `pflag`,
    `logrus`, `uuid`, and `jsonparser`.
-4. CervoMutant timed out on 4/10 targets: `decimal`, `gjson`,
+4. CervoMutants timed out on 4/10 targets: `decimal`, `gjson`,
    `burntsushi-toml`, and `urfave-cli`.
-5. CervoMutant watchdog-killed `sjson` quickly. This is safer than exhausting the
+5. CervoMutants watchdog-killed `sjson` quickly. This is safer than exhausting the
    host, but the result still needs partial metrics to be useful.
 6. Full mutation is too expensive for this "small" pool. `jsonparser` generated
    874 mutants and took 512.67s. The next comparison should be bounded by
    deterministic sample or budget on both tools where possible.
-7. CervoMutant has a reporting advantage when it completes: the JSON captures
+7. CervoMutants has a reporting advantage when it completes: the JSON captures
    denominator counts and timeout counts consistently. The weakness is that
    timeout/watchdog exits currently lose partial per-mutant metrics.
 
@@ -202,9 +202,9 @@ C:\Users\c___h\AppData\Local\Temp\cervomut-gremlins-small-10\summary.json
 
 - Update the comparison harness to detect Gremlins panics in logs and mark them
   as `panic` or `tool_error`, not successful runs with null metrics.
-- Add CervoMutant checkpoint/partial-summary preservation for timeout and
+- Add CervoMutants checkpoint/partial-summary preservation for timeout and
   watchdog exits.
-- Add a bounded comparison mode for CervoMutant vs Gremlins:
+- Add a bounded comparison mode for CervoMutants vs Gremlins:
   - deterministic sample when the tool supports it;
   - otherwise fixed budget and explicit "not comparable denominator" flag.
 - Re-run the small pool in WSL2 to distinguish Windows-specific Gremlins panic
@@ -270,14 +270,14 @@ Artifacts:
    writing no JSON report and no diagnostic output.
 3. Cobra is no longer apples-to-apples in this WSL2 run. Gremlins wrote JSON,
    but reported `mutants_total=0`, `mutants_not_covered=5`, and
-   `mutants_timed_out=87`, while CervoMutant executed and scored 69 mutants.
-4. CervoMutant ran substantially faster in WSL2 than in Windows/OneDrive for
+   `mutants_timed_out=87`, while CervoMutants executed and scored 69 mutants.
+4. CervoMutants ran substantially faster in WSL2 than in Windows/OneDrive for
    the complete-metric targets:
    - `cobra`: 28.49s -> 12s
    - `pflag`: 223.33s -> 119s
    - `logrus`: 206.62s -> 123s
    - `uuid`: 182.87s -> 113s
-5. CervoMutant still needs better bounded-run behavior. Full mutation timed out
+5. CervoMutants still needs better bounded-run behavior. Full mutation timed out
    on `decimal`, `gjson`, `jsonparser`, and `urfave-cli`; those runs should
    preserve partial metrics instead of ending with empty denominators.
 6. `sjson` exposed a separate diagnostic gap: exit 1 with empty stdout, stderr,
@@ -329,29 +329,29 @@ Artifacts:
 
 1. Gremlins should be compared as a package-root tool, not as a `go test ./...`
    equivalent. Passing `./...` produced misleading no-report/no-results cases.
-   CervoMutant can still support `./...`, but the comparison harness must
+   CervoMutants can still support `./...`, but the comparison harness must
    normalize Gremlins targets differently.
-2. CervoMutant should expose the same distinction Gremlins makes between:
+2. CervoMutants should expose the same distinction Gremlins makes between:
    - effective executed mutants: killed + survived;
    - not covered mutants;
    - timed-out mutations;
    - test efficacy over killed + survived.
 3. Gremlins' raw score can be misleading when timeout/not-covered counts dwarf
    the effective denominator. For example, `gjson` scored 100% over only 3
-   effective mutants while recording 1,244 timed-out mutations. CervoMutant
+   effective mutants while recording 1,244 timed-out mutations. CervoMutants
    reports should make this impossible to miss with a top-level denominator
    health section.
-4. CervoMutant's next comparison mode should have a `gremlins-package-root`
+4. CervoMutants' next comparison mode should have a `gremlins-package-root`
    strategy:
    - use package-root target normalization for external Gremlins runs;
    - carry original manifest target and effective external target separately;
    - mark `not_comparable` when target semantics differ.
-5. CervoMutant needs partial checkpoint reports for timeout cases. Gremlins gave
-   useful completed reports for 9/10 in this corrected run; CervoMutant's
+5. CervoMutants needs partial checkpoint reports for timeout cases. Gremlins gave
+   useful completed reports for 9/10 in this corrected run; CervoMutants'
    timeout runs in the earlier WSL2 comparison still lost denominators.
 6. Budget-aware scheduling should account for operator/repo timeout risk.
    `gjson`, `decimal`, `jsonparser`, and `pflag` show high timeout counts under
-   Gremlins; these are good targets for CervoMutant's timeout-risk ranking and
+   Gremlins; these are good targets for CervoMutants' timeout-risk ranking and
    deterministic sampling.
 7. The comparison harness now needs to classify:
    - `ok`
@@ -370,7 +370,7 @@ in future multi-repo calibration summaries.
 
 Follow-up run completed on 2026-05-29 after implementing Gremlins-compatible
 target metadata, denominator health, test efficacy, mutation coverage, and
-budget-aware operator risk ordering in CervoMutant.
+budget-aware operator risk ordering in CervoMutants.
 
 Artifacts:
 
@@ -390,7 +390,7 @@ GOMEMLIMIT=3GiB
 GOMAXPROCS=2
 GOFLAGS=-p=2
 timeout=600s per tool case
-CervoMutant: cervomut run <target> --profile gremlins-compatible --isolation overlay --workers 2
+CervoMutants: cervomut run <target> --profile gremlins-compatible --isolation overlay --workers 2
 Gremlins: gremlins unleash <effective_target> --workers 2 --timeout-coefficient 4
 ```
 
@@ -408,7 +408,7 @@ Gremlins: gremlins unleash <effective_target> --workers 2 --timeout-coefficient 
 | `decimal` | `gremlins` | `.` | 0 | 456 | `ok` | 29 | 29 | 0 | 93 | 671 | 100.00 | 88.27 | false | `timed_out_exceeds_effective`, `not_covered_exceeds_effective`, `high_score_poor_denominator_health` |
 | `gjson` | `cervomut` | `./...` | 124 | 600 | `timeout` |  |  |  |  |  |  |  |  | `no_report` |
 | `gjson` | `gremlins` | `.` | 124 | 615 | `timeout` |  |  |  |  |  |  |  |  | `no_report` |
-| `sjson` | `cervomut` | `./...` | 1 | 60 | `no CervoMutant JSON report` |  |  |  |  |  |  |  |  | `no_report` |
+| `sjson` | `cervomut` | `./...` | 1 | 60 | `no CervoMutants JSON report` |  |  |  |  |  |  |  |  | `no_report` |
 | `sjson` | `gremlins` | `.` | 0 | 118 | `ok` | 100 | 100 | 0 | 33 | 68 | 100.00 | 83.58 | true |  |
 | `jsonparser` | `cervomut` | `./...` | 124 | 600 | `timeout` |  |  |  |  |  |  |  |  | `no_report` |
 | `jsonparser` | `gremlins` | `.` | 0 | 321 | `ok` | 17 | 16 | 1 | 848 | 584 | 94.12 | 41.48 | false | `timed_out_exceeds_effective`, `not_covered_exceeds_effective`, `high_score_poor_denominator_health` |
@@ -423,15 +423,15 @@ Findings:
    high efficacy on `pflag`, `decimal`, and `jsonparser`, but each row is now
    visibly unhealthy because timeout or not-covered counts dwarf the effective
    killed/survived denominator.
-2. CervoMutant completed 6/10 rows with healthy denominators and complete
+2. CervoMutants completed 6/10 rows with healthy denominators and complete
    mutation coverage over its generated pool: `cobra`, `pflag`, `logrus`,
    `uuid`, `burntsushi-toml`, and `urfave-cli`.
-3. CervoMutant timed out on `decimal`, `gjson`, and `jsonparser`; `sjson`
+3. CervoMutants timed out on `decimal`, `gjson`, and `jsonparser`; `sjson`
    exited without a final JSON report. These remain the best small-pool targets
    for bounded scheduling and diagnostic-report work.
 4. Gremlins completed 8/10 rows under package-root normalization. It timed out
    on `gjson` and `urfave-cli`.
-5. CervoMutant partial checkpoints existed for timeout/error cases, but report
+5. CervoMutants partial checkpoints existed for timeout/error cases, but report
    quality differed:
    - `decimal`: usable `partial-mutation-report.json` around 2.4 MB.
    - `jsonparser`: usable `partial-mutation-report.json` around 75 MB.
@@ -441,18 +441,18 @@ Findings:
 
 Implementation response:
 
-- CervoMutant now writes partial mutation reports through an atomic
+- CervoMutants now writes partial mutation reports through an atomic
   temp-file-and-rename path so a watchdog kill during JSON serialization cannot
   replace the last valid checkpoint with an empty file.
-- The comparison harness can now parse CervoMutant partial reports when final
+- The comparison harness can now parse CervoMutants partial reports when final
   reports are absent, so timeout rows can retain observed denominators.
 
 ## Apples-To-Apples Protocol Update
 
 The post-implementation run still mixed two different questions:
 
-1. Can CervoMutant run the manifest target such as `./...`?
-2. How does CervoMutant compare to Gremlins when both are constrained to the
+1. Can CervoMutants run the manifest target such as `./...`?
+2. How does CervoMutants compare to Gremlins when both are constrained to the
    same package-root target?
 
 Those are both useful, but they must not be summarized as the same comparison.
@@ -489,6 +489,8 @@ Future Gremlins-focused small-pool runs should use:
   -TimeoutSeconds 600
 ```
 
-For all-tool studies, use the same `CompareTargetMode` for CervoMutant, gomu,
+For all-tool studies, use the same `CompareTargetMode` for CervoMutants, gomu,
 and go-mutesting too. Normalizing only Gremlins makes the run useful for
 diagnosis, but not for a fairness claim.
+
+

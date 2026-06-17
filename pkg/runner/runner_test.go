@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cervantesh/cervo-mutants/pkg/engine"
+	"github.com/cervantesh/CervoMutants/pkg/engine"
 )
 
 func TestRunRejectsEmptyCommand(t *testing.T) {

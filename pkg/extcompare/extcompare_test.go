@@ -16,7 +16,7 @@ func TestParseCervoReportNormalizesMetrics(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ParseCervo returned error: %v", err)
 	}
-	if result.Tool != "cervo-mutant" || result.Total != 3 || result.Killed != 1 || result.Survived != 1 || result.NotCovered != 1 || result.Score != 50 {
+	if result.Tool != "cervo-mutants" || result.Total != 3 || result.Killed != 1 || result.Survived != 1 || result.NotCovered != 1 || result.Score != 50 {
 		t.Fatalf("unexpected normalized result: %+v", result)
 	}
 }
@@ -87,7 +87,7 @@ func TestNormalizeGremlinsPackageRootTargetMarksNotComparable(t *testing.T) {
 }
 
 func TestBuildComparabilitySeparatesToolApplesFromManifestEquivalence(t *testing.T) {
-	cervo := ApplyTargetMode(ToolResult{Tool: "cervo-mutant"}, "./...", ".", "package-root", true)
+	cervo := ApplyTargetMode(ToolResult{Tool: "cervo-mutants"}, "./...", ".", "package-root", true)
 	gremlins := ApplyTargetMode(ToolResult{Tool: "gremlins"}, "./...", ".", "package-root", true)
 
 	comp := BuildComparability([]ToolResult{cervo, gremlins})
@@ -103,7 +103,7 @@ func TestBuildComparabilitySeparatesToolApplesFromManifestEquivalence(t *testing
 }
 
 func TestBuildComparabilityDetectsEffectiveTargetMismatch(t *testing.T) {
-	cervo := ApplyTargetMode(ToolResult{Tool: "cervo-mutant"}, "./...", "./...", "manifest", false)
+	cervo := ApplyTargetMode(ToolResult{Tool: "cervo-mutants"}, "./...", "./...", "manifest", false)
 	gremlins := ApplyTargetMode(ToolResult{Tool: "gremlins"}, "./...", ".", "gremlins-package-root", true)
 
 	comp := BuildComparability([]ToolResult{cervo, gremlins})
@@ -248,7 +248,7 @@ func TestParserErrorAndFallbackBranches(t *testing.T) {
 
 func TestWriteStudy(t *testing.T) {
 	out := filepath.Join(t.TempDir(), "study.json")
-	if err := Write(out, []ToolResult{{Tool: "cervo-mutant", Completed: true, Total: 1}}); err != nil {
+	if err := Write(out, []ToolResult{{Tool: "cervo-mutants", Completed: true, Total: 1}}); err != nil {
 		t.Fatalf("Write returned error: %v", err)
 	}
 	data, err := os.ReadFile(out)

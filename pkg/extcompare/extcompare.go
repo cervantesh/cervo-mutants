@@ -77,7 +77,7 @@ func ParseCervo(path string) (ToolResult, error) {
 		return ToolResult{}, err
 	}
 	result := ToolResult{
-		Tool:       "cervo-mutant",
+		Tool:       "cervo-mutants",
 		Completed:  true,
 		Status:     "ok",
 		Total:      report.Summary.Total,

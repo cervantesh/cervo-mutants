@@ -12,7 +12,7 @@ implementation starts.
 
 ## Mutation Tool Comparisons Must Be Apples-To-Apples
 
-When running CervoMutant against Gremlins, gomu, go-mutesting, or any other
+When running CervoMutants against Gremlins, gomu, go-mutesting, or any other
 mutation-testing tool, every result must record target semantics explicitly.
 
 - Store the manifest target, effective target, and target mode for every tool.
@@ -24,10 +24,11 @@ mutation-testing tool, every result must record target semantics explicitly.
   modes differ.
 - Preserve denominator health fields: killed, survived, not covered, timed out,
   errors, test efficacy, mutation coverage, and score denominator.
-- If a final CervoMutant report is missing, inspect
+- If a final CervoMutants report is missing, inspect
   `partial-mutation-report.json` before reporting `no_report`.
 
 The reusable protocol is documented in
 `docs/evaluations/tool-comparison-protocol.md`, and the runnable harness is
 described in `docs/evaluations/comparison-harness.md`. Agents should follow
 both before launching or summarizing comparison runs.
+

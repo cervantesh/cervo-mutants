@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cervantesh/cervo-mutants/pkg/config"
-	"github.com/cervantesh/cervo-mutants/pkg/mutator"
+	"github.com/cervantesh/CervoMutants/pkg/config"
+	"github.com/cervantesh/CervoMutants/pkg/mutator"
 )
 
 func writeFixture(t *testing.T) string {
@@ -1507,7 +1507,7 @@ func assertQuarantineLoad(t *testing.T, e *Engine, path string) {
 		"mutant_id":  "m-active",
 		"reason":     "temporary",
 		"owner":      "qa",
-		"issue":      "cervantesh/cervo-mutants#31",
+		"issue":      "cervantesh/CervoMutants#31",
 		"created_at": time.Now().Add(-time.Hour).Format(time.RFC3339),
 		"expires_at": time.Now().Add(time.Hour).Format(time.RFC3339),
 	}}

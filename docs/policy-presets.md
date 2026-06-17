@@ -1,8 +1,8 @@
 # Policy Presets
 
-Tracking issue: https://github.com/cervantesh/cervo-mutants/issues/11
+Tracking issue: https://github.com/cervantesh/CervoMutants/issues/11
 
-CervoMutant presets are adoption modes, not marketing labels. They control
+CervoMutants presets are adoption modes, not marketing labels. They control
 operator breadth, coverage selection, isolation, report formats, and timeout
 expectations.
 
@@ -67,4 +67,5 @@ cervomut run ./... --policy campaign --out .cervomut/campaign
   `evidence: confirmed` and at least one reviewer.
 - History is enabled by default at `.cervomut/history.json` so reports can
   identify new and long-standing survivors.
+
 

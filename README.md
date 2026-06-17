@@ -168,6 +168,16 @@ cervomut run ./... --policy ci-fast --report summary,json,junit,sarif,github-sum
 
 More detail: [docs/policy-presets.md](docs/policy-presets.md).
 
+## Reference Examples
+
+Three maintained example workspaces now live under [examples/](examples/README.md):
+
+- `small-library`: first adoption path for compact repos
+- `medium-service`: richer review outputs for multi-package services
+- `large-repo-ci`: slicing and matrix CI patterns for bounded large-repo rollout
+
+The public guide is [docs/example-repos.md](docs/example-repos.md).
+
 ## CLI Reference
 
 | Command | Purpose |
@@ -629,6 +639,8 @@ Latest local Sonar pass after issue #31:
 - [docs/sonar.md](docs/sonar.md): local and CI Sonar workflow.
 - [docs/go-toolchain-compatibility.md](docs/go-toolchain-compatibility.md):
   supported Go versions and `doctor` checks.
+- [docs/example-repos.md](docs/example-repos.md): maintained example workspaces
+  for small, medium, and large-repo adoption patterns.
 - [docs/extensibility.md](docs/extensibility.md): programmatic extension seams
   for custom mutators, suppression evaluators, and survivor rankers.
 - [docs/evaluations/multi-repo-calibration.md](docs/evaluations/multi-repo-calibration.md):

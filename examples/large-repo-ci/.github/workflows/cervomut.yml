@@ -1,0 +1,36 @@
+name: cervomut
+
+on:
+  pull_request:
+  schedule:
+    - cron: "0 4 * * *"
+  workflow_dispatch:
+
+jobs:
+  pr-shards:
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        shard: ["1/4", "2/4", "3/4", "4/4"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.6"
+      - run: go install github.com/cervantesh/cervo-mutants/cmd/cervomut@latest
+      - run: cervomut run ./... --policy ci-fast --slice-by package --shard "${{ matrix.shard }}" --max-files-per-run 20 --sample deterministic --report summary,json,github-summary --out ".cervomut/pr-${{ matrix.shard }}"
+
+  nightly-shards:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        shard: ["1/6", "2/6", "3/6", "4/6", "5/6", "6/6"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.6"
+      - run: go install github.com/cervantesh/cervo-mutants/cmd/cervomut@latest
+      - run: cervomut run ./... --policy nightly --slice-by file --shard "${{ matrix.shard }}" --max-mutants-per-package 25 --sample deterministic --report summary,json,junit,html,sarif,github-summary --out ".cervomut/nightly-${{ matrix.shard }}"

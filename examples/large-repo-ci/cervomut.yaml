@@ -1,0 +1,33 @@
+version: 1
+policy: nightly
+scope:
+  mode: all
+  include: ["./..."]
+  slice_by: package
+tests:
+  command: ["go", "test", "./..."]
+  timeout: 45s
+  baseline_required: true
+mutators:
+  profile: default
+execution:
+  workers: 2
+  isolation: overlay
+selection:
+  mode: coverage
+  prefilter: true
+  coverage_profile: .cervomut/coverage.out
+limits:
+  max_files_per_run: 20
+  max_mutants_per_package: 25
+  sample: deterministic
+history:
+  enabled: true
+  path: .cervomut/history.json
+baseline:
+  enabled: true
+  path: .cervomut/baseline.json
+  fail_on_regression: true
+  fail_on_new_survivors: true
+reports:
+  formats: [summary, json, junit, html, sarif, github-summary]

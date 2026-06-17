@@ -1,0 +1,16 @@
+name: cervomut
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  mutation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.6"
+      - run: go install github.com/cervantesh/cervo-mutants/cmd/cervomut@latest
+      - run: cervomut run ./... --policy ci-fast --budget 5m --report summary,json,junit,github-summary --out .cervomut/pr

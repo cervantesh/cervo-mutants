@@ -1,6 +1,6 @@
 # Go Toolchain Compatibility
 
-Tracking issue: https://github.com/cervantesh/cervo-mutant/issues/21
+Tracking issue: https://github.com/cervantesh/cervo-mutants/issues/21
 
 CervoMutant is sensitive to Go toolchain behavior because mutation runs execute
 many `go test` commands, may use Go overlay files, and may generate coverage

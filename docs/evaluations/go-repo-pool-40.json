@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "tracking_issue": "https://github.com/cervantesh/cervo-mutant/issues/13",
+  "tracking_issue": "https://github.com/cervantesh/cervo-mutants/issues/13",
   "selection_policy": "Anti-fitting pool for CervoMutant calibration. Repositories are split into tuning, validation, holdout, and special lanes. Holdout results must not be used to tune defaults before the candidate changes are frozen.",
   "repos": [
     {"name": "cobra", "url": "https://github.com/spf13/cobra.git", "target": "./doc", "lane": "tuning", "domain": "cli", "reason": "Existing comparison target and widely used CLI library."},

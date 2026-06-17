@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cervantesh/cervo-mutant/pkg/engine"
+	"github.com/cervantesh/cervo-mutants/pkg/engine"
 )
 
 func TestSelectorDefaultsToAllTests(t *testing.T) {

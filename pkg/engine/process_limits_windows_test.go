@@ -6,7 +6,7 @@ import (
 	"os/exec"
 	"testing"
 
-	"github.com/cervantesh/cervo-mutant/pkg/config"
+	"github.com/cervantesh/cervo-mutants/pkg/config"
 )
 
 func TestApplyProcessLimitsWindowsBranches(t *testing.T) {

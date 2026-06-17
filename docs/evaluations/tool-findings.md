@@ -1,6 +1,6 @@
 # External Tool Findings Ledger
 
-Tracking issue: https://github.com/cervantesh/cervo-mutant/issues/13
+Tracking issue: https://github.com/cervantesh/cervo-mutants/issues/13
 
 Purpose: keep reusable findings from external mutation testing tools in one
 place so CervoMutant can learn from each tool without copying blindly or

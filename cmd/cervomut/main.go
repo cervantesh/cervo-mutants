@@ -12,15 +12,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cervantesh/cervo-mutant/pkg/baseline"
-	"github.com/cervantesh/cervo-mutant/pkg/config"
-	"github.com/cervantesh/cervo-mutant/pkg/daemon"
-	"github.com/cervantesh/cervo-mutant/pkg/doctor"
-	"github.com/cervantesh/cervo-mutant/pkg/engine"
-	evalpkg "github.com/cervantesh/cervo-mutant/pkg/eval"
-	"github.com/cervantesh/cervo-mutant/pkg/extcompare"
-	"github.com/cervantesh/cervo-mutant/pkg/mutator"
-	"github.com/cervantesh/cervo-mutant/pkg/report"
+	"github.com/cervantesh/cervo-mutants/pkg/baseline"
+	"github.com/cervantesh/cervo-mutants/pkg/config"
+	"github.com/cervantesh/cervo-mutants/pkg/daemon"
+	"github.com/cervantesh/cervo-mutants/pkg/doctor"
+	"github.com/cervantesh/cervo-mutants/pkg/engine"
+	evalpkg "github.com/cervantesh/cervo-mutants/pkg/eval"
+	"github.com/cervantesh/cervo-mutants/pkg/extcompare"
+	"github.com/cervantesh/cervo-mutants/pkg/mutator"
+	"github.com/cervantesh/cervo-mutants/pkg/report"
 )
 
 const (

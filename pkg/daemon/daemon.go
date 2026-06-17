@@ -8,9 +8,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/cervantesh/cervo-mutant/pkg/engine"
-	"github.com/cervantesh/cervo-mutant/pkg/isolate"
-	"github.com/cervantesh/cervo-mutant/pkg/runner"
+	"github.com/cervantesh/cervo-mutants/pkg/engine"
+	"github.com/cervantesh/cervo-mutants/pkg/isolate"
+	"github.com/cervantesh/cervo-mutants/pkg/runner"
 )
 
 type Message struct {

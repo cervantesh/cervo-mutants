@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/cervantesh/cervo-mutant/pkg/engine"
+	"github.com/cervantesh/cervo-mutants/pkg/engine"
 )
 
 type Store struct {

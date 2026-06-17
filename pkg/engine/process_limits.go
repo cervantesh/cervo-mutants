@@ -3,7 +3,7 @@ package engine
 import (
 	"errors"
 
-	"github.com/cervantesh/cervo-mutant/pkg/config"
+	"github.com/cervantesh/cervo-mutants/pkg/config"
 )
 
 var errProcessLimitUnsupported = errors.New("process resource limits are not supported on this platform")

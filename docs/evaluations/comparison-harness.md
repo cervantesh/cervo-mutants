@@ -3,7 +3,7 @@
 This document describes the local mutation-tool comparison harness so a future
 agent can run it without relying on thread memory.
 
-Tracking issue: https://github.com/cervantesh/cervo-mutant/issues/13
+Tracking issue: https://github.com/cervantesh/cervo-mutants/issues/13
 
 ## Purpose
 

@@ -19,11 +19,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cervantesh/cervo-mutant/pkg/config"
-	"github.com/cervantesh/cervo-mutant/pkg/discover"
-	"github.com/cervantesh/cervo-mutant/pkg/isolate"
-	"github.com/cervantesh/cervo-mutant/pkg/mutator"
-	"github.com/cervantesh/cervo-mutant/pkg/quarantine"
+	"github.com/cervantesh/cervo-mutants/pkg/config"
+	"github.com/cervantesh/cervo-mutants/pkg/discover"
+	"github.com/cervantesh/cervo-mutants/pkg/isolate"
+	"github.com/cervantesh/cervo-mutants/pkg/mutator"
+	"github.com/cervantesh/cervo-mutants/pkg/quarantine"
 )
 
 type Engine struct {

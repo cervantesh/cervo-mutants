@@ -1,6 +1,6 @@
 # Signal-First Mutation Testing Framework
 
-Tracking issue: https://github.com/cervantesh/cervo-mutant/issues/10
+Tracking issue: https://github.com/cervantesh/cervo-mutants/issues/10
 
 This document captures the non-operator lessons CervoMutant should reuse from
 Gremlins, recent mutation-testing research, and the Cobra comparison study.

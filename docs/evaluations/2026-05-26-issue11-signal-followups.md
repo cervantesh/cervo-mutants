@@ -1,6 +1,6 @@
 # Issue #11 Signal Follow-Ups
 
-Tracking issue: https://github.com/cervantesh/cervo-mutant/issues/11
+Tracking issue: https://github.com/cervantesh/cervo-mutants/issues/11
 
 Date: 2026-05-26
 

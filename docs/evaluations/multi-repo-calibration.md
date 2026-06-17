@@ -1,6 +1,6 @@
 # Multi-Repo Calibration Protocol
 
-Tracking issue: https://github.com/cervantesh/cervo-mutant/issues/10
+Tracking issue: https://github.com/cervantesh/cervo-mutants/issues/10
 
 This calibration exists so CervoMutant can become better than a single-repo
 benchmark. Cobra proved the speed architecture is competitive, but policy

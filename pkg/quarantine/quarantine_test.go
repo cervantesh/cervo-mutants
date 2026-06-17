@@ -13,7 +13,7 @@ func TestValidateRequiresAuditedTemporaryEntries(t *testing.T) {
 		MutantID:  "pkg/foo.go:1:conditionals:eq-to-ne",
 		Reason:    "Equivalent defensive branch",
 		Owner:     "platform",
-		Issue:     "cervantesh/cervo-mutant#1",
+		Issue:     "cervantesh/cervo-mutants#1",
 		CreatedAt: now.Add(-24 * time.Hour),
 		ExpiresAt: now.Add(24 * time.Hour),
 	}}, policy, now)
@@ -28,7 +28,7 @@ func TestValidateRequiresAuditedTemporaryEntries(t *testing.T) {
 		MutantID:  "m1",
 		Reason:    "temporary",
 		Owner:     "platform",
-		Issue:     "cervantesh/cervo-mutant#1",
+		Issue:     "cervantesh/cervo-mutants#1",
 		ExpiresAt: now.Add(-time.Second),
 	}}, policy, now); err == nil {
 		t.Fatal("Validate accepted expired quarantine")
@@ -42,7 +42,7 @@ func TestValidateRejectsEachRequiredFieldAndRenewalLimit(t *testing.T) {
 		MutantID:  "m1",
 		Reason:    "temporary",
 		Owner:     "qa",
-		Issue:     "cervantesh/cervo-mutant#31",
+		Issue:     "cervantesh/cervo-mutants#31",
 		ExpiresAt: now.Add(time.Hour),
 	}
 	cases := []struct {

@@ -1,6 +1,6 @@
 # Gremlins-Focused Comparison Pool
 
-Tracking issue: https://github.com/cervantesh/cervo-mutant/issues/13
+Tracking issue: https://github.com/cervantesh/cervo-mutants/issues/13
 
 Date: 2026-05-28
 

@@ -1,4 +1,4 @@
-module github.com/cervantesh/cervo-mutant
+module github.com/cervantesh/cervo-mutants
 
 go 1.25.6
 

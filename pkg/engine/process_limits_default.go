@@ -5,7 +5,7 @@ package engine
 import (
 	"os/exec"
 
-	"github.com/cervantesh/cervo-mutant/pkg/config"
+	"github.com/cervantesh/cervo-mutants/pkg/config"
 )
 
 func applyProcessLimits(cmd *exec.Cmd, resources config.Resources) (func(), error) {

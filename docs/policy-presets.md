@@ -1,6 +1,6 @@
 # Policy Presets
 
-Tracking issue: https://github.com/cervantesh/cervo-mutant/issues/11
+Tracking issue: https://github.com/cervantesh/cervo-mutants/issues/11
 
 CervoMutant presets are adoption modes, not marketing labels. They control
 operator breadth, coverage selection, isolation, report formats, and timeout

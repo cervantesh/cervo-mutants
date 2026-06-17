@@ -10,7 +10,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/cervantesh/cervo-mutant/pkg/engine"
+	"github.com/cervantesh/cervo-mutants/pkg/engine"
 )
 
 func JSON(result engine.RunResult) ([]byte, error) {

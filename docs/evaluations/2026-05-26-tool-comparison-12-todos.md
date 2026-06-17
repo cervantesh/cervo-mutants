@@ -1,6 +1,6 @@
 # Tool Comparison 12 TODOs
 
-Tracking issue: https://github.com/cervantesh/cervo-mutant/issues/13
+Tracking issue: https://github.com/cervantesh/cervo-mutants/issues/13
 
 This file intentionally records the paused 12-repository comparison against the
 three external tools: Gremlins, gomu, and go-mutesting.

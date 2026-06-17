@@ -1,6 +1,6 @@
 # Cobra Mutation Tool Comparison Study
 
-Issue: [#10](https://github.com/cervantesh/cervo-mutant/issues/10)
+Issue: [#10](https://github.com/cervantesh/cervo-mutants/issues/10)
 
 Date: 2026-05-26
 

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cervantesh/cervo-mutant/pkg/engine"
+	"github.com/cervantesh/cervo-mutants/pkg/engine"
 )
 
 type GoTestRunner struct {

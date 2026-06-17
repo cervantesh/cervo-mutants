@@ -132,8 +132,12 @@ func TestMemoryLimitExceededBranches(t *testing.T) {
 func TestPlatformAndEnvironmentHelperCoverage(t *testing.T) {
 	plain := platformSensitivityPriority(Mutant{})
 	sensitive := platformSensitivityPriority(Mutant{PlatformSensitive: true})
-	if sensitive <= plain {
-		t.Fatalf("platformSensitivityPriority sensitive=%d plain=%d", sensitive, plain)
+	if runtime.GOOS == "windows" {
+		if sensitive <= plain {
+			t.Fatalf("platformSensitivityPriority sensitive=%d plain=%d", sensitive, plain)
+		}
+	} else if sensitive != plain {
+		t.Fatalf("platformSensitivityPriority should stay neutral off Windows: sensitive=%d plain=%d", sensitive, plain)
 	}
 	if !pathMentionsOneDrive(filepath.Join("C:\\Users", "user", "OneDrive - Personal", "repo")) {
 		t.Fatal("pathMentionsOneDrive should detect OneDrive paths")

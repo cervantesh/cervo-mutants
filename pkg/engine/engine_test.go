@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"math"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -1344,7 +1345,15 @@ func TestSummarizeIncludesSemanticTriageStats(t *testing.T) {
 	if result.Actionable.RawScore == 0 || result.Actionable.ActionableScore == 0 {
 		t.Fatalf("actionable score block missing scores: %+v", result.Actionable)
 	}
-	if result.Actionable.Survivors != 4 || result.Actionable.ActionableSurvivors != 3 || result.Actionable.TrueActionableSurvivors != 2 {
+	expectedActionableSurvivors := 4
+	expectedTrueActionable := 3
+	expectedActionableScore := 25.0
+	if runtime.GOOS == "windows" {
+		expectedActionableSurvivors = 3
+		expectedTrueActionable = 2
+		expectedActionableScore = 100.0 / 3.0
+	}
+	if result.Actionable.Survivors != 4 || result.Actionable.ActionableSurvivors != expectedActionableSurvivors || result.Actionable.TrueActionableSurvivors != expectedTrueActionable {
 		t.Fatalf("unexpected actionable survivor counts: %+v", result.Actionable)
 	}
 	if result.Actionable.EquivalentRiskSurvivors != 2 || result.Actionable.SemanticGroupReviewUnits != 1 || result.Actionable.CollapsedSemanticDuplicates != 1 {
@@ -1353,8 +1362,8 @@ func TestSummarizeIncludesSemanticTriageStats(t *testing.T) {
 	if result.Actionable.PlatformSensitiveSurvivors != 1 || result.Actionable.NonProgressTimeouts != 1 {
 		t.Fatalf("unexpected actionable platform/timeout counters: %+v", result.Actionable)
 	}
-	if result.Actionable.ActionableScore != 33.33333333333333 {
-		t.Fatalf("actionable score = %.14f", result.Actionable.ActionableScore)
+	if math.Abs(result.Actionable.ActionableScore-expectedActionableScore) > 1e-9 {
+		t.Fatalf("actionable score = %.14f, want %.14f", result.Actionable.ActionableScore, expectedActionableScore)
 	}
 }
 

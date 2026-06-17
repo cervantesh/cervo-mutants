@@ -15,6 +15,7 @@ func TestJSONReportSchemaV1IncludesActionableFields(t *testing.T) {
 	run := engine.RunResult{
 		SchemaVersion: "1",
 		Environment:   engine.Environment{OS: "linux", Arch: "amd64", GoVersion: "go1.25.6", TempRoot: "/tmp/cervomut", Isolation: "overlay", Workers: 1, TestTimeout: "30s", WSL: true, Warnings: []string{"workspace path contains spaces"}},
+		Slice:         engine.SliceMetadata{Enabled: true, SliceBy: "package", ShardIndex: 2, ShardCount: 4, GroupCount: 12, SelectedGroups: 3, MaxFilesPerRun: 5, SelectedFiles: 5, MaxMutantsPerPackage: 10, SelectedMutants: 25},
 		Checkpoint:    engine.Checkpoint{Fingerprint: "abc123", Mutants: 1, IncludesFileDigests: true, Reason: "final"},
 		Summary: engine.Summary{
 			Total:       1,
@@ -83,7 +84,7 @@ func TestJSONReportSchemaV1IncludesActionableFields(t *testing.T) {
 		t.Fatalf("schema_version = %v", decoded["schema_version"])
 	}
 	text := string(data)
-	for _, want := range []string{"environment", "go_version", "temp_root", "warnings", "isolation", "checkpoint", "fingerprint", "includes_file_digests", "failure_kind", "memory_peak_bytes", "baseline", "cache", "quarantine", "history", "unified_diff", "status_reason", "selection_reason", "coverage_source", "selected_tests", "description", "nearby_tests", "equivalent_risk", "recommendation", "compile_error_risk", "suppression_audit", "evidence_level", "survivor_rank", "rank_score", "rank_reason", "actionability", "suggested_test_scope", "nearest_tests", "previous_status", "first_seen", "survivor_age_runs", "operator_historical_yield"} {
+	for _, want := range []string{"environment", "go_version", "temp_root", "warnings", "slice", "slice_by", "shard_index", "shard_count", "selected_files", "max_mutants_per_package", "isolation", "checkpoint", "fingerprint", "includes_file_digests", "failure_kind", "memory_peak_bytes", "baseline", "cache", "quarantine", "history", "unified_diff", "status_reason", "selection_reason", "coverage_source", "selected_tests", "description", "nearby_tests", "equivalent_risk", "recommendation", "compile_error_risk", "suppression_audit", "evidence_level", "survivor_rank", "rank_score", "rank_reason", "actionability", "suggested_test_scope", "nearest_tests", "previous_status", "first_seen", "survivor_age_runs", "operator_historical_yield"} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("JSON report missing %q: %s", want, text)
 		}
@@ -125,6 +126,7 @@ func TestSummaryIncludesGremlinsStyleCoverageMetricsAndMutatorStats(t *testing.T
 			},
 		},
 		Environment: engine.Environment{OS: "linux", Arch: "amd64", GoVersion: "go1.25.6", TempRoot: "/tmp/cervomut", Isolation: "overlay", Workers: 1, TestTimeout: "30s", Warnings: []string{"workspace path contains spaces"}},
+		Slice:       engine.SliceMetadata{Enabled: true, SliceBy: "package", ShardIndex: 2, ShardCount: 4, GroupCount: 12, SelectedGroups: 3, MaxFilesPerRun: 5, SelectedFiles: 5, MaxMutantsPerPackage: 10, SelectedMutants: 25},
 	}
 
 	text := Summary(run)
@@ -146,6 +148,7 @@ func TestSummaryIncludesGremlinsStyleCoverageMetricsAndMutatorStats(t *testing.T
 		"recommendation=fast-ci",
 		"logical: total=1 killed=0 survived=0 not_covered=1 pending_budget=0 skipped_resource=0 timed_out=0 memory_killed=0 compile_error=0",
 		"recommendation=conservative",
+		"Slice: by=package shard=2/4 groups=12 selected_groups=3 files=5 max_files=5 max_mutants_per_package=10 selected_mutants=25",
 		"Environment: os=linux arch=amd64 go=go1.25.6 isolation=overlay workers=1 timeout=30s",
 		"Temp root: /tmp/cervomut",
 		"Environment warnings: workspace path contains spaces",

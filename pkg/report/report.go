@@ -110,6 +110,19 @@ func Summary(result engine.RunResult) string {
 			)
 		}
 	}
+	if result.Slice.Enabled {
+		fmt.Fprintf(&b, "Slice: by=%s shard=%d/%d groups=%d selected_groups=%d files=%d max_files=%d max_mutants_per_package=%d selected_mutants=%d\n",
+			result.Slice.SliceBy,
+			result.Slice.ShardIndex,
+			result.Slice.ShardCount,
+			result.Slice.GroupCount,
+			result.Slice.SelectedGroups,
+			result.Slice.SelectedFiles,
+			result.Slice.MaxFilesPerRun,
+			result.Slice.MaxMutantsPerPackage,
+			result.Slice.SelectedMutants,
+		)
+	}
 	if result.StoppedReason != "" {
 		fmt.Fprintf(&b, "Stopped reason: %s\n", result.StoppedReason)
 	}

@@ -166,6 +166,10 @@ cervomut run ./... `
   --policy ci-fast `
   --budget 10m `
   --max-mutants 100 `
+  --slice-by package `
+  --shard 1/4 `
+  --max-files-per-run 20 `
+  --max-mutants-per-package 10 `
   --sample deterministic `
   --workers 2 `
   --isolation overlay `
@@ -188,6 +192,9 @@ scope:
   mode: all
   since: origin/main
   include: ["./..."]
+  slice_by: ""
+  shard_index: 0
+  shard_count: 0
 tests:
   command: ["go", "test", "./..."]
   timeout: 30s
@@ -200,6 +207,10 @@ execution:
   temp_root: ""
 selection:
   mode: package
+limits:
+  max_mutants: 0
+  max_mutants_per_package: 0
+  max_files_per_run: 0
 cache:
   enabled: true
   mode: incremental
@@ -229,6 +240,32 @@ Supported isolation modes:
   copy. On Windows this mode uses a conservative worker cap and prefers a safe
   local temp root when the system `TEMP` is risky.
 - `overlay`: use Go's `-overlay` support to avoid copying the module.
+
+## Large-Repo Slicing
+
+Large repositories can cut one broad run into smaller, resumable slices without
+hiding the raw report model.
+
+Available controls:
+
+- `--slice-by mutant|package|file|function|operator` to choose the deterministic
+  shard grouping key
+- `--shard INDEX/COUNT`
+- `--max-files-per-run N`
+- `--max-mutants-per-package N`
+
+Examples:
+
+```powershell
+# PR lane: one package shard with a hard file cap
+cervomut run ./... --policy ci-fast --slice-by package --shard 1/4 --max-files-per-run 20 --sample deterministic
+
+# Nightly lane: broader shard with capped per-package density
+cervomut run ./... --policy nightly --slice-by file --shard 3/12 --max-mutants-per-package 25 --sample deterministic
+```
+
+Reports keep the applied slice metadata under the top-level `slice` block so
+later tooling can merge shard outputs without guessing how the run was cut.
 
 Windows note:
 

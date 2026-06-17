@@ -49,6 +49,9 @@ func TestLoadParsesYAMLAndValidatesEnums(t *testing.T) {
 scope:
   mode: changed
   since: origin/main
+  slice_by: package
+  shard_index: 1
+  shard_count: 4
 tests:
   command: ["go", "test", "./pkg/..."]
   timeout: 45s
@@ -63,6 +66,9 @@ selection:
   mode: coverage
 ci:
   fail_under: 80
+limits:
+  max_files_per_run: 5
+  max_mutants_per_package: 3
 `), 0o600)
 	if err != nil {
 		t.Fatal(err)
@@ -75,6 +81,9 @@ ci:
 	if cfg.Scope.Mode != "changed" || cfg.Scope.Since != "origin/main" {
 		t.Fatalf("scope not loaded: %+v", cfg.Scope)
 	}
+	if cfg.Scope.SliceBy != "package" || cfg.Scope.ShardIndex != 1 || cfg.Scope.ShardCount != 4 {
+		t.Fatalf("slice settings not loaded: %+v", cfg.Scope)
+	}
 	if cfg.Tests.Command[2] != "./pkg/..." || cfg.Tests.Timeout != 45*time.Second {
 		t.Fatalf("tests not loaded: %+v", cfg.Tests)
 	}
@@ -83,6 +92,9 @@ ci:
 	}
 	if cfg.Execution.TempRoot != "C:/cervomut-tmp" {
 		t.Fatalf("temp_root not loaded: %+v", cfg.Execution)
+	}
+	if cfg.Limits.MaxFilesPerRun != 5 || cfg.Limits.MaxMutantsPerPackage != 3 {
+		t.Fatalf("slicing limits not loaded: %+v", cfg.Limits)
 	}
 	if len(cfg.Execution.CheckpointIncludes) != 2 || cfg.Execution.CheckpointIncludes[1] != "golden/**" {
 		t.Fatalf("checkpoint includes not loaded: %+v", cfg.Execution.CheckpointIncludes)
@@ -227,6 +239,7 @@ func TestValidateRejectsEveryEnumAndEvidenceValue(t *testing.T) {
 	cases := []func(*Config){
 		func(cfg *Config) { cfg.Policy = "bad" },
 		func(cfg *Config) { cfg.Scope.Mode = "bad" },
+		func(cfg *Config) { cfg.Scope.SliceBy = "bad" },
 		func(cfg *Config) { cfg.Selection.Mode = "bad" },
 		func(cfg *Config) { cfg.Mutators.Profile = "bad" },
 		func(cfg *Config) { cfg.Execution.Isolation = "bad" },
@@ -254,5 +267,26 @@ func TestValidateRejectsEveryEnumAndEvidenceValue(t *testing.T) {
 	}
 	if got := minInt(2, 1); got != 1 {
 		t.Fatalf("minInt = %d, want 1", got)
+	}
+}
+
+func TestValidateRejectsInvalidShardConfiguration(t *testing.T) {
+	cfg := Defaults()
+	cfg.Scope.ShardIndex = 1
+	if err := cfg.Validate(); err == nil {
+		t.Fatal("Validate accepted shard index without shard count")
+	}
+
+	cfg = Defaults()
+	cfg.Scope.ShardCount = 2
+	cfg.Scope.ShardIndex = 3
+	if err := cfg.Validate(); err == nil {
+		t.Fatal("Validate accepted out-of-range shard index")
+	}
+
+	cfg = Defaults()
+	cfg.Limits.MaxFilesPerRun = -1
+	if err := cfg.Validate(); err == nil {
+		t.Fatal("Validate accepted negative max_files_per_run")
 	}
 }

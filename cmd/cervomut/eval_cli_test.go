@@ -130,6 +130,9 @@ func TestRunCommandErrorsAndReorderFlags(t *testing.T) {
 	if err := run([]string{"run", "--bad-flag"}); err == nil {
 		t.Fatal("run accepted bad flag")
 	}
+	if err := run([]string{"run", "./...", "--shard", "bad"}); err == nil {
+		t.Fatal("run accepted malformed shard")
+	}
 	if err := run([]string{"affected", "--bad-flag"}); err == nil {
 		t.Fatal("affected accepted bad flag")
 	}
@@ -199,7 +202,7 @@ func TestRunAcceptsWorkerAndIsolationFlags(t *testing.T) {
 	dir := writeCLIFixture(t)
 	out := filepath.Join(dir, "parallel-out")
 	tempRoot := filepath.Join(dir, "temp-root")
-	if err := run([]string{"run", dir, "--max-mutants", "1", "--workers", "2", "--isolation", "overlay", "--temp-root", tempRoot, "--out", out}); err != nil {
+	if err := run([]string{"run", dir, "--max-mutants", "1", "--workers", "2", "--isolation", "overlay", "--temp-root", tempRoot, "--slice-by", "package", "--shard", "1/1", "--max-files-per-run", "1", "--max-mutants-per-package", "1", "--out", out}); err != nil {
 		t.Fatalf("run with workers and isolation returned error: %v", err)
 	}
 	if _, err := os.Stat(tempRoot); err != nil {

@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime/debug"
+	"strconv"
 	"strings"
 	"time"
 
@@ -180,9 +181,14 @@ func cmdRun(args []string) (err error) {
 type runOptions struct {
 	dryRun           bool
 	scope            string
+	sliceBy          string
+	shardIndex       int
+	shardCount       int
 	budget           flagDuration
 	testTimeout      flagDuration
 	maxMutants       int
+	maxFilesPerRun   int
+	maxMutantsPerPkg int
 	sample           string
 	reportFormats    string
 	out              string
@@ -206,10 +212,14 @@ func parseRunOptions(args []string) (runOptions, []string, error) {
 	opts := runOptions{}
 	fs.BoolVar(&opts.dryRun, "dry-run", false, "only discover mutants")
 	scope := fs.String("scope", "", "scope mode")
+	sliceBy := fs.String("slice-by", "", "large-repo slicing key: mutant, package, file, function, or operator")
+	shard := fs.String("shard", "", "deterministic shard in the form index/count")
 	since := fs.String("since", "", "git base")
 	budget := fs.Duration("budget", 0, "run budget")
 	testTimeout := fs.Duration(flagTestTimeout, 0, "per-mutant go test timeout")
 	maxMutants := fs.Int(flagMaxMutants, 0, "max mutants")
+	maxFilesPerRun := fs.Int("max-files-per-run", 0, "limit the run to the first N files after deterministic ordering")
+	maxMutantsPerPackage := fs.Int("max-mutants-per-package", 0, "limit mutants kept per package after slicing")
 	sample := fs.String("sample", "", "sampling mode")
 	reportFormats := fs.String("report", "", "comma-separated report formats")
 	out := fs.String("out", "", reportOutputDirectoryDoc)
@@ -222,15 +232,26 @@ func parseRunOptions(args []string) (runOptions, []string, error) {
 	resume := fs.Bool("resume", false, "resume from partial-mutation-report.json in the output directory")
 	maxProcessMemory := fs.Int(flagMaxProcessMemoryMB, 0, "best-effort process-tree memory cap in MB")
 	if err := fs.Parse(reorderFlags(args, map[string]bool{
-		"scope": true, "since": true, "budget": true, flagTestTimeout: true, flagMaxMutants: true, "sample": true, "report": true, "out": true, "workers": true, "isolation": true, "temp-root": true, "policy": true, "profile": true, flagMaxProcessMemoryMB: true,
+		"scope": true, "slice-by": true, "shard": true, "since": true, "budget": true, flagTestTimeout: true, flagMaxMutants: true, "max-files-per-run": true, "max-mutants-per-package": true, "sample": true, "report": true, "out": true, "workers": true, "isolation": true, "temp-root": true, "policy": true, "profile": true, flagMaxProcessMemoryMB: true,
 	})); err != nil {
 		return runOptions{}, nil, err
 	}
 	opts.scope = *scope
+	opts.sliceBy = *sliceBy
+	if *shard != "" {
+		index, count, err := parseShard(*shard)
+		if err != nil {
+			return runOptions{}, nil, err
+		}
+		opts.shardIndex = index
+		opts.shardCount = count
+	}
 	_ = since
 	opts.budget = flagDuration{value: *budget, set: *budget > 0}
 	opts.testTimeout = flagDuration{value: *testTimeout, set: *testTimeout > 0}
 	opts.maxMutants = *maxMutants
+	opts.maxFilesPerRun = *maxFilesPerRun
+	opts.maxMutantsPerPkg = *maxMutantsPerPackage
 	opts.sample = *sample
 	opts.reportFormats = *reportFormats
 	opts.out = *out
@@ -256,6 +277,7 @@ func applyRunOptions(cfg *config.Config, opts runOptions) {
 
 func applyRunOverrides(cfg *config.Config, opts runOptions) {
 	setString(&cfg.Scope.Mode, opts.scope)
+	setString(&cfg.Scope.SliceBy, opts.sliceBy)
 	setString(&cfg.Mutators.Profile, opts.profile)
 	setString(&cfg.Limits.Sample, opts.sample)
 	setString(&cfg.Execution.Isolation, opts.isolation)
@@ -265,6 +287,16 @@ func applyRunOverrides(cfg *config.Config, opts runOptions) {
 	}
 	if opts.resume {
 		cfg.Execution.Resume = true
+	}
+	if opts.maxFilesPerRun > 0 {
+		cfg.Limits.MaxFilesPerRun = opts.maxFilesPerRun
+	}
+	if opts.maxMutantsPerPkg > 0 {
+		cfg.Limits.MaxMutantsPerPackage = opts.maxMutantsPerPkg
+	}
+	if opts.shardCount > 0 {
+		cfg.Scope.ShardIndex = opts.shardIndex
+		cfg.Scope.ShardCount = opts.shardCount
 	}
 	if opts.maxProcessMemory > 0 {
 		cfg.Execution.Resources.MaxProcessMemoryMB = opts.maxProcessMemory
@@ -427,6 +459,25 @@ func fileExists(path string) bool {
 	return err == nil
 }
 
+func parseShard(value string) (int, int, error) {
+	parts := strings.Split(strings.TrimSpace(value), "/")
+	if len(parts) != 2 {
+		return 0, 0, fmt.Errorf("shard must be in the form index/count")
+	}
+	index, err := strconv.Atoi(strings.TrimSpace(parts[0]))
+	if err != nil {
+		return 0, 0, fmt.Errorf("invalid shard index: %w", err)
+	}
+	count, err := strconv.Atoi(strings.TrimSpace(parts[1]))
+	if err != nil {
+		return 0, 0, fmt.Errorf("invalid shard count: %w", err)
+	}
+	if count < 1 || index < 1 || index > count {
+		return 0, 0, fmt.Errorf("shard index must be between 1 and count")
+	}
+	return index, count, nil
+}
+
 func cmdFast(args []string) error {
 	next := append([]string{"--policy", "ci-fast", "--report", "summary,json,junit"}, args...)
 	return cmdRun(next)
@@ -436,9 +487,13 @@ func cmdEval(args []string) (err error) {
 	fs := flag.NewFlagSet("eval", flag.ContinueOnError)
 	out := fs.String("out", ".cervomut/evaluation", "evaluation output directory")
 	framework := fs.String("framework", "generic-go", "evaluation framework")
+	sliceBy := fs.String("slice-by", "", "large-repo slicing key: mutant, package, file, function, or operator")
+	shard := fs.String("shard", "", "deterministic shard in the form index/count")
 	budget := fs.Duration("budget", 0, "run budget")
 	testTimeout := fs.Duration(flagTestTimeout, 0, "per-mutant go test timeout")
 	maxMutants := fs.Int(flagMaxMutants, 0, "max mutants")
+	maxFilesPerRun := fs.Int("max-files-per-run", 0, "limit the run to the first N files after deterministic ordering")
+	maxMutantsPerPackage := fs.Int("max-mutants-per-package", 0, "limit mutants kept per package after slicing")
 	sample := fs.String("sample", "", "sampling mode")
 	workers := fs.Int("workers", 0, "parallel mutation workers")
 	isolation := fs.String("isolation", "", "isolation backend: temp-workdir or overlay")
@@ -447,7 +502,7 @@ func cmdEval(args []string) (err error) {
 	resume := fs.Bool("resume", false, "resume from partial-mutation-report.json in the output directory")
 	maxProcessMemory := fs.Int(flagMaxProcessMemoryMB, 0, "best-effort process-tree memory cap in MB")
 	if err := fs.Parse(reorderFlags(args, map[string]bool{
-		"out": true, "framework": true, "budget": true, flagTestTimeout: true, flagMaxMutants: true, "sample": true, "workers": true, "isolation": true, "temp-root": true, "policy": true, flagMaxProcessMemoryMB: true,
+		"out": true, "framework": true, "slice-by": true, "shard": true, "budget": true, flagTestTimeout: true, flagMaxMutants: true, "max-files-per-run": true, "max-mutants-per-package": true, "sample": true, "workers": true, "isolation": true, "temp-root": true, "policy": true, flagMaxProcessMemoryMB: true,
 	})); err != nil {
 		return err
 	}
@@ -493,6 +548,23 @@ func cmdEval(args []string) (err error) {
 	}
 	if *isolation != "" {
 		cfg.Execution.Isolation = *isolation
+	}
+	if *sliceBy != "" {
+		cfg.Scope.SliceBy = *sliceBy
+	}
+	if *shard != "" {
+		index, count, err := parseShard(*shard)
+		if err != nil {
+			return err
+		}
+		cfg.Scope.ShardIndex = index
+		cfg.Scope.ShardCount = count
+	}
+	if *maxFilesPerRun > 0 {
+		cfg.Limits.MaxFilesPerRun = *maxFilesPerRun
+	}
+	if *maxMutantsPerPackage > 0 {
+		cfg.Limits.MaxMutantsPerPackage = *maxMutantsPerPackage
 	}
 	if *tempRoot != "" {
 		cfg.Execution.TempRoot = *tempRoot
@@ -818,6 +890,9 @@ scope:
   since: origin/main
   include: ["./..."]
   exclude: ["**/*_generated.go", "**/vendor/**"]
+  slice_by: ""
+  shard_index: 0
+  shard_count: 0
 tests:
   command: ["go", "test", "./..."]
   timeout: 30s
@@ -876,6 +951,8 @@ baseline:
   fail_on_new_survivors: true
 limits:
   max_mutants: 0
+  max_mutants_per_package: 0
+  max_files_per_run: 0
   sample: none
   seed: 0
 ci:

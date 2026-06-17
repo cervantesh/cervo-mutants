@@ -4,6 +4,8 @@ Tracking issue: https://github.com/cervantesh/cervo-mutants/issues/57
 
 Assessment date: 2026-06-17
 
+Follow-on roadmap: [docs/maturity-roadmap.md](maturity-roadmap.md)
+
 This document records a dated maturity snapshot for CervoMutants across product,
 code, and operations. It is intentionally time-bound: maturity can move quickly
 as CI, releases, public adoption, and major features change.

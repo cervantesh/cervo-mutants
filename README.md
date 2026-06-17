@@ -464,6 +464,8 @@ Latest local Sonar pass after issue #31:
   product framework behind CervoMutants defaults.
 - [docs/project-maturity-assessment.md](docs/project-maturity-assessment.md):
   dated assessment of product, code, and operational maturity.
+- [docs/maturity-roadmap.md](docs/maturity-roadmap.md): 18-month execution
+  roadmap for raising functional and code maturity.
 - [docs/policy-presets.md](docs/policy-presets.md): policy preset behavior.
 - [docs/sonar.md](docs/sonar.md): local and CI Sonar workflow.
 - [docs/go-toolchain-compatibility.md](docs/go-toolchain-compatibility.md):

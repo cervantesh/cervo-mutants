@@ -3,7 +3,7 @@
 .scannerwork/
 *.exe
 *.test
-cervomut
+/cervomut
 coverage.out
 coverage*.out
 coverage[0-9]*

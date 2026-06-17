@@ -147,6 +147,7 @@ jobs:
               const freshCodexReaction = reactions.find((reaction) => {
                 return (
                   isCodex(reaction.user?.login) &&
+                  reaction.content === "+1" &&
                   Date.parse(reaction.created_at) >= runStartedAt
                 );
               });

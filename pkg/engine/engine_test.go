@@ -1073,6 +1073,90 @@ func TestRunMutantCacheAndErrorBranches(t *testing.T) {
 	}
 }
 
+func TestApplySlicingCapsFilesAndPackageMutants(t *testing.T) {
+	cfg := config.Defaults()
+	cfg.Limits.MaxFilesPerRun = 1
+	cfg.Limits.MaxMutantsPerPackage = 1
+	mutants := []Mutant{
+		{ID: "b", Package: "./pkg/a", File: filepath.Join("pkg", "a", "first.go")},
+		{ID: "a", Package: "./pkg/a", File: filepath.Join("pkg", "a", "second.go")},
+		{ID: "c", Package: "./pkg/b", File: filepath.Join("pkg", "b", "third.go")},
+	}
+
+	selected, meta := New(cfg).applySlicing(mutants)
+	if len(selected) != 1 || selected[0].ID != "a" {
+		t.Fatalf("unexpected sliced mutants: %+v", selected)
+	}
+	if !meta.Enabled || meta.SelectedFiles != 1 || meta.SelectedMutants != 1 || meta.MaxMutantsPerPackage != 1 {
+		t.Fatalf("unexpected slice metadata: %+v", meta)
+	}
+}
+
+func TestApplySlicingUsesDeterministicShardGroups(t *testing.T) {
+	cfg := config.Defaults()
+	cfg.Scope.SliceBy = "package"
+	cfg.Scope.ShardIndex = 1
+	cfg.Scope.ShardCount = 2
+	mutants := []Mutant{
+		{ID: "a1", Package: "./pkg/a", File: "pkg/a/one.go"},
+		{ID: "a2", Package: "./pkg/a", File: "pkg/a/two.go"},
+		{ID: "b1", Package: "./pkg/b", File: "pkg/b/one.go"},
+		{ID: "c1", Package: "./pkg/c", File: "pkg/c/one.go"},
+	}
+
+	selected, meta := New(cfg).applySlicing(mutants)
+	expectedPackages := map[string]bool{}
+	for _, pkg := range []string{"./pkg/a", "./pkg/b", "./pkg/c"} {
+		if shardForKey(pkg, 2) == 1 {
+			expectedPackages[pkg] = true
+		}
+	}
+	if meta.GroupCount != 3 || meta.SelectedGroups != len(expectedPackages) || !meta.Enabled {
+		t.Fatalf("unexpected shard metadata: %+v", meta)
+	}
+	for _, mutant := range selected {
+		if !expectedPackages[mutant.Package] {
+			t.Fatalf("mutant from unexpected package shard: %+v", mutant)
+		}
+	}
+}
+
+func TestCacheKeyChangesWhenSliceConfigChanges(t *testing.T) {
+	dir := writeFixture(t)
+	mutant := Mutant{
+		ID:          "m-cache",
+		Module:      dir,
+		Package:     ".",
+		File:        filepath.Join(dir, "calc.go"),
+		Line:        3,
+		Operator:    "conditionals-boundary",
+		Original:    ">=",
+		Mutated:     ">",
+		StartOffset: 0,
+		EndOffset:   1,
+		Fingerprint: "fp",
+	}
+	baseCfg := config.Defaults()
+	baseCfg.Tests.Command = []string{"go", "test", "."}
+	basePlan := New(baseCfg).selectTests(mutant)
+	baseKey, err := New(baseCfg).cacheKey(mutant, basePlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	slicedCfg := baseCfg
+	slicedCfg.Scope.SliceBy = "package"
+	slicedCfg.Scope.ShardIndex = 1
+	slicedCfg.Scope.ShardCount = 4
+	slicedKey, err := New(slicedCfg).cacheKey(mutant, basePlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if baseKey == slicedKey {
+		t.Fatalf("cache key should change when slice config changes: %q", baseKey)
+	}
+}
+
 func TestLoadCorruptCacheAndBaselineBranches(t *testing.T) {
 	dir := t.TempDir()
 	cfg := config.Defaults()

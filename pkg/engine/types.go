@@ -195,6 +195,7 @@ type RunResult struct {
 	SchemaVersion       string             `json:"schema_version"`
 	Summary             Summary            `json:"summary"`
 	Environment         Environment        `json:"environment"`
+	Slice               SliceMetadata      `json:"slice,omitempty"`
 	Checkpoint          Checkpoint         `json:"checkpoint,omitempty"`
 	StoppedReason       string             `json:"stopped_reason,omitempty"`
 	LastCompletedMutant string             `json:"last_completed_mutant,omitempty"`
@@ -205,6 +206,19 @@ type RunResult struct {
 	Quarantine          QuarantineStats    `json:"quarantine"`
 	History             HistoryStats       `json:"history"`
 	Mutants             []MutantResult     `json:"mutants"`
+}
+
+type SliceMetadata struct {
+	Enabled              bool   `json:"enabled"`
+	SliceBy              string `json:"slice_by,omitempty"`
+	ShardIndex           int    `json:"shard_index,omitempty"`
+	ShardCount           int    `json:"shard_count,omitempty"`
+	GroupCount           int    `json:"group_count,omitempty"`
+	SelectedGroups       int    `json:"selected_groups,omitempty"`
+	MaxFilesPerRun       int    `json:"max_files_per_run,omitempty"`
+	SelectedFiles        int    `json:"selected_files,omitempty"`
+	MaxMutantsPerPackage int    `json:"max_mutants_per_package,omitempty"`
+	SelectedMutants      int    `json:"selected_mutants,omitempty"`
 }
 
 type Failure struct {

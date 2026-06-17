@@ -37,10 +37,13 @@ type Config struct {
 }
 
 type Scope struct {
-	Mode    string   `yaml:"mode" json:"mode"`
-	Since   string   `yaml:"since" json:"since"`
-	Include []string `yaml:"include" json:"include"`
-	Exclude []string `yaml:"exclude" json:"exclude"`
+	Mode       string   `yaml:"mode" json:"mode"`
+	Since      string   `yaml:"since" json:"since"`
+	Include    []string `yaml:"include" json:"include"`
+	Exclude    []string `yaml:"exclude" json:"exclude"`
+	SliceBy    string   `yaml:"slice_by" json:"slice_by"`
+	ShardIndex int      `yaml:"shard_index" json:"shard_index"`
+	ShardCount int      `yaml:"shard_count" json:"shard_count"`
 }
 
 type Tests struct {
@@ -118,9 +121,11 @@ type Baseline struct {
 }
 
 type Limits struct {
-	MaxMutants int    `yaml:"max_mutants" json:"max_mutants"`
-	Sample     string `yaml:"sample" json:"sample"`
-	Seed       int64  `yaml:"seed" json:"seed"`
+	MaxMutants           int    `yaml:"max_mutants" json:"max_mutants"`
+	MaxMutantsPerPackage int    `yaml:"max_mutants_per_package" json:"max_mutants_per_package"`
+	MaxFilesPerRun       int    `yaml:"max_files_per_run" json:"max_files_per_run"`
+	Sample               string `yaml:"sample" json:"sample"`
+	Seed                 int64  `yaml:"seed" json:"seed"`
 }
 
 type CI struct {
@@ -245,6 +250,7 @@ func Load(path string) (Config, error) {
 func (cfg Config) Validate() error {
 	fields := []enumField{
 		{name: "scope.mode", value: cfg.Scope.Mode, allowed: []string{"all", "changed", "packages"}},
+		{name: "scope.slice_by", value: cfg.Scope.SliceBy, allowed: []string{"", "mutant", "package", "file", "function", "operator"}},
 		{name: "selection.mode", value: cfg.Selection.Mode, allowed: []string{"all", "package", "coverage"}},
 		{name: "mutators.profile", value: cfg.Mutators.Profile, allowed: []string{"gremlins-compatible", "conservative-fast", "conservative", "default", "aggressive"}},
 		{name: "execution.isolation", value: cfg.Execution.Isolation, allowed: []string{IsolationTempWorkdir, "overlay"}},
@@ -256,6 +262,18 @@ func (cfg Config) Validate() error {
 	}
 	if err := validateEnums(fields); err != nil {
 		return err
+	}
+	if cfg.Scope.ShardCount < 0 || cfg.Scope.ShardIndex < 0 {
+		return errors.New("scope shard settings must not be negative")
+	}
+	if cfg.Scope.ShardCount == 0 && cfg.Scope.ShardIndex != 0 {
+		return errors.New("scope.shard_index requires scope.shard_count")
+	}
+	if cfg.Scope.ShardCount > 0 && (cfg.Scope.ShardIndex < 1 || cfg.Scope.ShardIndex > cfg.Scope.ShardCount) {
+		return errors.New("scope.shard_index must be between 1 and scope.shard_count")
+	}
+	if cfg.Limits.MaxMutantsPerPackage < 0 || cfg.Limits.MaxFilesPerRun < 0 {
+		return errors.New("large-repo slicing limits must not be negative")
 	}
 	for _, rule := range cfg.Suppression.Rules {
 		if rule.Name == "" || rule.Action == "" || rule.Reason == "" {

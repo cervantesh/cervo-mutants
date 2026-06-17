@@ -51,6 +51,16 @@ Use `nightly` for scheduled jobs and baseline comparison:
 cervomut run ./... --policy nightly --budget 30m --sample deterministic
 ```
 
+Large-repo slicing examples:
+
+```powershell
+# PR shard
+cervomut run ./... --policy ci-fast --slice-by package --shard 1/4 --max-files-per-run 20 --sample deterministic
+
+# Nightly shard
+cervomut run ./... --policy nightly --slice-by file --shard 3/12 --max-mutants-per-package 25 --sample deterministic
+```
+
 Use `campaign` only when review time is available:
 
 ```powershell

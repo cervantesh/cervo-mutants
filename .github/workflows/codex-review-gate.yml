@@ -212,19 +212,51 @@ jobs:
                 return isCodex(review.author?.login) && review.commit?.oid === pr.headRefOid;
               });
 
-              const reactions = await github.paginate(github.rest.reactions.listForIssue, {
+              const issueReactions = await github.paginate(github.rest.reactions.listForIssue, {
                 owner,
                 repo,
                 issue_number: number,
                 per_page: 100,
               });
-              const freshCodexReaction = reactions.find((reaction) => {
+              const freshCodexIssueReaction = issueReactions.find((reaction) => {
                 return (
                   isCodex(reaction.user?.login) &&
                   acceptedReactionContent.has(reaction.content) &&
                   Date.parse(reaction.created_at) >= reviewFloor
                 );
               });
+              const issueComments = await github.paginate(github.rest.issues.listComments, {
+                owner,
+                repo,
+                issue_number: number,
+                per_page: 100,
+              });
+              let freshCodexCommentReaction = null;
+              for (const issueComment of [...issueComments].reverse()) {
+                const commentReactions = await github.paginate(
+                  github.rest.reactions.listForIssueComment,
+                  {
+                    owner,
+                    repo,
+                    comment_id: issueComment.id,
+                    per_page: 100,
+                  },
+                );
+                const matchingCommentReaction = commentReactions.find((reaction) => {
+                  return (
+                    isCodex(reaction.user?.login) &&
+                    acceptedReactionContent.has(reaction.content) &&
+                    Date.parse(reaction.created_at) >= reviewFloor
+                  );
+                });
+                if (matchingCommentReaction) {
+                  freshCodexCommentReaction = {
+                    ...matchingCommentReaction,
+                    commentUrl: issueComment.html_url,
+                  };
+                  break;
+                }
+              }
 
               return {
                 draft: false,
@@ -233,10 +265,12 @@ jobs:
                   unresolvedThreads.length > 0 ||
                   codexThreadCount > 0 ||
                   codexReviews.length > 0 ||
-                  Boolean(freshCodexReaction),
+                  Boolean(freshCodexIssueReaction) ||
+                  Boolean(freshCodexCommentReaction),
                 unresolvedThreads,
                 codexReviews,
-                freshCodexReaction,
+                freshCodexIssueReaction,
+                freshCodexCommentReaction,
               };
             }
 
@@ -273,8 +307,13 @@ jobs:
                 if (state.codexReviews?.length) {
                   evidence.push(`reviews=${state.codexReviews.length}`);
                 }
-                if (state.freshCodexReaction) {
-                  evidence.push(`reaction=${state.freshCodexReaction.content}`);
+                if (state.freshCodexIssueReaction) {
+                  evidence.push(`reaction=issue:${state.freshCodexIssueReaction.content}`);
+                }
+                if (state.freshCodexCommentReaction) {
+                  evidence.push(
+                    `reaction=comment:${state.freshCodexCommentReaction.content} (${state.freshCodexCommentReaction.commentUrl})`,
+                  );
                 }
                 await core.summary
                   .addHeading("Codex review gate")

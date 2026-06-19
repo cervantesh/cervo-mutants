@@ -17,7 +17,8 @@ The release workflow publishes:
 3. If the release changes a supported CLI or report surface, update
    [compatibility-policy.md](compatibility-policy.md) or confirm the change is
    already covered by that policy.
-4. Ensure `main` is green.
+4. Ensure `main` is green, including the upgrade smoke that exercises the
+   latest public release archive against the current source tree.
 5. Ensure the matching upgrade note contains `## Summary`,
    `## Operator Action`, and `## Rollback`.
 

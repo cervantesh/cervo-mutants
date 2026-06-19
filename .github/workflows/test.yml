@@ -11,6 +11,9 @@ on:
       - published
       - prereleased
 
+permissions:
+  contents: read
+
 jobs:
   core-tests:
     runs-on: ubuntu-latest
@@ -74,3 +77,31 @@ jobs:
       - run: test -f .cervomut/action-smoke/mutation-report.json
       - run: test -n "${{ steps.cervomut.outputs.report-dir }}"
       - run: test -f "${{ steps.cervomut.outputs.report-dir }}/mutation-report.json"
+
+  upgrade-compat-smoke:
+    if: github.event_name != 'release'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.6"
+      - name: Determine previous supported release
+        id: previous
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: echo "tag=$(gh api repos/${GITHUB_REPOSITORY}/releases/latest --jq .tag_name)" >> "$GITHUB_OUTPUT"
+      - name: Download previous release archive
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p .upgrade/previous
+          gh release download "${{ steps.previous.outputs.tag }}" --pattern "cervomut_${{ steps.previous.outputs.tag }}_linux_amd64.tar.gz" --dir .upgrade/previous
+      - run: mkdir -p .upgrade/current
+      - run: go build -trimpath -o .upgrade/current/cervomut ./cmd/cervomut
+      - run: >-
+          go run ./cmd/releasehelper verify-upgrade
+          --previous-version "${{ steps.previous.outputs.tag }}"
+          --previous-archive ".upgrade/previous/cervomut_${{ steps.previous.outputs.tag }}_linux_amd64.tar.gz"
+          --current-binary .upgrade/current/cervomut
+          --work-dir .upgrade/smoke

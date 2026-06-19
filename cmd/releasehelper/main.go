@@ -19,7 +19,7 @@ func main() {
 
 func run(args []string) error {
 	if len(args) == 0 {
-		return fmt.Errorf("usage: releasehelper <notes|verify-compat|verify-release>")
+		return fmt.Errorf("usage: releasehelper <notes|verify-compat|verify-release|verify-upgrade>")
 	}
 	switch args[0] {
 	case "notes":
@@ -28,6 +28,8 @@ func run(args []string) error {
 		return cmdVerifyCompat(args[1:])
 	case "verify-release":
 		return cmdVerifyRelease(args[1:])
+	case "verify-upgrade":
+		return cmdVerifyUpgrade(args[1:])
 	default:
 		return fmt.Errorf("unknown command %q", args[0])
 	}

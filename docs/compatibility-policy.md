@@ -164,3 +164,7 @@ Every release that changes a supported surface must document that change in:
 
 The release workflow already depends on those files, so missing upgrade
 communication blocks publication instead of relying on memory.
+
+Main CI also runs an upgrade smoke from the latest public release archive into
+the current source tree so supported report and baseline workflows fail loudly
+when a release-to-release handoff breaks.

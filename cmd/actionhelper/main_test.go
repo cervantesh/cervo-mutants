@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -132,5 +133,100 @@ func TestCmdReportDirWritesPath(t *testing.T) {
 	want := filepath.Clean(filepath.Join(workspace, "repo", ".cervomut/reports"))
 	if got != want {
 		t.Fatalf("expected %q, got %q", want, got)
+	}
+}
+
+func TestResolveGoVersionUsesTargetWhenTargetNeedsNewerToolchain(t *testing.T) {
+	dir := t.TempDir()
+	targetGoMod := filepath.Join(dir, "target.go.mod")
+	actionGoMod := filepath.Join(dir, "action.go.mod")
+	writeGoModForTest(t, targetGoMod, "module example.com/target\n\ngo 1.25.0\ntoolchain go1.26.0\n")
+	writeGoModForTest(t, actionGoMod, "module github.com/cervantesh/cervo-mutants\n\ngo 1.25.6\n")
+
+	resolution, err := resolveGoVersion("", targetGoMod, actionGoMod, "1.25.6")
+	if err != nil {
+		t.Fatalf("resolveGoVersion returned error: %v", err)
+	}
+	if resolution.GoVersion != "1.26.0" {
+		t.Fatalf("resolved go version = %q, want 1.26.0", resolution.GoVersion)
+	}
+	if resolution.GoVersionTarget != "1.26.0" {
+		t.Fatalf("target go version = %q, want 1.26.0", resolution.GoVersionTarget)
+	}
+	if resolution.GoVersionActionMin != "1.25.6" {
+		t.Fatalf("action minimum = %q, want 1.25.6", resolution.GoVersionActionMin)
+	}
+}
+
+func TestResolveGoVersionFloorsAtActionMinimum(t *testing.T) {
+	dir := t.TempDir()
+	targetGoMod := filepath.Join(dir, "target.go.mod")
+	actionGoMod := filepath.Join(dir, "action.go.mod")
+	writeGoModForTest(t, targetGoMod, "module example.com/target\n\ngo 1.12\n")
+	writeGoModForTest(t, actionGoMod, "module github.com/cervantesh/cervo-mutants\n\ngo 1.25.6\n")
+
+	resolution, err := resolveGoVersion("", targetGoMod, actionGoMod, "1.25.6")
+	if err != nil {
+		t.Fatalf("resolveGoVersion returned error: %v", err)
+	}
+	if resolution.GoVersion != "1.25.6" {
+		t.Fatalf("resolved go version = %q, want 1.25.6", resolution.GoVersion)
+	}
+	if resolution.GoVersionTarget != "1.12" {
+		t.Fatalf("target go version = %q, want 1.12", resolution.GoVersionTarget)
+	}
+}
+
+func TestResolveGoVersionHonorsRequestedVersionWhenHigher(t *testing.T) {
+	dir := t.TempDir()
+	targetGoMod := filepath.Join(dir, "target.go.mod")
+	actionGoMod := filepath.Join(dir, "action.go.mod")
+	writeGoModForTest(t, targetGoMod, "module example.com/target\n\ngo 1.26.0\n")
+	writeGoModForTest(t, actionGoMod, "module github.com/cervantesh/cervo-mutants\n\ngo 1.25.6\n")
+
+	resolution, err := resolveGoVersion("1.27.1", targetGoMod, actionGoMod, "1.25.6")
+	if err != nil {
+		t.Fatalf("resolveGoVersion returned error: %v", err)
+	}
+	if resolution.GoVersion != "1.27.1" {
+		t.Fatalf("resolved go version = %q, want 1.27.1", resolution.GoVersion)
+	}
+	if resolution.GoVersionRequested != "1.27.1" {
+		t.Fatalf("requested go version = %q, want 1.27.1", resolution.GoVersionRequested)
+	}
+}
+
+func TestCmdResolveGoVersionWritesJSON(t *testing.T) {
+	dir := t.TempDir()
+	targetGoMod := filepath.Join(dir, "target.go.mod")
+	actionGoMod := filepath.Join(dir, "action.go.mod")
+	writeGoModForTest(t, targetGoMod, "module example.com/target\n\ngo 1.12\n")
+	writeGoModForTest(t, actionGoMod, "module github.com/cervantesh/cervo-mutants\n\ngo 1.25.6\n")
+
+	var out bytes.Buffer
+	if err := cmdResolveGoVersion([]string{
+		"--requested", "1.24.0",
+		"--target-gomod", targetGoMod,
+		"--action-gomod", actionGoMod,
+	}, &out); err != nil {
+		t.Fatalf("cmdResolveGoVersion returned error: %v", err)
+	}
+
+	var resolution goVersionResolution
+	if err := json.Unmarshal(out.Bytes(), &resolution); err != nil {
+		t.Fatalf("cmdResolveGoVersion did not emit valid JSON: %v", err)
+	}
+	if resolution.GoVersion != "1.25.6" {
+		t.Fatalf("resolved go version = %q, want 1.25.6", resolution.GoVersion)
+	}
+	if resolution.GoVersionRequested != "1.24.0" || resolution.GoVersionTarget != "1.12" || resolution.GoVersionActionMin != "1.25.6" {
+		t.Fatalf("unexpected go version resolution payload: %+v", resolution)
+	}
+}
+
+func writeGoModForTest(t *testing.T, path, contents string) {
+	t.Helper()
+	if err := os.WriteFile(path, []byte(contents), 0o600); err != nil {
+		t.Fatalf("write go.mod %s: %v", path, err)
 	}
 }

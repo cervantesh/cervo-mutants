@@ -94,55 +94,23 @@ jobs:
           path: target
           fetch-depth: 1
 
+      - name: Setup Go for version resolution
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: cervomut-source/go.mod
+          cache: false
+
       - name: Resolve Go version
         id: resolve-go-version
         shell: bash
         env:
           REQUESTED_GO_VERSION: ${{ matrix.go_version }}
         run: |
-          extract_go_version() {
-            local gomod="$1"
-            local toolchain
-            toolchain="$(awk '/^toolchain / { print $2; exit }' "$gomod")"
-            if [ -n "$toolchain" ]; then
-              printf '%s\n' "${toolchain#go}"
-              return
-            fi
-            awk '/^go / { print $2; exit }' "$gomod"
-          }
-
-          max_go_version() {
-            printf '%s\n%s\n' "$1" "$2" | sort -V | tail -n 1
-          }
-
-          requested="$REQUESTED_GO_VERSION"
-          target_version=""
-          if [ -f target/go.mod ]; then
-            target_version="$(extract_go_version target/go.mod)"
-          fi
-
-          action_min="1.25.6"
-          if [ -f cervomut-source/go.mod ]; then
-            parsed_action_min="$(extract_go_version cervomut-source/go.mod)"
-            if [ -n "$parsed_action_min" ]; then
-              action_min="$parsed_action_min"
-            fi
-          fi
-
-          resolved="$requested"
-          if [ -z "$resolved" ]; then
-            resolved="$target_version"
-          fi
-          if [ -n "$resolved" ]; then
-            resolved="$(max_go_version "$action_min" "$resolved")"
-          else
-            resolved="$action_min"
-          fi
-
-          echo "go_version=$resolved" >> "$GITHUB_OUTPUT"
-          echo "go_version_requested=$requested" >> "$GITHUB_OUTPUT"
-          echo "go_version_target=$target_version" >> "$GITHUB_OUTPUT"
-          echo "go_version_action_min=$action_min" >> "$GITHUB_OUTPUT"
+          resolution_json="$(go run ./cervomut-source/cmd/actionhelper resolve-go-version --requested "$REQUESTED_GO_VERSION" --target-gomod target/go.mod --action-gomod cervomut-source/go.mod)"
+          echo "go_version=$(jq -r '.go_version' <<<"$resolution_json")" >> "$GITHUB_OUTPUT"
+          echo "go_version_requested=$(jq -r '.go_version_requested // \"\"' <<<"$resolution_json")" >> "$GITHUB_OUTPUT"
+          echo "go_version_target=$(jq -r '.go_version_target // \"\"' <<<"$resolution_json")" >> "$GITHUB_OUTPUT"
+          echo "go_version_action_min=$(jq -r '.go_version_action_min' <<<"$resolution_json")" >> "$GITHUB_OUTPUT"
 
       - name: Run CervoMutants
         id: cervomut

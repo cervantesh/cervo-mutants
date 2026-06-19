@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"go/version"
 	"io"
 	"os"
 	"path/filepath"
@@ -19,6 +20,13 @@ type installPlan struct {
 	Version    string `json:"version,omitempty"`
 }
 
+type goVersionResolution struct {
+	GoVersion          string `json:"go_version"`
+	GoVersionRequested string `json:"go_version_requested,omitempty"`
+	GoVersionTarget    string `json:"go_version_target,omitempty"`
+	GoVersionActionMin string `json:"go_version_action_min"`
+}
+
 func main() {
 	if err := run(os.Args[1:], os.Stdout); err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -28,13 +36,15 @@ func main() {
 
 func run(args []string, stdout io.Writer) error {
 	if len(args) == 0 {
-		return fmt.Errorf("usage: actionhelper <install-plan|report-dir>")
+		return fmt.Errorf("usage: actionhelper <install-plan|report-dir|resolve-go-version>")
 	}
 	switch args[0] {
 	case "install-plan":
 		return cmdInstallPlan(args[1:], stdout)
 	case "report-dir":
 		return cmdReportDir(args[1:], stdout)
+	case "resolve-go-version":
+		return cmdResolveGoVersion(args[1:], stdout)
 	default:
 		return fmt.Errorf("unknown command %q", args[0])
 	}
@@ -80,6 +90,26 @@ func cmdReportDir(args []string, stdout io.Writer) error {
 	return err
 }
 
+func cmdResolveGoVersion(args []string, stdout io.Writer) error {
+	fs := flag.NewFlagSet("resolve-go-version", flag.ContinueOnError)
+	requested := fs.String("requested", "", "optional requested Go version from the manifest")
+	targetGoMod := fs.String("target-gomod", "", "path to the target repository go.mod")
+	actionGoMod := fs.String("action-gomod", "", "path to the action source go.mod")
+	defaultActionMin := fs.String("default-action-min", "1.25.6", "fallback action minimum when action go.mod is unavailable")
+	if err := fs.Parse(args); err != nil {
+		if err == flag.ErrHelp {
+			return nil
+		}
+		return err
+	}
+
+	resolution, err := resolveGoVersion(*requested, *targetGoMod, *actionGoMod, *defaultActionMin)
+	if err != nil {
+		return err
+	}
+	return json.NewEncoder(stdout).Encode(resolution)
+}
+
 func resolveInstallPlan(modulePath, explicitVersion, actionPath, actionRef string) (installPlan, error) {
 	version := strings.TrimSpace(explicitVersion)
 	if version != "" {
@@ -122,6 +152,92 @@ func normalizeActionRef(ref string) string {
 		return strings.TrimPrefix(ref, "refs/heads/")
 	default:
 		return ref
+	}
+}
+
+func resolveGoVersion(requested, targetGoMod, actionGoMod, defaultActionMin string) (goVersionResolution, error) {
+	requested = normalizeGoVersion(requested)
+	targetVersion, err := extractGoVersionFromGoMod(targetGoMod)
+	if err != nil {
+		return goVersionResolution{}, err
+	}
+	actionMin := normalizeGoVersion(defaultActionMin)
+	if actionGoMod != "" {
+		parsedActionMin, err := extractGoVersionFromGoMod(actionGoMod)
+		if err != nil {
+			return goVersionResolution{}, err
+		}
+		if parsedActionMin != "" {
+			actionMin = parsedActionMin
+		}
+	}
+	if actionMin == "" {
+		return goVersionResolution{}, fmt.Errorf("action minimum Go version could not be determined")
+	}
+
+	resolved := requested
+	if resolved == "" {
+		resolved = targetVersion
+	}
+	if resolved == "" {
+		resolved = actionMin
+	} else {
+		resolved = maxGoVersion(actionMin, resolved)
+	}
+	return goVersionResolution{
+		GoVersion:          resolved,
+		GoVersionRequested: requested,
+		GoVersionTarget:    targetVersion,
+		GoVersionActionMin: actionMin,
+	}, nil
+}
+
+func extractGoVersionFromGoMod(path string) (string, error) {
+	path = strings.TrimSpace(path)
+	if path == "" {
+		return "", nil
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return "", nil
+		}
+		return "", err
+	}
+	var fallback string
+	for _, line := range strings.Split(string(data), "\n") {
+		fields := strings.Fields(line)
+		if len(fields) < 2 {
+			continue
+		}
+		switch fields[0] {
+		case "toolchain":
+			return normalizeGoVersion(fields[1]), nil
+		case "go":
+			if fallback == "" {
+				fallback = normalizeGoVersion(fields[1])
+			}
+		}
+	}
+	return fallback, nil
+}
+
+func normalizeGoVersion(raw string) string {
+	return strings.TrimPrefix(strings.TrimSpace(raw), "go")
+}
+
+func maxGoVersion(left, right string) string {
+	left = normalizeGoVersion(left)
+	right = normalizeGoVersion(right)
+	switch {
+	case left == "":
+		return right
+	case right == "":
+		return left
+	case version.Compare("go"+left, "go"+right) >= 0:
+		return left
+	default:
+		return right
 	}
 }
 

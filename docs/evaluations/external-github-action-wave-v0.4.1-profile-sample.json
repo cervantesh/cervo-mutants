@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "tracking_issue": "#264",
+  "description": "Broader released-surface GitHub Action wave for v0.4.1 across intentionally mixed repository profiles, including small-library controls plus service-repo-scoped and large multi-package candidates.",
+  "install_path": "github-action@v0.4.1",
+  "action_ref": "v0.4.1",
+  "jobs": [
+    {
+      "name": "pflag-root",
+      "url": "https://github.com/spf13/pflag.git",
+      "ref": "v1.0.10",
+      "target": "./...",
+      "profile": "small-library",
+      "policy": "ci-balanced",
+      "budget": "5m",
+      "sample": "deterministic",
+      "max_mutants": 10,
+      "workers": 2
+    },
+    {
+      "name": "logrus-root",
+      "url": "https://github.com/sirupsen/logrus.git",
+      "ref": "v1.9.3",
+      "target": "./...",
+      "profile": "medium-library",
+      "policy": "ci-balanced",
+      "budget": "5m",
+      "sample": "deterministic",
+      "max_mutants": 10,
+      "workers": 2
+    },
+    {
+      "name": "gjson-root",
+      "url": "https://github.com/tidwall/gjson.git",
+      "ref": "v1.18.0",
+      "target": "./...",
+      "profile": "validation-library",
+      "policy": "ci-balanced",
+      "budget": "5m",
+      "sample": "deterministic",
+      "max_mutants": 10,
+      "workers": 2
+    },
+    {
+      "name": "prometheus-labels",
+      "url": "https://github.com/prometheus/prometheus.git",
+      "ref": "505095b64b43dd76baf08839e1800a8d473c97e0",
+      "target": "./model/labels",
+      "profile": "medium-service-scoped",
+      "policy": "ci-balanced",
+      "budget": "5m",
+      "sample": "deterministic",
+      "max_mutants": 10,
+      "workers": 2
+    },
+    {
+      "name": "apimachinery-sets",
+      "url": "https://github.com/kubernetes/apimachinery.git",
+      "ref": "6bdb38e7395b5518f3111f71bdf16152db13ad46",
+      "target": "./pkg/util/sets",
+      "profile": "large-multipackage-scoped",
+      "policy": "ci-balanced",
+      "budget": "5m",
+      "sample": "deterministic",
+      "max_mutants": 10,
+      "workers": 2
+    }
+  ]
+}

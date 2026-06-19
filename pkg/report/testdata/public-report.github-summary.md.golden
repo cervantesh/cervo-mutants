@@ -3,9 +3,13 @@
 - Raw score: **50.00%**
 - Actionable score: **50.00%**
 - Survivors: **2** total, **1** true actionable review units
+- Semantic review units: **1** (0 collapsed duplicates)
 - Equivalent-risk survivors: **1**
 - Platform-sensitive survivors: **1**
 - Non-progress timeouts: **1**
+- Lane shape: **grouped review lane**
+- Lane note: 2 raw survivors collapsed into 1 immediate review units across 1 semantic group
+- Lane guidance: review the grouped equivalent-risk family once before splitting it into multiple separate test tasks
 - Baseline regression: **true**
 - Baseline new survivors: **1**
 - Denominator warnings: `timed_out_exceeds_effective`

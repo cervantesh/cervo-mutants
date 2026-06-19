@@ -9,6 +9,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/cervantesh/cervo-mutants/pkg/engine"
 )
 
 const defaultModulePath = "github.com/cervantesh/cervo-mutants/cmd/cervomut"
@@ -27,6 +29,17 @@ type goVersionResolution struct {
 	GoVersionActionMin string `json:"go_version_action_min"`
 }
 
+type failureDebugArtifact struct {
+	SchemaVersion string                      `json:"schema_version"`
+	Kind          string                      `json:"kind"`
+	Message       string                      `json:"message"`
+	CorrelationID string                      `json:"correlation_id"`
+	Command       []string                    `json:"command,omitempty"`
+	Targets       []string                    `json:"targets,omitempty"`
+	StackTrace    string                      `json:"stack_trace,omitempty"`
+	RunnerResult  *engine.FailureRunnerResult `json:"runner_result,omitempty"`
+}
+
 func main() {
 	if err := run(os.Args[1:], os.Stdout); err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -36,7 +49,7 @@ func main() {
 
 func run(args []string, stdout io.Writer) error {
 	if len(args) == 0 {
-		return fmt.Errorf("usage: actionhelper <install-plan|report-dir|resolve-go-version>")
+		return fmt.Errorf("usage: actionhelper <install-plan|report-dir|resolve-go-version|failure-from-debug>")
 	}
 	switch args[0] {
 	case "install-plan":
@@ -45,6 +58,8 @@ func run(args []string, stdout io.Writer) error {
 		return cmdReportDir(args[1:], stdout)
 	case "resolve-go-version":
 		return cmdResolveGoVersion(args[1:], stdout)
+	case "failure-from-debug":
+		return cmdFailureFromDebug(args[1:], stdout)
 	default:
 		return fmt.Errorf("unknown command %q", args[0])
 	}
@@ -108,6 +123,22 @@ func cmdResolveGoVersion(args []string, stdout io.Writer) error {
 		return err
 	}
 	return json.NewEncoder(stdout).Encode(resolution)
+}
+
+func cmdFailureFromDebug(args []string, stdout io.Writer) error {
+	fs := flag.NewFlagSet("failure-from-debug", flag.ContinueOnError)
+	path := fs.String("path", "", "path to failure-debug.json")
+	if err := fs.Parse(args); err != nil {
+		if err == flag.ErrHelp {
+			return nil
+		}
+		return err
+	}
+	failure, err := failureFromDebugFile(*path)
+	if err != nil {
+		return err
+	}
+	return json.NewEncoder(stdout).Encode(failure)
 }
 
 func resolveInstallPlan(modulePath, explicitVersion, actionPath, actionRef string) (installPlan, error) {
@@ -239,6 +270,41 @@ func maxGoVersion(left, right string) string {
 	default:
 		return right
 	}
+}
+
+func failureFromDebugFile(path string) (*engine.Failure, error) {
+	path = strings.TrimSpace(path)
+	if path == "" {
+		return nil, nil
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	var artifact failureDebugArtifact
+	if err := json.Unmarshal(data, &artifact); err != nil {
+		return nil, err
+	}
+	if artifact.Kind == "" && artifact.Message == "" && artifact.CorrelationID == "" {
+		return nil, nil
+	}
+	failure := &engine.Failure{
+		Kind:          artifact.Kind,
+		Message:       artifact.Message,
+		CorrelationID: artifact.CorrelationID,
+		Command:       append([]string{}, artifact.Command...),
+		Targets:       append([]string{}, artifact.Targets...),
+		DebugArtifact: filepath.Base(path),
+	}
+	if artifact.RunnerResult != nil {
+		cloned := *artifact.RunnerResult
+		cloned.Command = append([]string{}, artifact.RunnerResult.Command...)
+		failure.RunnerResult = &cloned
+	}
+	return failure, nil
 }
 
 func resolveReportDir(workspace, workingDirectory, outDir string) (string, error) {

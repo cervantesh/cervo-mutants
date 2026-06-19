@@ -267,6 +267,10 @@ jobs:
               }
               ' > wave-result.json
           else
+            failure_json="null"
+            if [ -f "$report_dir/failure-debug.json" ]; then
+              failure_json="$(go run ./cervomut-source/cmd/actionhelper failure-from-debug --path "$report_dir/failure-debug.json")"
+            fi
             jq -n \
               --arg generated_at "$generated_at" \
               --arg name "$REPO_NAME" \
@@ -289,6 +293,7 @@ jobs:
               --arg job_status "$JOB_STATUS" \
               --argjson max_mutants "$MAX_MUTANTS" \
               --argjson workers "$WORKERS" \
+              --argjson failure "$failure_json" \
               '
               {
                 generated_at: $generated_at,
@@ -328,7 +333,7 @@ jobs:
                   governance_suggestions_by_status: {},
                   governance_total_suggestions: 0
                 },
-                failure: null
+                failure: $failure
               }
               ' > wave-result.json
           fi

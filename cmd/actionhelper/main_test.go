@@ -8,6 +8,8 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/cervantesh/cervo-mutants/pkg/engine"
 )
 
 func TestResolveInstallPlanPrefersLocalActionPath(t *testing.T) {
@@ -224,9 +226,96 @@ func TestCmdResolveGoVersionWritesJSON(t *testing.T) {
 	}
 }
 
+func TestFailureFromDebugFileReturnsNilWhenMissing(t *testing.T) {
+	failure, err := failureFromDebugFile(filepath.Join(t.TempDir(), "missing-failure-debug.json"))
+	if err != nil {
+		t.Fatalf("failureFromDebugFile returned error: %v", err)
+	}
+	if failure != nil {
+		t.Fatalf("expected nil failure for missing file, got %+v", failure)
+	}
+}
+
+func TestFailureFromDebugFileMapsArtifactToFailure(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "failure-debug.json")
+	writeJSONForTest(t, path, map[string]any{
+		"schema_version": "1",
+		"kind":           "runner_error",
+		"message":        "baseline tests failed before mutation",
+		"correlation_id": "cid-276",
+		"command":        []string{"cervomut", "run", "./pkg/api/resource"},
+		"targets":        []string{"./pkg/api/resource"},
+		"runner_result": map[string]any{
+			"status":        "compile_error",
+			"status_reason": "baseline compile failed",
+			"command":       []string{"go", "test", "./pkg/api/resource"},
+			"output":        "go: go.mod requires go >= 1.26.0",
+		},
+	})
+
+	failure, err := failureFromDebugFile(path)
+	if err != nil {
+		t.Fatalf("failureFromDebugFile returned error: %v", err)
+	}
+	if failure == nil {
+		t.Fatal("expected recovered failure, got nil")
+	}
+	if failure.Kind != "runner_error" || failure.Message != "baseline tests failed before mutation" || failure.CorrelationID != "cid-276" {
+		t.Fatalf("unexpected failure metadata: %+v", failure)
+	}
+	if failure.DebugArtifact != "failure-debug.json" {
+		t.Fatalf("debug artifact = %q, want failure-debug.json", failure.DebugArtifact)
+	}
+	if got, want := strings.Join(failure.Command, " "), "cervomut run ./pkg/api/resource"; got != want {
+		t.Fatalf("failure command = %q, want %q", got, want)
+	}
+	if failure.RunnerResult == nil {
+		t.Fatalf("runner result missing: %+v", failure)
+	}
+	if failure.RunnerResult.StatusReason != "baseline compile failed" || failure.RunnerResult.Output != "go: go.mod requires go >= 1.26.0" {
+		t.Fatalf("unexpected runner result: %+v", failure.RunnerResult)
+	}
+}
+
+func TestCmdFailureFromDebugWritesJSON(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "failure-debug.json")
+	writeJSONForTest(t, path, map[string]any{
+		"schema_version": "1",
+		"kind":           "runner_error",
+		"message":        "baseline tests failed before mutation",
+		"correlation_id": "cid-276",
+	})
+
+	var out bytes.Buffer
+	if err := cmdFailureFromDebug([]string{"--path", path}, &out); err != nil {
+		t.Fatalf("cmdFailureFromDebug returned error: %v", err)
+	}
+
+	var failure engine.Failure
+	if err := json.Unmarshal(out.Bytes(), &failure); err != nil {
+		t.Fatalf("cmdFailureFromDebug did not emit valid JSON: %v", err)
+	}
+	if failure.Kind != "runner_error" || failure.CorrelationID != "cid-276" {
+		t.Fatalf("unexpected recovered failure: %+v", failure)
+	}
+}
+
 func writeGoModForTest(t *testing.T, path, contents string) {
 	t.Helper()
 	if err := os.WriteFile(path, []byte(contents), 0o600); err != nil {
 		t.Fatalf("write go.mod %s: %v", path, err)
+	}
+}
+
+func writeJSONForTest(t *testing.T, path string, value any) {
+	t.Helper()
+	data, err := json.Marshal(value)
+	if err != nil {
+		t.Fatalf("marshal json fixture %s: %v", path, err)
+	}
+	if err := os.WriteFile(path, data, 0o600); err != nil {
+		t.Fatalf("write json fixture %s: %v", path, err)
 	}
 }

@@ -43,6 +43,19 @@ jobs:
         with:
           go-version: "1.25.6"
       - run: go run ./cmd/releasehelper verify-compat
+      - run: mkdir -p .verify-install/gobin
+      - run: >-
+          GOBIN="$PWD/.verify-install/gobin"
+          GOPROXY=direct
+          GOSUMDB=off
+          go install github.com/cervantesh/cervo-mutants/cmd/cervomut@"${GITHUB_REF_NAME}"
+      - run: >-
+          go run ./cmd/releasehelper verify-install
+          --binary .verify-install/gobin/cervomut
+          --source-root .
+          --target ./pkg/config
+          --work-dir .verify-install/go-install
+          --label go-install
       - run: go vet ./...
       - run: go test ./...
       - run: mkdir -p dist
@@ -96,6 +109,13 @@ jobs:
           --dist dist
           --notes dist/release-notes.md
           --manifest-out dist/release-manifest.json
+      - run: >-
+          go run ./cmd/releasehelper verify-install
+          --archive "dist/cervomut_${GITHUB_REF_NAME}_linux_amd64.tar.gz"
+          --source-root .
+          --target ./pkg/config
+          --work-dir .verify-install/archive-install
+          --label archive-install
       - name: Publish GitHub release
         uses: softprops/action-gh-release@v2
         with:

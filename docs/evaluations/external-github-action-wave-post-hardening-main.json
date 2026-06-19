@@ -1,0 +1,45 @@
+{
+  "schema_version": "1",
+  "tracking_issue": "#280",
+  "description": "Hosted external-action-wave verification pass against current main after the hosted actionhelper hardening sequence through #278.",
+  "install_path": "github-action@aa5c10255137df7a3dfa1480f088fd999ebdccfd",
+  "action_ref": "aa5c10255137df7a3dfa1480f088fd999ebdccfd",
+  "jobs": [
+    {
+      "name": "pflag-root",
+      "url": "https://github.com/spf13/pflag.git",
+      "ref": "v1.0.10",
+      "target": "./...",
+      "profile": "small-library",
+      "policy": "ci-balanced",
+      "budget": "5m",
+      "sample": "deterministic",
+      "max_mutants": 10,
+      "workers": 2
+    },
+    {
+      "name": "logrus-root",
+      "url": "https://github.com/sirupsen/logrus.git",
+      "ref": "v1.9.3",
+      "target": "./...",
+      "profile": "medium-library",
+      "policy": "ci-balanced",
+      "budget": "5m",
+      "sample": "deterministic",
+      "max_mutants": 10,
+      "workers": 2
+    },
+    {
+      "name": "gjson-root",
+      "url": "https://github.com/tidwall/gjson.git",
+      "ref": "v1.18.0",
+      "target": "./...",
+      "profile": "validation-library",
+      "policy": "ci-balanced",
+      "budget": "5m",
+      "sample": "deterministic",
+      "max_mutants": 10,
+      "workers": 2
+    }
+  ]
+}

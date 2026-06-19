@@ -103,10 +103,11 @@ jobs:
       - name: Resolve Go version
         id: resolve-go-version
         shell: bash
+        working-directory: cervomut-source
         env:
           REQUESTED_GO_VERSION: ${{ matrix.go_version }}
         run: |
-          resolution_json="$(go run ./cervomut-source/cmd/actionhelper resolve-go-version --requested "$REQUESTED_GO_VERSION" --target-gomod target/go.mod --action-gomod cervomut-source/go.mod)"
+          resolution_json="$(go run ./cmd/actionhelper resolve-go-version --requested "$REQUESTED_GO_VERSION" --target-gomod ../target/go.mod --action-gomod go.mod)"
           echo "go_version=$(jq -r '.go_version' <<<"$resolution_json")" >> "$GITHUB_OUTPUT"
           echo "go_version_requested=$(jq -r '.go_version_requested // \"\"' <<<"$resolution_json")" >> "$GITHUB_OUTPUT"
           echo "go_version_target=$(jq -r '.go_version_target // \"\"' <<<"$resolution_json")" >> "$GITHUB_OUTPUT"
@@ -131,6 +132,7 @@ jobs:
       - name: Extract wave result
         if: always()
         shell: bash
+        working-directory: cervomut-source
         env:
           JOB_STATUS: ${{ job.status }}
           REPO_NAME: ${{ matrix.name }}
@@ -151,9 +153,9 @@ jobs:
           ACTION_REF: ${{ needs.plan.outputs.action_ref }}
           INSTALL_PATH: ${{ needs.plan.outputs.install_path }}
         run: |
-          report_dir="target/.cervomut/external-wave/${REPO_NAME}"
+          report_dir="../target/.cervomut/external-wave/${REPO_NAME}"
           generated_at="$(date -u +%FT%TZ)"
-          go run ./cervomut-source/cmd/actionhelper build-wave-result \
+          go run ./cmd/actionhelper build-wave-result \
             --generated-at "$generated_at" \
             --name "$REPO_NAME" \
             --repository "$REPOSITORY" \
@@ -174,13 +176,14 @@ jobs:
             --job-status "$JOB_STATUS" \
             --max-mutants "$MAX_MUTANTS" \
             --workers "$WORKERS" \
-            > wave-result.json
+            > ../wave-result.json
 
       - name: Append repo summary
         if: always()
         shell: bash
+        working-directory: cervomut-source
         run: |
-          go run ./cervomut-source/cmd/actionhelper render-wave-result-markdown --path wave-result.json >> "$GITHUB_STEP_SUMMARY"
+          go run ./cmd/actionhelper render-wave-result-markdown --path ../wave-result.json >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload wave artifact
         if: always()
@@ -219,6 +222,7 @@ jobs:
 
       - name: Build aggregate summary
         shell: bash
+        working-directory: cervomut-source
         env:
           TRACKING_ISSUE: ${{ needs.plan.outputs.tracking_issue }}
           MANIFEST_PATH: ${{ needs.plan.outputs.manifest_path }}
@@ -226,16 +230,16 @@ jobs:
           INSTALL_PATH: ${{ needs.plan.outputs.install_path }}
         run: |
           generated_at="$(date -u +%FT%TZ)"
-          go run ./cervomut-source/cmd/actionhelper build-wave-summary \
+          go run ./cmd/actionhelper build-wave-summary \
             --generated-at "$generated_at" \
             --tracking-issue "$TRACKING_ISSUE" \
             --manifest-path "$MANIFEST_PATH" \
             --action-ref "$ACTION_REF" \
             --install-path "$INSTALL_PATH" \
-            --artifacts-dir artifacts \
-            > wave-summary.json
+            --artifacts-dir ../artifacts \
+            > ../wave-summary.json
 
-          go run ./cervomut-source/cmd/actionhelper render-wave-summary-markdown --path wave-summary.json > wave-summary.md
+          go run ./cmd/actionhelper render-wave-summary-markdown --path ../wave-summary.json > ../wave-summary.md
 
       - name: Publish combined summary
         shell: bash

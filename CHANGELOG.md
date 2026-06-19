@@ -12,6 +12,44 @@ The format is intentionally simple:
 
 - No unreleased entries yet.
 
+## [v0.4.0] - 2026-06-19
+
+### Added
+
+- Semantic triage v1 with `pkg/triage`, actionable scoring, semantic grouping,
+  actionable-only survivor views, and triage-aware report fields.
+- GitHub-native review surfaces including SARIF, GitHub summary output, and
+  first-party GitHub Action support for the standard CI path.
+- Historical dashboards, recommendation surfaces, ownership routing, and
+  baseline review lifecycle expansion for more durable survivor governance.
+- Pool campaign orchestration, benchmark-corpus support, and committed example
+  workspaces for small, medium, and large-repo adoption paths.
+
+### Changed
+
+- The public support story now includes an explicit compatibility matrix,
+  additive compatibility policy, and daemon/worker narrowing as an
+  experimental-only surface until protocol versioning exists.
+- Release automation now verifies release notes, archive contents, checksums,
+  upgrade handoff, `go install`, and archive-install report flows before
+  publication.
+- Public CI and release guidance now reflect the first hardened cross-platform
+  validation lane on GitHub Actions.
+
+### Documentation
+
+- Added adoption guidance, rollout playbooks, maintainer operations guidance,
+  adoption feedback intake, hosted-layer scope notes, and commercialization
+  guardrails for the OSS core.
+- Published the 24-month roadmap v2 and refreshed the project maturity
+  assessment against the current repo-head evidence.
+
+### Verification
+
+- `go test ./...`
+- `go run ./cmd/releasehelper notes --version v0.4.0 --out .tmp/release-notes-v0.4.0.md`
+- `go run ./cmd/releasehelper verify-compat`
+
 ## [v0.3.0] - 2026-06-17
 
 ### Changed

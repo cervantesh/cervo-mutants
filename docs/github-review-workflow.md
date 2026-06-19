@@ -141,6 +141,10 @@ The repository now enforces this in two layers:
   current PR head
 - unresolved Codex review threads must be resolved before merge
 
+That gate is intentionally about open pull requests. Once a PR is already
+closed or merged, late review or review-comment events should no longer create
+fresh failing gate runs.
+
 That means a pull request should not merge while:
 
 - Codex has not yet responded to the current head commit, or

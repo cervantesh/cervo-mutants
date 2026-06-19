@@ -26,6 +26,7 @@ permissions:
 
 jobs:
   codex-review-gate:
+    if: ${{ github.event.pull_request.state == 'open' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -106,6 +107,9 @@ jobs:
                     repository(owner:$owner, name:$repo) {
                       pullRequest(number:$number) {
                         number
+                        state
+                        merged
+                        mergedAt
                         isDraft
                         headRefOid
                         reviews(last:50) {
@@ -168,8 +172,16 @@ jobs:
                 throw new Error(`pull request #${number} not found`);
               }
 
+              if (pr.state !== "OPEN" || pr.merged || pr.mergedAt) {
+                return {
+                  inactive: true,
+                  inactiveReason: pr.merged || pr.mergedAt ? "merged" : "closed",
+                };
+              }
+
               if (pr.isDraft) {
                 return {
+                  inactive: false,
                   draft: true,
                   responseSeen: true,
                   unresolvedThreads: [],
@@ -259,6 +271,7 @@ jobs:
               }
 
               return {
+                inactive: false,
                 draft: false,
                 headSha: pr.headRefOid,
                 responseSeen:
@@ -277,6 +290,16 @@ jobs:
             const deadline = Date.now() + maxWaitMs;
             while (Date.now() <= deadline) {
               const state = await fetchGateState();
+              if (state.inactive) {
+                await core.summary
+                  .addHeading("Codex review gate")
+                  .addRaw(
+                    `Pull request is already ${state.inactiveReason}; skipping gate enforcement for post-merge or stale review events.\n`
+                  )
+                  .write();
+                return;
+              }
+
               if (state.draft) {
                 await core.summary
                   .addHeading("Codex review gate")

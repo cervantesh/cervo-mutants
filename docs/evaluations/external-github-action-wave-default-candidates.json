@@ -1,0 +1,44 @@
+{
+  "schema_version": "1",
+  "tracking_issue": "#224",
+  "description": "Default hosted GitHub Action wave manifest tuned for better effective-mutant yield after the first hosted adoption wave under-produced actionable units.",
+  "action_ref": "3adfa28",
+  "jobs": [
+    {
+      "name": "cobra-doc",
+      "url": "https://github.com/spf13/cobra.git",
+      "ref": "v1.10.1",
+      "target": "./doc",
+      "profile": "small-library",
+      "policy": "ci-balanced",
+      "budget": "5m",
+      "sample": "deterministic",
+      "max_mutants": 10,
+      "workers": 2
+    },
+    {
+      "name": "logrus-root",
+      "url": "https://github.com/sirupsen/logrus.git",
+      "ref": "v1.9.3",
+      "target": "./...",
+      "profile": "medium-library",
+      "policy": "ci-balanced",
+      "budget": "5m",
+      "sample": "deterministic",
+      "max_mutants": 10,
+      "workers": 2
+    },
+    {
+      "name": "grpc-metadata",
+      "url": "https://github.com/grpc/grpc-go.git",
+      "ref": "v1.63.2",
+      "target": "./metadata",
+      "profile": "scoped-large-validation",
+      "policy": "ci-balanced",
+      "budget": "5m",
+      "sample": "deterministic",
+      "max_mutants": 10,
+      "workers": 2
+    }
+  ]
+}

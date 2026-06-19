@@ -2,6 +2,11 @@ name: external-action-wave
 
 on:
   workflow_dispatch:
+    inputs:
+      manifest_path:
+        description: Path to the hosted-wave manifest checked into this repository.
+        required: false
+        default: docs/evaluations/external-github-action-wave-default-candidates.json
 
 permissions:
   contents: read
@@ -11,11 +16,16 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.matrix.outputs.matrix }}
+      manifest_path: ${{ steps.matrix.outputs.manifest_path }}
+      tracking_issue: ${{ steps.matrix.outputs.tracking_issue }}
     steps:
       - uses: actions/checkout@v7
       - id: matrix
         shell: bash
+        env:
+          MANIFEST_PATH: ${{ inputs.manifest_path }}
         run: |
+          test -f "$MANIFEST_PATH"
           matrix="$(
             jq -c '
               {
@@ -30,13 +40,17 @@ jobs:
                     policy,
                     budget,
                     max_mutants,
-                    workers
+                    workers,
+                    sample: (.sample // "")
                   }
                 ]
               }
-            ' docs/evaluations/external-github-action-wave-2-candidates.json
+            ' "$MANIFEST_PATH"
           )"
+          tracking_issue="$(jq -r '.tracking_issue // ""' "$MANIFEST_PATH")"
           echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          echo "manifest_path=$MANIFEST_PATH" >> "$GITHUB_OUTPUT"
+          echo "tracking_issue=$tracking_issue" >> "$GITHUB_OUTPUT"
 
   wave:
     needs: plan
@@ -68,6 +82,7 @@ jobs:
           budget: ${{ matrix.budget }}
           report: summary,json,github-summary
           out: .cervomut/external-wave/${{ matrix.name }}
+          sample: ${{ matrix.sample }}
           max-mutants: ${{ matrix.max_mutants }}
           workers: ${{ matrix.workers }}
 
@@ -83,6 +98,7 @@ jobs:
           PROFILE: ${{ matrix.profile }}
           POLICY: ${{ matrix.policy }}
           BUDGET: ${{ matrix.budget }}
+          SAMPLE: ${{ matrix.sample }}
           MAX_MUTANTS: ${{ matrix.max_mutants }}
           WORKERS: ${{ matrix.workers }}
         run: |
@@ -105,6 +121,7 @@ jobs:
               --arg profile "$PROFILE" \
               --arg policy "$POLICY" \
               --arg budget "$BUDGET" \
+              --arg sample "$SAMPLE" \
               --arg report_dir "$report_dir" \
               --arg report_path "$report_json" \
               --arg report_kind "$report_kind" \
@@ -123,6 +140,7 @@ jobs:
                 profile: $profile,
                 policy: $policy,
                 budget: $budget,
+                sample: $sample,
                 max_mutants: $max_mutants,
                 workers: $workers,
                 job_status: $job_status,
@@ -155,6 +173,7 @@ jobs:
               --arg profile "$PROFILE" \
               --arg policy "$POLICY" \
               --arg budget "$BUDGET" \
+              --arg sample "$SAMPLE" \
               --arg report_dir "$report_dir" \
               --arg report_kind "missing" \
               --arg job_status "$JOB_STATUS" \
@@ -170,6 +189,7 @@ jobs:
                 profile: $profile,
                 policy: $policy,
                 budget: $budget,
+                sample: $sample,
                 max_mutants: $max_mutants,
                 workers: $workers,
                 job_status: $job_status,
@@ -188,6 +208,7 @@ jobs:
             "- Repository: `" + .repository + "`",
             "- Target: `" + .target + "`",
             "- Profile: `" + .profile + "`",
+            "- Policy: `" + .policy + "` sample=`" + (.sample // "") + "` max_mutants=`" + (.max_mutants|tostring) + "` workers=`" + (.workers|tostring) + "`",
             "- Job status: `" + .job_status + "`",
             (
               if .report_kind == "missing" then
@@ -198,7 +219,7 @@ jobs:
             ),
             (
               if .summary then
-                "- Killed: **\(.summary.killed)**, survived: **\(.summary.survived)**, score: **\(.summary.score)%**, actionable: **\(.summary.actionable_score)%**"
+                "- Generated: **\(.denominator_health.generated // 0)**, effective: **\(.denominator_health.effective // 0)**, killed: **\(.summary.killed)**, survived: **\(.summary.survived)**, not covered: **\(.summary.not_covered)**, score: **\(.summary.score)%**, actionable: **\(.summary.actionable_score)%**"
               else
                 "- No report metrics captured"
               end
@@ -219,7 +240,9 @@ jobs:
 
   summarize:
     if: always()
-    needs: wave
+    needs:
+      - plan
+      - wave
     runs-on: ubuntu-latest
     steps:
       - name: Download wave artifacts
@@ -230,25 +253,36 @@ jobs:
 
       - name: Build aggregate summary
         shell: bash
+        env:
+          TRACKING_ISSUE: ${{ needs.plan.outputs.tracking_issue }}
+          MANIFEST_PATH: ${{ needs.plan.outputs.manifest_path }}
         run: |
           generated_at="$(date -u +%FT%TZ)"
           jq -s \
             --arg generated_at "$generated_at" \
+            --arg tracking_issue "$TRACKING_ISSUE" \
+            --arg manifest_path "$MANIFEST_PATH" \
             '
             {
               schema_version: "1",
-              tracking_issue: "#210",
+              tracking_issue: $tracking_issue,
+              manifest_path: $manifest_path,
               generated_at: $generated_at,
               repos: sort_by(.name),
               aggregate: {
                 selected: length,
                 reports: (map(select(.report_kind != "missing")) | length),
                 missing_reports: (map(select(.report_kind == "missing")) | length),
+                generated: (map(.denominator_health.generated // 0) | add),
+                covered: (map(.denominator_health.covered // 0) | add),
+                executed: (map(.denominator_health.executed // 0) | add),
+                effective: (map(.denominator_health.effective // 0) | add),
                 killed: (map(.summary.killed // 0) | add),
                 survived: (map(.summary.survived // 0) | add),
                 not_covered: (map(.summary.not_covered // 0) | add),
                 timed_out: (map(.summary.timed_out // 0) | add),
-                compile_error: (map(.summary.compile_error // 0) | add)
+                compile_error: (map(.summary.compile_error // 0) | add),
+                warning_repos: (map(select((.denominator_health.warnings // []) | length > 0)) | length)
               }
             }
             ' artifacts/*/wave-result.json > wave-summary.json
@@ -257,22 +291,29 @@ jobs:
             echo "# External GitHub Action Wave Summary"
             echo
             jq -r '
+              (if (.tracking_issue // "") != "" then "- Tracking issue: **\(.tracking_issue)**" else empty end),
+              (if (.manifest_path // "") != "" then "- Manifest: `\(.manifest_path)`" else empty end),
               "- Selected repos: **\(.aggregate.selected)**",
               "- Reports captured: **\(.aggregate.reports)**",
               "- Missing reports: **\(.aggregate.missing_reports)**",
+              "- Generated mutants: **\(.aggregate.generated)**",
+              "- Covered mutants: **\(.aggregate.covered)**",
+              "- Executed mutants: **\(.aggregate.executed)**",
+              "- Effective mutants: **\(.aggregate.effective)**",
               "- Killed: **\(.aggregate.killed)**",
               "- Survived: **\(.aggregate.survived)**",
               "- Not covered: **\(.aggregate.not_covered)**",
               "- Timed out: **\(.aggregate.timed_out)**",
               "- Compile errors: **\(.aggregate.compile_error)**",
+              "- Repos with denominator warnings: **\(.aggregate.warning_repos)**",
               ""
             ' wave-summary.json
             jq -r '
               .repos[] |
-              "## \(.name)\n- Repository: `\(.repository)`\n- Target: `\(.target)`\n- Profile: `\(.profile)`\n- Job status: `\(.job_status)`\n- Report kind: `\(.report_kind)`\n" +
+              "## \(.name)\n- Repository: `\(.repository)`\n- Target: `\(.target)`\n- Profile: `\(.profile)`\n- Policy: `\(.policy)` sample=`\(.sample // "")` max_mutants=`\(.max_mutants)` workers=`\(.workers)`\n- Job status: `\(.job_status)`\n- Report kind: `\(.report_kind)`\n" +
               (
                 if .summary then
-                  "- Killed: **\(.summary.killed)**, survived: **\(.summary.survived)**, score: **\(.summary.score)%**, actionable: **\(.summary.actionable_score)%**\n"
+                  "- Generated: **\(.denominator_health.generated // 0)**, effective: **\(.denominator_health.effective // 0)**, killed: **\(.summary.killed)**, survived: **\(.summary.survived)**, not covered: **\(.summary.not_covered)**, score: **\(.summary.score)%**, actionable: **\(.summary.actionable_score)%**\n"
                 else
                   "- No report metrics captured\n"
                 end

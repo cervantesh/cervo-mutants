@@ -154,8 +154,8 @@ The intended workflow is:
 4. re-run `codex-review-gate` after resolving the conversation
 5. merge only after `codex-review-gate` is green
 
-If Codex leaves a no-finding thumbs-up reaction, the gate accepts that as the
-review response for the current head commit.
+If Codex leaves a no-finding acknowledgement reaction such as `+1` or `eyes`,
+the gate accepts that as the review response for the current head commit.
 
 If Codex leaves a review comment, resolving the conversation is required after
 the feedback is handled. Do not merge while the thread is still open.

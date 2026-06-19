@@ -37,6 +37,7 @@ jobs:
               "chatgpt-codex-connector[bot]",
               "chatgpt-codex-connector",
             ]);
+            const acceptedReactionContent = new Set(["+1", "eyes"]);
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             const number = context.issue.number;
@@ -220,7 +221,7 @@ jobs:
               const freshCodexReaction = reactions.find((reaction) => {
                 return (
                   isCodex(reaction.user?.login) &&
-                  reaction.content === "+1" &&
+                  acceptedReactionContent.has(reaction.content) &&
                   Date.parse(reaction.created_at) >= reviewFloor
                 );
               });

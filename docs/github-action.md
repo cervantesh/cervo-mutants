@@ -27,7 +27,7 @@ normal shell steps around the CLI.
 - uses: actions/checkout@v7
 - name: Run CervoMutants
   id: cervomut
-  uses: cervantesh/cervo-mutants@v0.4.0
+  uses: cervantesh/cervo-mutants@v0.4.1
   with:
     policy: ci-fast
     budget: 5m
@@ -47,7 +47,7 @@ normal shell steps around the CLI.
 ```yaml
 - uses: actions/checkout@v7
 - name: Run CervoMutants
-  uses: cervantesh/cervo-mutants@v0.4.0
+  uses: cervantesh/cervo-mutants@v0.4.1
   with:
     policy: ci-balanced
     budget: 10m
@@ -61,7 +61,7 @@ normal shell steps around the CLI.
 ```yaml
 - uses: actions/checkout@v7
 - name: Run CervoMutants
-  uses: cervantesh/cervo-mutants@v0.4.0
+  uses: cervantesh/cervo-mutants@v0.4.1
   with:
     policy: nightly
     budget: 20m
@@ -89,7 +89,7 @@ strategy:
 steps:
   - uses: actions/checkout@v7
   - name: Run shard
-    uses: cervantesh/cervo-mutants@v0.4.0
+    uses: cervantesh/cervo-mutants@v0.4.1
     with:
       policy: ci-fast
       slice-by: package
@@ -129,7 +129,7 @@ explicit override.
 That resolution path is now hardened in two ways:
 
 - ref normalization accepts standard GitHub tag refs such as
-  `refs/tags/v0.4.0` and standard branch refs such as `refs/heads/main`
+  `refs/tags/v0.4.1` and standard branch refs such as `refs/heads/main`
 - blank-version installs prefer the checked-out local action source before
   falling back to a ref-derived `go install` target, which keeps slash-qualified
   branch names safe when the action is executed from its source checkout
@@ -174,7 +174,7 @@ For example, a first retargeted pass can be as small as:
 
 ```yaml
 - name: Run CervoMutants
-  uses: cervantesh/cervo-mutants@v0.4.0
+  uses: cervantesh/cervo-mutants@v0.4.1
   with:
     targets: ./pkg/your-hot-path
     policy: ci-fast
@@ -197,8 +197,8 @@ The repository now backs the action with both unit and workflow evidence:
 
 ## Versioning Note
 
-The examples above now pin `@v0.4.0`, which is the first public release that
-includes the first-party GitHub Action.
+The examples above now pin `@v0.4.1`, which is the latest public release of
+the first-party GitHub Action.
 
 For production workflows, keep pinning to an explicit release tag instead of
 following `main`, and update that tag only when you are ready to adopt the next

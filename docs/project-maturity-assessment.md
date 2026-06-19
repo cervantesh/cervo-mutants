@@ -11,10 +11,11 @@ product, code, and operations. It is intentionally time-bound: maturity can
 move quickly as CI, releases, public adoption, and major features change.
 
 This snapshot evaluates the current `main` branch state on 2026-06-19. The
-latest public release is now `v0.4.0` from 2026-06-19, so the biggest
-release-head lag identified earlier is materially closed. The current `main`
-branch still contains a few small post-release guidance follow-ups, but the
-public tag now reflects most of the repository's current hardened surface.
+latest public release is now `v0.4.1` from 2026-06-19, so the earlier
+release-head lag plus the immediate release-surface follow-ups are now
+materially closed. The current `main` branch and latest public tag are now
+effectively aligned for the supported install, CI, and reporting surfaces
+described in this assessment.
 
 ## Scale
 
@@ -64,8 +65,8 @@ surface.
 
 - Public GitHub repository created on 2026-06-17.
 - Public releases present on 2026-06-19: `v0.1.0`, `v0.2.0`, `v0.3.0`,
-  `v0.4.0`.
-- Latest public release is `v0.4.0` from 2026-06-19 with multi-OS assets,
+  `v0.4.0`, `v0.4.1`.
+- Latest public release is `v0.4.1` from 2026-06-19 with multi-OS assets,
   `release-manifest.json`, and `SHA256SUMS`.
 - GitHub Pages is live at `https://cervantesh.github.io/cervo-mutants/`.
 - The seeded Phase 5 and Phase 6 roadmap backlog is closed.
@@ -105,30 +106,31 @@ surface.
 
 ### Repo-head versus release-head
 
-The latest release is now a much stronger proxy for repository-head maturity.
+The latest release is now effectively aligned with repository-head maturity for
+the supported public surfaces.
 
-`v0.4.0` proves:
+`v0.4.1` proves:
 
 - Windows-native execution hardening
 - deterministic large-repo slicing
 - survivor-ranking calibration improvements
 - semantic triage, actionable-only review, and additive actionable reporting
 - first-party GitHub Action support
+- released GitHub Action alignment on `actions/setup-go@v6`
 - CI-enforced compatibility matrix behavior
 - previous-release upgrade smoke
 - install and archive verification gates
+- deterministic Windows validation for serial-runner budget coverage and
+  pre-canceled pool commands
+- released follow-up guidance for adoption review-unit counts and governance
+  status counts
 - expanded adoption guidance, operations guidance, and external-validation
   framing
 
-`main` now additionally proves:
-
-- post-release rollout-doc tightening from real field friction
-- low-denominator guidance in human-facing summaries for weak first runs
-
-That gap is now narrower and mostly additive. External users get most of the
-current hardened product through the latest public release, while `main`
-contains smaller post-release guidance refinements rather than a major
-unreleased operational leap.
+There is no material supported-surface gap called out in this snapshot between
+the latest release and `main`. The remaining maturity limits are now about
+release repetition, external adoption depth, and continued field calibration,
+not about a missing public catch-up release.
 
 ## Functional Maturity
 
@@ -232,12 +234,12 @@ in release repetition and external adoption proof.
 
 ### What is not mature enough yet
 
-- The strongest operational hardening is now packaged in `v0.4.0`, but public
-  release history is still extremely young and compressed. Four releases in
+- The strongest operational hardening is now packaged in `v0.4.1`, but public
+  release history is still extremely young and compressed. Five releases in
   three days are enough to bootstrap a project, not enough to prove a stable
   long-term release cadence.
 - Small repo-head versus release-head drift can still reopen quickly if the
-  next release cadence slips, even though the `v0.4.0` catch-up materially
+  next release cadence slips, even though the `v0.4.1` alignment materially
   reduced that gap.
 - External adoption evidence is better than before, but still too early to
   claim broad field validation across multiple independent teams.
@@ -266,7 +268,7 @@ in release repetition and external adoption proof.
 
 ### Immediate
 
-1. Keep release-head aligned with repo-head; the `v0.4.0` catch-up should
+1. Keep release-head aligned with repo-head; the `v0.4.1` alignment should
    become the norm, not a one-off.
 2. Refresh the public maturity narrative and install guidance whenever release
    state changes.

@@ -12,6 +12,31 @@ The format is intentionally simple:
 
 - No unreleased entries yet.
 
+## [v0.4.1] - 2026-06-19
+
+### Changed
+
+- Hosted adoption-wave summaries now distinguish raw recommendation entries
+  from collapsed recommendation review units, and raw governance suggestion
+  totals from per-status governance counts, which makes released GitHub Action
+  evidence easier to interpret without hiding the raw totals.
+- The published first-party GitHub Action now uses `actions/setup-go@v6`,
+  removing the stale Node 20 deprecation path from the released action surface.
+- Windows compatibility validation is more deterministic:
+  pre-canceled pool commands no longer start real processes, and the serial
+  runner budget/quarantine coverage no longer depends on real-clock races.
+
+### Documentation
+
+- Published dated follow-up notes for released adoption-wave recommendation
+  review units and governance suggestion status counts.
+
+### Verification
+
+- `go test ./...`
+- `go run ./cmd/releasehelper verify-compat`
+- `go run ./cmd/releasehelper notes --version v0.4.1 --out .tmp/release-notes-v0.4.1.md`
+
 ## [v0.4.0] - 2026-06-19
 
 ### Added

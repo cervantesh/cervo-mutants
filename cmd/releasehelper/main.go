@@ -19,7 +19,7 @@ func main() {
 
 func run(args []string) error {
 	if len(args) == 0 {
-		return fmt.Errorf("usage: releasehelper <notes|verify-compat|verify-release|verify-upgrade>")
+		return fmt.Errorf("usage: releasehelper <notes|verify-compat|verify-release|verify-upgrade|verify-install>")
 	}
 	switch args[0] {
 	case "notes":
@@ -30,6 +30,8 @@ func run(args []string) error {
 		return cmdVerifyRelease(args[1:])
 	case "verify-upgrade":
 		return cmdVerifyUpgrade(args[1:])
+	case "verify-install":
+		return cmdVerifyInstall(args[1:])
 	default:
 		return fmt.Errorf("unknown command %q", args[0])
 	}
@@ -143,6 +145,7 @@ type workflowMatrix struct {
 
 type workflowStep struct {
 	Name string            `yaml:"name"`
+	Run  string            `yaml:"run"`
 	Uses string            `yaml:"uses"`
 	With map[string]string `yaml:"with"`
 }
@@ -224,7 +227,25 @@ func verifyReleaseWorkflow(path string) error {
 	if err := verifySetupGoVersion(workflow, "publish", compatmatrix.SupportedGoVersion); err != nil {
 		return err
 	}
-	return verifyCompatibilityMatrixJob(workflow, path, "compatibility-smoke")
+	if err := verifyCompatibilityMatrixJob(workflow, path, "compatibility-smoke"); err != nil {
+		return err
+	}
+	if err := verifyJobHasRunContaining(workflow, path, "publish", "go run ./cmd/releasehelper verify-compat"); err != nil {
+		return err
+	}
+	if err := verifyJobHasRunContaining(workflow, path, "publish", "go run ./cmd/releasehelper verify-release"); err != nil {
+		return err
+	}
+	if err := verifyJobHasRunContaining(workflow, path, "publish", "go run ./cmd/releasehelper verify-install"); err != nil {
+		return err
+	}
+	if err := verifyJobRunCountContaining(workflow, path, "publish", "go run ./cmd/releasehelper verify-install", 2); err != nil {
+		return err
+	}
+	if err := verifyJobHasRunContaining(workflow, path, "publish", "go install github.com/cervantesh/cervo-mutants/cmd/cervomut@"); err != nil {
+		return err
+	}
+	return nil
 }
 
 func loadWorkflow(path string) (workflowDoc, error) {
@@ -302,4 +323,34 @@ func verifyActionInputVersion(workflow workflowDoc, jobName, stepName, want stri
 		}
 	}
 	return fmt.Errorf("job %q is missing step %q", jobName, stepName)
+}
+
+func verifyJobHasRunContaining(workflow workflowDoc, path, jobName, want string) error {
+	job, ok := workflow.Jobs[jobName]
+	if !ok {
+		return fmt.Errorf("%s is missing job %q", filepath.ToSlash(path), jobName)
+	}
+	for _, step := range job.Steps {
+		if strings.Contains(step.Run, want) {
+			return nil
+		}
+	}
+	return fmt.Errorf("%s job %q must include a run step containing %q", filepath.ToSlash(path), jobName, want)
+}
+
+func verifyJobRunCountContaining(workflow workflowDoc, path, jobName, want string, min int) error {
+	job, ok := workflow.Jobs[jobName]
+	if !ok {
+		return fmt.Errorf("%s is missing job %q", filepath.ToSlash(path), jobName)
+	}
+	count := 0
+	for _, step := range job.Steps {
+		if strings.Contains(step.Run, want) {
+			count++
+		}
+	}
+	if count < min {
+		return fmt.Errorf("%s job %q must include at least %d run steps containing %q, got %d", filepath.ToSlash(path), jobName, min, want, count)
+	}
+	return nil
 }

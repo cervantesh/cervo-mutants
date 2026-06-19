@@ -33,12 +33,14 @@ The GitHub Actions release workflow then:
 
 1. runs `go vet ./...`
 2. runs `go test ./...`
-3. builds release archives for the supported target set
-4. writes `SHA256SUMS`
-5. composes release notes from the changelog section and upgrade note file
-6. verifies archive contents, checksums, and generated release notes
-7. writes `release-manifest.json` for auditability
-8. publishes or updates the GitHub release for that tag
+3. verifies the documented `go install` path and report-reading flow from an installed binary
+4. builds release archives for the supported target set
+5. writes `SHA256SUMS`
+6. composes release notes from the changelog section and upgrade note file
+7. verifies archive contents, checksums, and generated release notes
+8. verifies the archive-install path and report-reading flow from the built Linux release archive
+9. writes `release-manifest.json` for auditability
+10. publishes or updates the GitHub release for that tag
 
 ## Artifacts
 
@@ -63,6 +65,10 @@ Each archive includes:
 
 If the changelog section or upgrade note file is missing, the workflow fails
 instead of publishing an incomplete release.
+
+The workflow also fails before publication if the documented `go install` or
+archive-install path cannot run a bounded mutation lane and read back the
+generated report surfaces from the installed binary.
 
 ## Rollback Guidance
 

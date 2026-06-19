@@ -168,3 +168,7 @@ communication blocks publication instead of relying on memory.
 Main CI also runs an upgrade smoke from the latest public release archive into
 the current source tree so supported report and baseline workflows fail loudly
 when a release-to-release handoff breaks.
+
+The release workflow also validates the documented `go install` and
+archive-install paths with a real installed binary and exercises report
+generation plus report-reading commands before publication.

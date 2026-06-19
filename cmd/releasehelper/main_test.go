@@ -126,6 +126,11 @@ func TestCmdVerifyCompatAcceptsAlignedFiles(t *testing.T) {
       - uses: actions/setup-go@v5
         with:
           go-version: "1.25.6"
+      - run: go run ./cmd/releasehelper verify-compat
+      - run: GOBIN="$PWD/.verify-install/gobin" GOPROXY=direct GOSUMDB=off go install github.com/cervantesh/cervo-mutants/cmd/cervomut@${GITHUB_REF_NAME}
+      - run: go run ./cmd/releasehelper verify-install --binary .verify-install/gobin/cervomut
+      - run: go run ./cmd/releasehelper verify-release
+      - run: go run ./cmd/releasehelper verify-install --archive dist/cervomut_${GITHUB_REF_NAME}_linux_amd64.tar.gz
 `)
 
 	err := cmdVerifyCompat([]string{
@@ -185,6 +190,7 @@ func TestCmdVerifyCompatRejectsMismatchedWorkflowVersion(t *testing.T) {
       - uses: actions/setup-go@v5
         with:
           go-version: "1.25.6"
+      - run: go run ./cmd/releasehelper verify-release
 `)
 
 	err := cmdVerifyCompat([]string{
@@ -195,6 +201,72 @@ func TestCmdVerifyCompatRejectsMismatchedWorkflowVersion(t *testing.T) {
 	})
 	if err == nil || !strings.Contains(err.Error(), "core-tests") {
 		t.Fatalf("expected core-tests mismatch error, got %v", err)
+	}
+}
+
+func TestCmdVerifyCompatRejectsMissingInstallGate(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "go.mod"), "module fixture\n\ngo "+compatmatrix.SupportedGoVersion+"\n")
+	writeFile(t, filepath.Join(dir, "docs", "go-toolchain-compatibility.md"), "# Go And OS Compatibility Matrix\n\n"+
+		"| OS | Go version | Status | Automated validation | Notes |\n"+
+		"| --- | --- | --- | --- | --- |\n"+
+		"| Linux | `1.25.x` | Supported | GitHub Actions core lane | Primary validation lane. |\n"+
+		"| Windows | `1.25.x` | Supported | GitHub Actions compatibility smoke | Windows lane. |\n"+
+		"| macOS | `1.25.x` | Supported | GitHub Actions compatibility smoke | macOS lane. |\n"+
+		"| Any OS | `< 1.25` | Unsupported | Not validated | Current `go.mod` baseline is `go 1.25.6`. |\n")
+	writeFile(t, filepath.Join(dir, ".github", "workflows", "test.yml"), `jobs:
+  core-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.6"
+  compatibility-smoke:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            go-version: "1.25.6"
+          - os: windows-latest
+            go-version: "1.25.6"
+          - os: macos-latest
+            go-version: "1.25.6"
+  github-action-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run local GitHub Action source
+        uses: ./
+        with:
+          go-version: "1.25.6"
+`)
+	writeFile(t, filepath.Join(dir, ".github", "workflows", "release.yml"), `jobs:
+  compatibility-smoke:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            go-version: "1.25.6"
+          - os: windows-latest
+            go-version: "1.25.6"
+          - os: macos-latest
+            go-version: "1.25.6"
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.6"
+      - run: go run ./cmd/releasehelper verify-compat
+      - run: go run ./cmd/releasehelper verify-release
+`)
+	err := cmdVerifyCompat([]string{
+		"--go-mod", filepath.Join(dir, "go.mod"),
+		"--doc", filepath.Join(dir, "docs", "go-toolchain-compatibility.md"),
+		"--test-workflow", filepath.Join(dir, ".github", "workflows", "test.yml"),
+		"--release-workflow", filepath.Join(dir, ".github", "workflows", "release.yml"),
+	})
+	if err == nil || !strings.Contains(err.Error(), "verify-install") {
+		t.Fatalf("expected verify-install gate error, got %v", err)
 	}
 }
 

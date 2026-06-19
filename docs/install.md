@@ -88,6 +88,11 @@ go build ./cmd/cervomut
 This is useful for local development, branch testing, or validating a change
 before a public release is tagged.
 
+Before a public release is published, the release workflow now validates both
+the documented `go install` path and the Linux archive-install path with a real
+installed binary, including report generation plus `cervomut report ...`
+commands against the generated artifacts.
+
 ## Upgrade Guidance
 
 Use one installation family consistently:

@@ -97,6 +97,22 @@ runs:
     - name: Install CervoMutants
       shell: pwsh
       run: |
+        function Invoke-ActionHelper([string[]]$helperArgs) {
+          if ([string]::IsNullOrWhiteSpace($env:GITHUB_ACTION_PATH)) {
+            throw "GITHUB_ACTION_PATH is not available for the composite action helper."
+          }
+          Push-Location $env:GITHUB_ACTION_PATH
+          try {
+            $output = & go run ./cmd/actionhelper @helperArgs
+            if ($LASTEXITCODE -ne 0) {
+              exit $LASTEXITCODE
+            }
+            return $output
+          } finally {
+            Pop-Location
+          }
+        }
+
         function Invoke-GoInstall([string]$target) {
           go install $target
           if ($LASTEXITCODE -ne 0) {
@@ -117,31 +133,20 @@ runs:
           }
         }
 
-        $version = '${{ inputs.cervomut-version }}'.Trim()
-        if ([string]::IsNullOrWhiteSpace($version)) {
-          if (-not [string]::IsNullOrWhiteSpace($env:GITHUB_ACTION_PATH)) {
-            Invoke-InstallFromActionPath $env:GITHUB_ACTION_PATH
-            return
-          }
+        $plan = Invoke-ActionHelper @(
+          'install-plan',
+          '--version', '${{ inputs.cervomut-version }}',
+          '--action-path', $env:GITHUB_ACTION_PATH,
+          '--action-ref', $env:GITHUB_ACTION_REF
+        ) | ConvertFrom-Json
 
-          if (-not [string]::IsNullOrWhiteSpace($env:GITHUB_ACTION_REF)) {
-            $version = $env:GITHUB_ACTION_REF.Trim()
-            if ($version.StartsWith('refs/tags/')) {
-              $version = $version.Substring('refs/tags/'.Length)
-            }
-            if ($version.Contains('/')) {
-              throw "GITHUB_ACTION_PATH is not available and GITHUB_ACTION_REF '$version' cannot be used as a go install version. Set cervomut-version explicitly to a tag, commit SHA, or latest."
-            }
-            Write-Host "Installing CervoMutants from action ref $version"
-            Invoke-GoInstall "github.com/cervantesh/cervo-mutants/cmd/cervomut@$version"
-            return
-          }
-
-          throw "GITHUB_ACTION_PATH is not available; set cervomut-version explicitly."
+        if ($plan.mode -eq 'local-source') {
+          Invoke-InstallFromActionPath $plan.action_path
+          return
         }
 
-        Write-Host "Installing CervoMutants version $version"
-        Invoke-GoInstall "github.com/cervantesh/cervo-mutants/cmd/cervomut@$version"
+        Write-Host "Installing CervoMutants version $($plan.version)"
+        Invoke-GoInstall $plan.target
 
     - name: Run CervoMutants
       id: run-cervomut
@@ -184,21 +189,11 @@ runs:
         & cervomut @cmdArgs
 
         if ($env:GITHUB_OUTPUT) {
-          $outDir = '${{ inputs.out }}'
-          $workingDirectory = '${{ inputs.working-directory }}'
-          if ([string]::IsNullOrWhiteSpace($workingDirectory)) {
-            $workingDirectory = '.'
-          }
-
-          if ([System.IO.Path]::IsPathRooted($outDir)) {
-            $reportDir = [System.IO.Path]::GetFullPath($outDir)
-          } else {
-            $workingRoot = $workingDirectory
-            if (-not [System.IO.Path]::IsPathRooted($workingRoot)) {
-              $workingRoot = Join-Path $env:GITHUB_WORKSPACE $workingRoot
-            }
-            $reportDir = [System.IO.Path]::GetFullPath((Join-Path $workingRoot $outDir))
-          }
-
+          $reportDir = Invoke-ActionHelper @(
+            'report-dir',
+            '--workspace', $env:GITHUB_WORKSPACE,
+            '--working-directory', '${{ inputs.working-directory }}',
+            '--out', '${{ inputs.out }}'
+          )
           "report-dir=$reportDir" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
         }

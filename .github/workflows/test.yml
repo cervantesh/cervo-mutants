@@ -53,3 +53,23 @@ jobs:
       - run: go run ./cmd/cervomut list-mutators
       - run: go run ./cmd/cervomut fast ./pkg/config --max-mutants 1 --workers 1 --out .cervomut/compat-smoke
       - run: go run ./cmd/cervomut report summary --out .cervomut/compat-smoke
+
+  github-action-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run local GitHub Action source
+        id: cervomut
+        uses: ./
+        with:
+          go-version: "1.25.6"
+          targets: ./pkg/config
+          policy: ci-fast
+          budget: 5m
+          report: summary,json
+          out: .cervomut/action-smoke
+          workers: "1"
+          max-mutants: "1"
+      - run: test -f .cervomut/action-smoke/mutation-report.json
+      - run: test -n "${{ steps.cervomut.outputs.report-dir }}"
+      - run: test -f "${{ steps.cervomut.outputs.report-dir }}/mutation-report.json"

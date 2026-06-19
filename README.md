@@ -679,6 +679,9 @@ Latest local Sonar pass after issue #31:
   durable product and system choices.
 - [docs/releasing.md](docs/releasing.md): tag-driven release workflow, assets,
   checksums, and upgrade-note requirements.
+- [docs/release-evidence-trail.md](docs/release-evidence-trail.md): public
+  per-release evidence trail for install, compatibility, and hosted-wave
+  validation across post-hardening tags.
 - [docs/contributing-technical.md](docs/contributing-technical.md): package
   boundaries, validation expectations, and safe change patterns for
   contributors.

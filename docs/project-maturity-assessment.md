@@ -56,6 +56,12 @@ profile released hosted sample on `v0.4.2`, so the open maturity question is
 less about whether the newer review surfaces can produce bounded mixed-profile
 signal and more about repeated external use over time.
 
+The current post-hardening release trail is tracked explicitly in
+[docs/release-evidence-trail.md](release-evidence-trail.md). That trail is
+stronger than the earlier snapshot, but it is still short enough that repeated
+release discipline over time remains a real maturity question rather than a
+closed one.
+
 That keeps the project just short of a clean `4 / 5` overall maturity
 classification. The current state is best described as a credible public beta
 whose latest public release now represents most of the hardened repository

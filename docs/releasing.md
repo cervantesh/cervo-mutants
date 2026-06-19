@@ -70,6 +70,20 @@ The workflow also fails before publication if the documented `go install` or
 archive-install path cannot run a bounded mutation lane and read back the
 generated report surfaces from the installed binary.
 
+## Release Evidence Trail
+
+After a public release is published, update
+[release-evidence-trail.md](release-evidence-trail.md) with:
+
+- the release URL
+- the published `release-manifest.json`
+- the published `SHA256SUMS`
+- the matching upgrade note
+- the release-specific hosted-wave or validation evidence
+
+That keeps the release-confidence story comparable across tags instead of
+forcing maintainers to reconstruct it from scattered dated notes later.
+
 ## Rollback Guidance
 
 Public release tags should be treated as immutable once announced.

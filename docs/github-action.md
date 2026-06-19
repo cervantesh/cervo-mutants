@@ -1,6 +1,6 @@
 # GitHub Action
 
-Tracking issues: #159, #182, #212
+Tracking issues: #159, #182, #212, #256
 
 CervoMutants now ships a first-party GitHub Action for the common CI path:
 install the tool, set up Go, and run a bounded `cervomut run` mutation lane.
@@ -154,6 +154,21 @@ Review these first from the uploaded artifacts or step summary:
 - denominator-health warnings
 - whether the run produced any actionable review units or survivor output at all
 
+Treat the first hosted result as one of three different states:
+
+1. healthy review signal:
+   denominator health is understandable and the lane produced reviewable
+   survivors or actionable review units
+2. healthy retargeting signal:
+   the workflow completed, but denominator warnings or `not covered` pressure
+   dominate and the lane produced little or no actionable review work
+3. workflow failure:
+   the action failed, reports are missing, or the artifacts are incomplete
+
+Only the third state is a pipeline problem. The second state is still useful
+feedback, but it is feedback about target shape, budget shape, or candidate
+selection rather than about the core engine.
+
 If the first hosted run finishes but yields near-zero `effective mutants`, or
 mostly `not covered` rows, treat that as **target-selection feedback** before
 you treat it as a product failure.
@@ -170,6 +185,16 @@ That sequence matches the post-release field evidence: the largest early
 hosted-wave gains came from healthier targets and candidate choice, not from
 panic-tuning semantic heuristics first.
 
+The released hosted `v0.4.1` wave showed that distinction directly:
+
+- `pflag-root` and `gjson-root` produced healthy denominator behavior plus real
+  actionable review units
+- `logrus-root` completed successfully, but mostly produced `not covered` rows,
+  denominator warnings, and zero actionable review units
+
+That is why the recommended next step for a low-signal first run is retargeting
+before widening scope or judging heuristic quality.
+
 For example, a first retargeted pass can be as small as:
 
 ```yaml
@@ -185,6 +210,11 @@ For example, a first retargeted pass can be as small as:
 
 Once that lane produces healthy denominator behavior and reviewable survivors,
 then widen the target or add nightly depth.
+
+Evidence for the current hosted guidance:
+
+- [docs/evaluations/2026-06-19-external-github-action-wave-v0.4.1.md](evaluations/2026-06-19-external-github-action-wave-v0.4.1.md)
+- [docs/evaluations/2026-06-19-post-release-field-findings.md](evaluations/2026-06-19-post-release-field-findings.md)
 
 ## Validation Coverage
 

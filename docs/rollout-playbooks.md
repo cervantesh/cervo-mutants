@@ -1,6 +1,6 @@
 # Rollout Playbooks By Repository Profile
 
-Tracking issues: #191, #212
+Tracking issues: #191, #212, #256
 
 This document turns the existing examples, adoption guidance, and supported CLI
 workflows into repeatable rollout paths for three common repository shapes:
@@ -27,6 +27,14 @@ These rules apply before choosing a repository profile:
    and trusted.
 6. If the first bounded run produces weak denominator health, retarget before
    you widen scope, shard count, or mutant density.
+7. If the first bounded run produces zero actionable review units, check
+   denominator health before you assume the lane is unhelpful. A denominator-
+   poor lane is usually a retargeting problem first.
+
+The current released hosted evidence to model against is:
+
+- [docs/evaluations/2026-06-19-external-github-action-wave-v0.4.1.md](evaluations/2026-06-19-external-github-action-wave-v0.4.1.md)
+- [docs/evaluations/2026-06-19-post-release-field-findings.md](evaluations/2026-06-19-post-release-field-findings.md)
 
 ## Playbook 1: Compact Library
 
@@ -60,7 +68,8 @@ Start from:
 4. Review survivors through summary, JSON, JUnit, and GitHub summary outputs.
 5. If the first bounded run lands with near-zero `effective mutants` or mostly
    `not covered` rows, rerun on the hottest package path before you treat `./...`
-   as the permanent compact-library target.
+   as the permanent compact-library target. If that same run also has zero
+   actionable review units, read that as denominator-shape feedback first.
 6. Stay on `ci-fast` until the team can explain which survivors are useful and
    which are noise.
 
@@ -93,7 +102,9 @@ Start from:
 
 3. Accept the baseline before introducing stronger policy expectations.
 4. If the first PR lane has poor denominator health, narrow the target to one
-   service boundary or package cluster before you add nightly depth.
+   service boundary or package cluster before you add nightly depth. If the
+   lane also produces zero actionable review units, do not escalate score or
+   heuristic judgments until the denominator improves.
 5. Add a nightly lane only after the PR lane is already trusted:
 
    ```powershell
@@ -136,7 +147,9 @@ Start from:
 
 3. Accept the baseline for the bounded PR shape first.
 4. If the first shard still produces weak denominator health, retarget to a
-   smaller package set before you increase shard count or nightly breadth.
+   smaller package set before you increase shard count or nightly breadth. Zero
+   actionable review units on a denominator-poor shard are still rollout
+   guidance, not proof that the shard model is wrong.
 5. Add a wider nightly shard set only after the PR shard is stable:
 
    ```powershell
@@ -169,6 +182,8 @@ When a rollout feels stuck, use this rule:
   automation.
 - If the problem is poor denominator health, retarget before you add more
   mutants, broader shards, or stricter score expectations.
+- If the problem is zero actionable review units, first ask whether the
+  denominator is healthy enough to trust that result.
 - If the problem is missing historical context, preserve artifacts and add
   history review before broadening mutation breadth.
 - If the problem is raw runtime, shard or slice before adding more mutants.

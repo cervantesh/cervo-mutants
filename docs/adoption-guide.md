@@ -1,6 +1,6 @@
 # Adoption Guide: Fit, Limits, And Rollout
 
-Tracking issues: #137, #165, #212
+Tracking issues: #137, #165, #212, #256
 
 This guide turns the current public evidence into a practical answer to three
 questions:
@@ -10,8 +10,9 @@ questions:
 3. What is the safest rollout path into local development or CI?
 
 The guidance below is grounded in the current public release, the maintained
-example workspaces, and the first reproducible external validation wave across
-five public Go repositories.
+example workspaces, the first reproducible external validation wave across five
+public Go repositories, and the latest released-surface GitHub Action wave
+against `v0.4.1`.
 
 ## Current Best Fit
 
@@ -70,6 +71,8 @@ What is proven:
 - the current release works as a local and CI mutation runner
 - bounded external validation succeeded across five public Go repositories on a
   Windows host without repo-specific patches
+- the released GitHub Action surface `github-action@v0.4.1` completed a hosted
+  public-wave sample with persisted actionable-yield evidence
 - example workspaces exist for small, medium, and large-repo rollout patterns
 - baseline-first governance, actionable review, and compatibility surfaces are
   publicly documented
@@ -84,6 +87,7 @@ What is not yet proven:
 See:
 
 - [docs/evaluations/2026-06-17-external-validation-wave.md](evaluations/2026-06-17-external-validation-wave.md)
+- [docs/evaluations/2026-06-19-external-github-action-wave-v0.4.1.md](evaluations/2026-06-19-external-github-action-wave-v0.4.1.md)
 - [docs/example-repos.md](example-repos.md)
 - [docs/rollout-playbooks.md](rollout-playbooks.md)
 - [docs/feedback-intake.md](feedback-intake.md)
@@ -134,6 +138,19 @@ For the first bounded run, read these fields before you judge the score:
 - denominator-health warnings in `summary.txt` or `github-summary.md`
 - whether there are any actionable review units at all
 
+A useful first signal can still have two different shapes:
+
+1. healthy review signal:
+   denominator health is reasonable and the run gives you survivors or
+   actionable review units worth discussing
+2. healthy retargeting signal:
+   the run completes, preserves artifacts, and clearly shows that the current
+   target is too cold or too broad to judge product value yet
+
+Those are both useful outcomes. What is not useful is a broken workflow with
+missing artifacts, or a rollout that treats denominator-poor output as proof
+that the repository is a bad fit without retargeting first.
+
 If the first run lands near `effective=0`, or if `not covered` dominates the
 report, do **not** immediately conclude that the repository is a bad fit or
 that semantic triage needs tuning first.
@@ -146,8 +163,20 @@ Treat that as rollout feedback:
 
 That is the safer interpretation supported by the current field evidence in:
 
+- [docs/evaluations/2026-06-19-external-github-action-wave-v0.4.1.md](evaluations/2026-06-19-external-github-action-wave-v0.4.1.md)
 - [docs/evaluations/2026-06-19-post-release-field-findings.md](evaluations/2026-06-19-post-release-field-findings.md)
 - [docs/evaluations/2026-06-19-external-github-action-wave-candidate-retargeting.md](evaluations/2026-06-19-external-github-action-wave-candidate-retargeting.md)
+
+The latest released hosted wave makes the interpretation concrete:
+
+- `pflag-root` and `gjson-root` produced healthy denominator behavior with real
+  actionable review units
+- `logrus-root` produced zero actionable review units together with denominator
+  warnings and `not covered` pressure
+
+That is not evidence that the hosted path is broken. It is evidence that the
+first bounded target can be too cold, and that retargeting should come before
+broader policy judgments.
 
 ## Recommended Rollout Path
 

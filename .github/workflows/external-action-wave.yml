@@ -6,7 +6,7 @@ on:
       manifest_path:
         description: Path to the hosted-wave manifest checked into this repository.
         required: false
-        default: docs/evaluations/external-github-action-wave-default-candidates.json
+        default: docs/evaluations/external-github-action-wave-v0.4.0-candidates.json
 
 permissions:
   contents: read
@@ -18,12 +18,15 @@ jobs:
       matrix: ${{ steps.matrix.outputs.matrix }}
       manifest_path: ${{ steps.matrix.outputs.manifest_path }}
       tracking_issue: ${{ steps.matrix.outputs.tracking_issue }}
+      action_ref: ${{ steps.matrix.outputs.action_ref }}
+      install_path: ${{ steps.matrix.outputs.install_path }}
     steps:
       - uses: actions/checkout@v7
       - id: matrix
         shell: bash
         env:
           MANIFEST_PATH: ${{ inputs.manifest_path }}
+          GITHUB_SHA: ${{ github.sha }}
         run: |
           test -f "$MANIFEST_PATH"
           matrix="$(
@@ -48,9 +51,13 @@ jobs:
             ' "$MANIFEST_PATH"
           )"
           tracking_issue="$(jq -r '.tracking_issue // ""' "$MANIFEST_PATH")"
+          action_ref="$(jq -r '.action_ref // env.GITHUB_SHA' "$MANIFEST_PATH")"
+          install_path="$(jq -r '.install_path // ("github-action@" + (.action_ref // env.GITHUB_SHA))' "$MANIFEST_PATH")"
           echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
           echo "manifest_path=$MANIFEST_PATH" >> "$GITHUB_OUTPUT"
           echo "tracking_issue=$tracking_issue" >> "$GITHUB_OUTPUT"
+          echo "action_ref=$action_ref" >> "$GITHUB_OUTPUT"
+          echo "install_path=$install_path" >> "$GITHUB_OUTPUT"
 
   wave:
     needs: plan
@@ -63,6 +70,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           path: cervomut-source
+          ref: ${{ needs.plan.outputs.action_ref }}
 
       - uses: actions/checkout@v7
         with:
@@ -101,6 +109,8 @@ jobs:
           SAMPLE: ${{ matrix.sample }}
           MAX_MUTANTS: ${{ matrix.max_mutants }}
           WORKERS: ${{ matrix.workers }}
+          ACTION_REF: ${{ needs.plan.outputs.action_ref }}
+          INSTALL_PATH: ${{ needs.plan.outputs.install_path }}
         run: |
           report_dir="target/.cervomut/external-wave/${REPO_NAME}"
           report_json="$report_dir/mutation-report.json"
@@ -150,6 +160,8 @@ jobs:
                 generated_at: $generated_at,
                 name: $name,
                 repository: $repository,
+                install_path: $install_path,
+                action_ref: $action_ref,
                 ref: $ref,
                 target: $target,
                 profile: $profile,
@@ -196,6 +208,8 @@ jobs:
               --arg generated_at "$generated_at" \
               --arg name "$REPO_NAME" \
               --arg repository "$REPOSITORY" \
+              --arg install_path "$INSTALL_PATH" \
+              --arg action_ref "$ACTION_REF" \
               --arg ref "$REPO_REF" \
               --arg target "$TARGET" \
               --arg profile "$PROFILE" \
@@ -212,6 +226,8 @@ jobs:
                 generated_at: $generated_at,
                 name: $name,
                 repository: $repository,
+                install_path: $install_path,
+                action_ref: $action_ref,
                 ref: $ref,
                 target: $target,
                 profile: $profile,
@@ -247,6 +263,7 @@ jobs:
           jq -r '
             "## " + .name,
             "- Repository: `" + .repository + "`",
+            "- Install path: `" + .install_path + "` action_ref=`" + .action_ref + "`",
             "- Target: `" + .target + "`",
             "- Profile: `" + .profile + "`",
             "- Policy: `" + .policy + "` sample=`" + (.sample // "") + "` max_mutants=`" + (.max_mutants|tostring) + "` workers=`" + (.workers|tostring) + "`",
@@ -300,17 +317,23 @@ jobs:
         env:
           TRACKING_ISSUE: ${{ needs.plan.outputs.tracking_issue }}
           MANIFEST_PATH: ${{ needs.plan.outputs.manifest_path }}
+          ACTION_REF: ${{ needs.plan.outputs.action_ref }}
+          INSTALL_PATH: ${{ needs.plan.outputs.install_path }}
         run: |
           generated_at="$(date -u +%FT%TZ)"
           jq -s \
             --arg generated_at "$generated_at" \
             --arg tracking_issue "$TRACKING_ISSUE" \
             --arg manifest_path "$MANIFEST_PATH" \
+            --arg action_ref "$ACTION_REF" \
+            --arg install_path "$INSTALL_PATH" \
             '
             {
               schema_version: "1",
               tracking_issue: $tracking_issue,
               manifest_path: $manifest_path,
+              action_ref: $action_ref,
+              install_path: $install_path,
               generated_at: $generated_at,
               repos: sort_by(.name),
               aggregate: {
@@ -355,6 +378,7 @@ jobs:
             jq -r '
               (if (.tracking_issue // "") != "" then "- Tracking issue: **\(.tracking_issue)**" else empty end),
               (if (.manifest_path // "") != "" then "- Manifest: `\(.manifest_path)`" else empty end),
+              (if (.install_path // "") != "" then "- Install path: `\(.install_path)` action_ref=`\(.action_ref // "")`" else empty end),
               "- Selected repos: **\(.aggregate.selected)**",
               "- Reports captured: **\(.aggregate.reports)**",
               "- Missing reports: **\(.aggregate.missing_reports)**",
@@ -378,7 +402,7 @@ jobs:
             ' wave-summary.json
             jq -r '
               .repos[] |
-              "## \(.name)\n- Repository: `\(.repository)`\n- Target: `\(.target)`\n- Profile: `\(.profile)`\n- Policy: `\(.policy)` sample=`\(.sample // "")` max_mutants=`\(.max_mutants)` workers=`\(.workers)`\n- Job status: `\(.job_status)`\n- Report kind: `\(.report_kind)`\n" +
+              "## \(.name)\n- Repository: `\(.repository)`\n- Install path: `\(.install_path)` action_ref=`\(.action_ref)`\n- Target: `\(.target)`\n- Profile: `\(.profile)`\n- Policy: `\(.policy)` sample=`\(.sample // "")` max_mutants=`\(.max_mutants)` workers=`\(.workers)`\n- Job status: `\(.job_status)`\n- Report kind: `\(.report_kind)`\n" +
               (
                 if .summary then
                   "- Generated: **\(.denominator_health.generated // 0)**, effective: **\(.denominator_health.effective // 0)**, killed: **\(.summary.killed)**, survived: **\(.summary.survived)**, not covered: **\(.summary.not_covered)**, score: **\(.summary.score)%**, actionable: **\(.summary.actionable_score)%**\n- Triage: actionable_review_units=**\(.triage.actionable_review_units // 0)**, semantic_groups=**\(.triage.semantic_group_count // 0)**, recommendations=**\(.triage.recommendation_entries // 0)**, ledger_entries=**\(.triage.ledger_entries // 0)**, governance_suggestions=**\(.triage.governance_total_suggestions // 0)**\n"

@@ -1,6 +1,6 @@
 # GitHub Action
 
-Tracking issue: #159
+Tracking issues: #159, #182
 
 CervoMutants now ships a first-party GitHub Action for the common CI path:
 install the tool, set up Go, and run a bounded `cervomut run` mutation lane.
@@ -126,6 +126,14 @@ the CLI from the same pinned ref as the action itself, or from the local action
 source when you use a checkout path. Set `cervomut-version: latest` only as an
 explicit override.
 
+That resolution path is now hardened in two ways:
+
+- ref normalization accepts standard GitHub tag refs such as
+  `refs/tags/v0.3.0` and standard branch refs such as `refs/heads/main`
+- blank-version installs prefer the checked-out local action source before
+  falling back to a ref-derived `go install` target, which keeps slash-qualified
+  branch names safe when the action is executed from its source checkout
+
 The action also exposes `report-dir` as a resolved absolute output path so
 follow-up artifact or SARIF steps can reference the chosen output directory
 consistently even when `working-directory` is a subdirectory.
@@ -134,6 +142,15 @@ When that directory lives under `.cervomut/...`, set
 `include-hidden-files: true` on `actions/upload-artifact@v4`; otherwise GitHub
 skips hidden report folders and the upload completes without the expected JSON,
 JUnit, HTML, or SARIF files.
+
+## Validation Coverage
+
+The repository now backs the action with both unit and workflow evidence:
+
+- `cmd/actionhelper` tests cover version/ref resolution and absolute
+  `report-dir` output behavior
+- the main CI workflow runs the composite action through `uses: ./` to validate
+  the local action-source install path and the emitted `report-dir` output
 
 ## Versioning Note
 

@@ -88,12 +88,12 @@ surface.
 - `go vet ./...` passed
 - `go test ./...` passed
 - fresh package coverage sample:
-  - `pkg/engine`: `89.9%`
+  - `pkg/engine`: `90.0%`
   - `pkg/report`: `93.9%`
   - `pkg/runner`: `97.3%`
-  - `pkg/mutator`: `92.9%`
+  - `pkg/mutator`: `93.6%`
   - `pkg/config`: `94.3%`
-  - `pkg/pool`: `80.2%`
+  - `pkg/pool`: `84.2%`
 
 ### Public automation state on 2026-06-19
 
@@ -188,7 +188,7 @@ areas, and much less concentrated orchestration risk.
 - Semantic actionability logic is extracted into `pkg/triage` instead of being
   buried inside orchestration code.
 - Coverage in previously weak areas is materially better, especially
-  `pkg/pool` at `80.2%`.
+  `pkg/pool` at `84.2%`.
 - The engine, report, runner, mutator, and config packages all sit at high
   statement coverage for a tool of this size.
 - The report model remains one of the strongest parts of the system:

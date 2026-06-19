@@ -107,5 +107,7 @@ This document does not say that CervoMutants should launch a hosted service. It
 only defines the boundaries for evaluating one.
 
 The question of whether a hosted or reporting layer is justified belongs to
-issue #193. If that work proceeds, it should be judged against the guardrails
-above instead of inventing a separate product boundary later.
+issue #193. The current evaluation is documented in
+[docs/hosted-reporting-evaluation.md](hosted-reporting-evaluation.md). If that
+work proceeds, it should be judged against the guardrails above instead of
+inventing a separate product boundary later.

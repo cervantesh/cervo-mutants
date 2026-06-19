@@ -680,6 +680,9 @@ Latest local Sonar pass after issue #31:
 - [docs/commercialization-guardrails.md](docs/commercialization-guardrails.md):
   product and architecture guardrails for keeping any future commercial offer
   adjacent to the OSS core.
+- [docs/hosted-reporting-evaluation.md](docs/hosted-reporting-evaluation.md):
+  evidence-based decision on whether an optional hosted or advanced reporting
+  layer is justified yet.
 - [docs/github-review-workflow.md](docs/github-review-workflow.md): the default
   PR and CI review model using the maintained GitHub workflow examples.
 - [docs/history-data.md](docs/history-data.md): storage, export, retention, and

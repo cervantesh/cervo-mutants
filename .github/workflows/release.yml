@@ -42,6 +42,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: "1.25.6"
+      - run: go run ./cmd/releasehelper verify-compat
       - run: go vet ./...
       - run: go test ./...
       - run: mkdir -p dist

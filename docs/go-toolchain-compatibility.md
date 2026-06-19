@@ -9,6 +9,16 @@ reports and coverage artifacts across OS-specific path semantics.
 The official support claim is therefore tied to an explicit CI-validated
 matrix, not only to local anecdotal success.
 
+The repository also enforces this matrix directly in CI and release preparation
+through:
+
+```powershell
+go run ./cmd/releasehelper verify-compat
+```
+
+That check fails if `go.mod`, this document, or the main test/release workflows
+drift away from the supported Go/OS matrix.
+
 ## Official Matrix
 
 | OS | Go version | Status | Automated validation | Notes |

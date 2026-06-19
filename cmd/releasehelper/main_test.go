@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/cervantesh/cervo-mutants/internal/compatmatrix"
 )
 
 func TestExtractMarkdownSection(t *testing.T) {
@@ -69,5 +71,139 @@ func TestCmdNotesWritesOutput(t *testing.T) {
 	}
 	if !strings.Contains(string(data), "- note") || !strings.Contains(string(data), "- migrate") {
 		t.Fatalf("unexpected release notes body:\n%s", data)
+	}
+}
+
+func TestCmdVerifyCompatAcceptsAlignedFiles(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "go.mod"), "module fixture\n\ngo "+compatmatrix.SupportedGoVersion+"\n")
+	writeFile(t, filepath.Join(dir, "docs", "go-toolchain-compatibility.md"), "# Go And OS Compatibility Matrix\n\n"+
+		"| OS | Go version | Status | Automated validation | Notes |\n"+
+		"| --- | --- | --- | --- | --- |\n"+
+		"| Linux | `1.25.x` | Supported | GitHub Actions core lane | Primary validation lane. |\n"+
+		"| Windows | `1.25.x` | Supported | GitHub Actions compatibility smoke | Windows lane. |\n"+
+		"| macOS | `1.25.x` | Supported | GitHub Actions compatibility smoke | macOS lane. |\n"+
+		"| Any OS | `< 1.25` | Unsupported | Not validated | Current `go.mod` baseline is `go 1.25.6`. |\n")
+	writeFile(t, filepath.Join(dir, ".github", "workflows", "test.yml"), `jobs:
+  core-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.6"
+  compatibility-smoke:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            go-version: "1.25.6"
+          - os: windows-latest
+            go-version: "1.25.6"
+          - os: macos-latest
+            go-version: "1.25.6"
+  github-action-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run local GitHub Action source
+        uses: ./
+        with:
+          go-version: "1.25.6"
+`)
+	writeFile(t, filepath.Join(dir, ".github", "workflows", "release.yml"), `jobs:
+  compatibility-smoke:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            go-version: "1.25.6"
+          - os: windows-latest
+            go-version: "1.25.6"
+          - os: macos-latest
+            go-version: "1.25.6"
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.6"
+`)
+
+	err := cmdVerifyCompat([]string{
+		"--go-mod", filepath.Join(dir, "go.mod"),
+		"--doc", filepath.Join(dir, "docs", "go-toolchain-compatibility.md"),
+		"--test-workflow", filepath.Join(dir, ".github", "workflows", "test.yml"),
+		"--release-workflow", filepath.Join(dir, ".github", "workflows", "release.yml"),
+	})
+	if err != nil {
+		t.Fatalf("cmdVerifyCompat returned error: %v", err)
+	}
+}
+
+func TestCmdVerifyCompatRejectsMismatchedWorkflowVersion(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "go.mod"), "module fixture\n\ngo "+compatmatrix.SupportedGoVersion+"\n")
+	writeFile(t, filepath.Join(dir, "docs", "go-toolchain-compatibility.md"), "| Linux | `1.25.x` | Supported |\n"+
+		"| Windows | `1.25.x` | Supported |\n"+
+		"| macOS | `1.25.x` | Supported |\n"+
+		"Current `go.mod` baseline is `go 1.25.6`.\n")
+	writeFile(t, filepath.Join(dir, ".github", "workflows", "test.yml"), `jobs:
+  core-tests:
+    steps:
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24.9"
+  compatibility-smoke:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            go-version: "1.25.6"
+          - os: windows-latest
+            go-version: "1.25.6"
+          - os: macos-latest
+            go-version: "1.25.6"
+  github-action-smoke:
+    steps:
+      - name: Run local GitHub Action source
+        uses: ./
+        with:
+          go-version: "1.25.6"
+`)
+	writeFile(t, filepath.Join(dir, ".github", "workflows", "release.yml"), `jobs:
+  compatibility-smoke:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            go-version: "1.25.6"
+          - os: windows-latest
+            go-version: "1.25.6"
+          - os: macos-latest
+            go-version: "1.25.6"
+  publish:
+    steps:
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.6"
+`)
+
+	err := cmdVerifyCompat([]string{
+		"--go-mod", filepath.Join(dir, "go.mod"),
+		"--doc", filepath.Join(dir, "docs", "go-toolchain-compatibility.md"),
+		"--test-workflow", filepath.Join(dir, ".github", "workflows", "test.yml"),
+		"--release-workflow", filepath.Join(dir, ".github", "workflows", "release.yml"),
+	})
+	if err == nil || !strings.Contains(err.Error(), "core-tests") {
+		t.Fatalf("expected core-tests mismatch error, got %v", err)
+	}
+}
+
+func writeFile(t *testing.T, path, body string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
+		t.Fatal(err)
 	}
 }

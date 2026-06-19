@@ -4,18 +4,12 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/cervantesh/cervo-mutants/internal/compatmatrix"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
-)
-
-const (
-	minSupportedGoMinor     = 25
-	currentTestedGoMinor    = 25
-	compatibilityMatrixText = "supported Go versions: 1.25.x validated on Linux, Windows, and macOS; newer versions warn until validated"
-	validatedGoOSText       = "validated operating systems: linux, windows, darwin"
 )
 
 type Check struct {
@@ -57,15 +51,15 @@ func goToolchainChecks(ctx context.Context, versionOutput string) []Check {
 func goVersionCompatibilityCheck(output string) Check {
 	major, minor, ok := parseGoMajorMinor(output)
 	if !ok {
-		return warning("go-version-compatibility", "unable to parse Go version; "+compatibilityMatrixText+"\n")
+		return warning("go-version-compatibility", "unable to parse Go version; "+compatmatrix.CompatibilityMatrixText()+"\n")
 	}
-	if major != 1 || minor < minSupportedGoMinor {
-		return Check{Name: "go-version-compatibility", OK: false, Severity: "fail", Message: fmt.Sprintf("Go %d.%d is below the supported matrix; %s\n", major, minor, compatibilityMatrixText)}
+	if major != compatmatrix.SupportedGoMajor || minor < compatmatrix.SupportedGoMinor {
+		return Check{Name: "go-version-compatibility", OK: false, Severity: "fail", Message: fmt.Sprintf("Go %d.%d is below the supported matrix; %s\n", major, minor, compatmatrix.CompatibilityMatrixText())}
 	}
-	if minor > currentTestedGoMinor {
-		return warning("go-version-compatibility", fmt.Sprintf("Go %d.%d is newer than the validated matrix; %s\n", major, minor, compatibilityMatrixText))
+	if minor > compatmatrix.SupportedGoMinor {
+		return warning("go-version-compatibility", fmt.Sprintf("Go %d.%d is newer than the validated matrix; %s\n", major, minor, compatmatrix.CompatibilityMatrixText()))
 	}
-	return Check{Name: "go-version-compatibility", OK: true, Severity: "ok", Message: fmt.Sprintf("Go %d.%d is within the compatibility matrix; %s\n", major, minor, compatibilityMatrixText)}
+	return Check{Name: "go-version-compatibility", OK: true, Severity: "ok", Message: fmt.Sprintf("Go %d.%d is within the compatibility matrix; %s\n", major, minor, compatmatrix.CompatibilityMatrixText())}
 }
 
 func goOverlayCompatibilityCheck(output string) Check {
@@ -158,17 +152,15 @@ func checkRuntimeEnvironment() []Check {
 }
 
 func goOSCompatibilityCheck(goos string) Check {
-	switch strings.TrimSpace(strings.ToLower(goos)) {
-	case "linux", "windows", "darwin":
+	if compatmatrix.IsSupportedGOOS(goos) {
 		return Check{
 			Name:     "go-os-compatibility",
 			OK:       true,
 			Severity: "ok",
-			Message:  fmt.Sprintf("GOOS=%s is within the validated compatibility matrix; %s\n", goos, validatedGoOSText),
+			Message:  fmt.Sprintf("GOOS=%s is within the validated compatibility matrix; %s\n", goos, compatmatrix.ValidatedGoOSText()),
 		}
-	default:
-		return warning("go-os-compatibility", fmt.Sprintf("GOOS=%s is outside the validated compatibility matrix; %s\n", goos, validatedGoOSText))
 	}
+	return warning("go-os-compatibility", fmt.Sprintf("GOOS=%s is outside the validated compatibility matrix; %s\n", goos, compatmatrix.ValidatedGoOSText()))
 }
 
 func windowsChecks(wd, temp string) []Check {

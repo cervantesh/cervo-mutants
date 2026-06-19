@@ -52,13 +52,26 @@ func TestFailureHelpersAndFailureResult(t *testing.T) {
 	cfg.Baseline.Enabled = true
 	cfg.History.Enabled = true
 	cfg.History.Path = filepath.ToSlash(filepath.Join(t.TempDir(), "history.json"))
-	failure := Failure{Kind: "runner_error", Message: "baseline failed", CorrelationID: "cid-test"}
+	failure := Failure{
+		Kind:          "runner_error",
+		Message:       "baseline failed",
+		CorrelationID: "cid-test",
+		RunnerResult: &FailureRunnerResult{
+			Status:       StatusCompileError,
+			StatusReason: "baseline compile failed",
+			Command:      []string{"go", "test", "./..."},
+			Output:       "go: toolchain mismatch",
+		},
+	}
 	result := FailureResult(cfg, failure)
 	if result.SchemaVersion != "1" || result.Failure == nil {
 		t.Fatalf("FailureResult() missing schema/failure: %+v", result)
 	}
 	if result.Failure.Kind != failure.Kind || result.StoppedReason != failure.Kind {
 		t.Fatalf("FailureResult() did not preserve failure metadata: %+v", result)
+	}
+	if result.Failure.RunnerResult == nil || result.Failure.RunnerResult.Status != StatusCompileError {
+		t.Fatalf("FailureResult() did not preserve runner result: %+v", result.Failure)
 	}
 	if failed, _ := result.Thresholds["failed"].(bool); !failed {
 		t.Fatalf("FailureResult() thresholds = %+v", result.Thresholds)

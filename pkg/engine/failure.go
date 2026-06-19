@@ -49,6 +49,14 @@ func trimStack(stack string) string {
 	return stack[:maxBytes]
 }
 
+type BaselineFailureError struct {
+	Result MutantResult
+}
+
+func (e *BaselineFailureError) Error() string {
+	return "baseline tests failed before mutation"
+}
+
 func FailureResult(cfg config.Config, failure Failure) RunResult {
 	result := RunResult{
 		SchemaVersion: "1",

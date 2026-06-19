@@ -242,7 +242,7 @@ func (e *Engine) runBaseline(ctx context.Context, targets []string) (MutantResul
 		return MutantResult{}, err
 	}
 	if result.Status != StatusSurvived {
-		return result, errors.New("baseline tests failed before mutation")
+		return result, &BaselineFailureError{Result: result}
 	}
 	return result, nil
 }

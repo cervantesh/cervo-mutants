@@ -291,14 +291,22 @@ type SliceMetadata struct {
 }
 
 type Failure struct {
-	Kind                  string   `json:"kind"`
-	Message               string   `json:"message"`
-	CorrelationID         string   `json:"correlation_id,omitempty"`
-	Command               []string `json:"command,omitempty"`
-	Targets               []string `json:"targets,omitempty"`
-	DebugArtifact         string   `json:"debug_artifact,omitempty"`
-	PartialReportPresent  bool     `json:"partial_report_present,omitempty"`
-	PartialSummaryPresent bool     `json:"partial_summary_present,omitempty"`
+	Kind                  string               `json:"kind"`
+	Message               string               `json:"message"`
+	CorrelationID         string               `json:"correlation_id,omitempty"`
+	Command               []string             `json:"command,omitempty"`
+	Targets               []string             `json:"targets,omitempty"`
+	DebugArtifact         string               `json:"debug_artifact,omitempty"`
+	PartialReportPresent  bool                 `json:"partial_report_present,omitempty"`
+	PartialSummaryPresent bool                 `json:"partial_summary_present,omitempty"`
+	RunnerResult          *FailureRunnerResult `json:"runner_result,omitempty"`
+}
+
+type FailureRunnerResult struct {
+	Status       Status   `json:"status,omitempty"`
+	StatusReason string   `json:"status_reason,omitempty"`
+	Command      []string `json:"command,omitempty"`
+	Output       string   `json:"output,omitempty"`
 }
 
 type Checkpoint struct {

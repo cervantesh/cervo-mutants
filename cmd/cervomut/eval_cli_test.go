@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -493,6 +494,53 @@ func TestRunCommandWritesStructuredFailureArtifactsOnConfigError(t *testing.T) {
 	}
 	if report.Failure.CorrelationID != debug.CorrelationID {
 		t.Fatalf("correlation ids differ report=%q debug=%q", report.Failure.CorrelationID, debug.CorrelationID)
+	}
+}
+
+func TestRunCommandPersistsBaselineFailureDiagnostics(t *testing.T) {
+	dir := writeCLIFixture(t)
+	out := filepath.Join(dir, "baseline-failure-out")
+	restoreCLIHooks(t)
+	baselineOutput := "go: go.mod requires go >= 1.26.0 (running go 1.25.6; GOTOOLCHAIN=local)\n" + strings.Repeat("x", 9000)
+	runEngineFn = func(_ config.Config, _ engine.RunRequest) (engine.RunResult, error) {
+		baselineErr := &engine.BaselineFailureError{Result: engine.MutantResult{
+			Status:       engine.StatusCompileError,
+			StatusReason: "baseline compile failed",
+			TestCommand:  []string{"go", "test", "./pkg/api/resource"},
+			Output:       baselineOutput,
+		}}
+		return engine.RunResult{}, fmt.Errorf("runner_error: %w", baselineErr)
+	}
+
+	err := run([]string{"run", dir, "--out", out})
+	if err == nil || !strings.Contains(err.Error(), "runner_error:") {
+		t.Fatalf("run should return runner_error, got %v", err)
+	}
+	assertCorrelationIDPresent(t, err.Error())
+
+	report := readRunReportForTest(t, out)
+	if report.Failure == nil || report.Failure.Kind != "runner_error" {
+		t.Fatalf("failure report = %+v", report.Failure)
+	}
+	if report.Failure.RunnerResult == nil {
+		t.Fatalf("runner result missing from failure report: %+v", report.Failure)
+	}
+	if report.Failure.RunnerResult.Status != engine.StatusCompileError || report.Failure.RunnerResult.StatusReason != "baseline compile failed" {
+		t.Fatalf("runner result metadata = %+v", report.Failure.RunnerResult)
+	}
+	if got, want := strings.Join(report.Failure.RunnerResult.Command, " "), "go test ./pkg/api/resource"; got != want {
+		t.Fatalf("runner command = %q, want %q", got, want)
+	}
+	if got, want := report.Failure.RunnerResult.Output, trimFailureOutput(baselineOutput); got != want {
+		t.Fatalf("runner output mismatch len=%d want=%d", len(got), len(want))
+	}
+
+	debug := readFailureDebugForTest(t, out)
+	if debug.RunnerResult == nil {
+		t.Fatalf("runner result missing from failure debug artifact: %+v", debug)
+	}
+	if got, want := debug.RunnerResult.Output, trimFailureOutput(baselineOutput); got != want {
+		t.Fatalf("debug runner output mismatch len=%d want=%d", len(got), len(want))
 	}
 }
 

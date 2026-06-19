@@ -370,6 +370,11 @@ jobs:
         shell: bash
         run: |
           jq -r '
+            def compact_inline:
+              gsub("[\r\n\t]+"; " ")
+              | gsub("`"; "")
+              | gsub("  +"; " ")
+              | if length > 240 then .[0:240] + "..." else . end;
             "## " + .name,
             "- Repository: `" + .repository + "`",
             "- Install path: `" + .install_path + "` action_ref=`" + .action_ref + "`",
@@ -395,6 +400,14 @@ jobs:
             (
               if .failure then
                 "- Failure: `\(.failure.kind)` \(.failure.message // "")"
+              else
+                empty
+              end
+            ),
+            (
+              if (.failure.runner_result // null) then
+                "- Runner detail: status=`\(.failure.runner_result.status // "")` reason=`\(.failure.runner_result.status_reason // "")` command=`\((.failure.runner_result.command // []) | join(" "))`" +
+                (if ((.failure.runner_result.output // "") != "") then " output=`\((.failure.runner_result.output // "") | compact_inline)`" else "" end)
               else
                 empty
               end
@@ -514,6 +527,11 @@ jobs:
             jq -r '
               def format_status_counts:
                 ((. // {}) | to_entries | sort_by(.key) | map("\(.key)=\(.value)") | join(", "));
+              def compact_inline:
+                gsub("[\r\n\t]+"; " ")
+                | gsub("`"; "")
+                | gsub("  +"; " ")
+                | if length > 240 then .[0:240] + "..." else . end;
               (if (.tracking_issue // "") != "" then "- Tracking issue: **\(.tracking_issue)**" else empty end),
               (if (.manifest_path // "") != "" then "- Manifest: `\(.manifest_path)`" else empty end),
               (if (.install_path // "") != "" then "- Install path: `\(.install_path)` action_ref=`\(.action_ref // "")`" else empty end),
@@ -553,6 +571,7 @@ jobs:
                   "- Generated: **\(.denominator_health.generated // 0)**, effective: **\(.denominator_health.effective // 0)**, killed: **\(.summary.killed)**, survived: **\(.summary.survived)**, not covered: **\(.summary.not_covered)**, score: **\(.summary.score)%**, actionable: **\(.summary.actionable_score)%**\n- Triage: actionable_review_units=**\(.triage.actionable_review_units // 0)**, semantic_groups=**\(.triage.semantic_group_count // 0)**, recommendations=**\(.triage.recommendation_entries // 0)**, recommendation_review_units=**\(.triage.recommendation_review_units // 0)**, collapsed_recommendation_duplicates=**\(.triage.collapsed_recommendation_duplicates // 0)**, ledger_entries=**\(.triage.ledger_entries // 0)**, governance_suggestions=**\(.triage.governance_total_suggestions // 0)**" +
                   (if ((.triage.governance_suggestions_by_status // {}) | length) > 0 then " (`\(.triage.governance_suggestions_by_status | format_status_counts)`)" else "" end) +
                   (if .failure then "\n- Failure: `\(.failure.kind)` \(.failure.message // "")" else "" end) +
+                  (if (.failure.runner_result // null) then "\n- Runner detail: status=`\(.failure.runner_result.status // "")` reason=`\(.failure.runner_result.status_reason // "")` command=`\((.failure.runner_result.command // []) | join(" "))`" + (if ((.failure.runner_result.output // "") != "") then " output=`\((.failure.runner_result.output // "") | compact_inline)`" else "" end) else "" end) +
                   "\n"
                 else
                   "- No report metrics captured\n"

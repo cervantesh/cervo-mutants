@@ -232,13 +232,14 @@ func writeRunResult(cfg config.Config, result engine.RunResult, dryRun bool) err
 }
 
 type failureDebugArtifact struct {
-	SchemaVersion string   `json:"schema_version"`
-	Kind          string   `json:"kind"`
-	Message       string   `json:"message"`
-	CorrelationID string   `json:"correlation_id"`
-	Command       []string `json:"command,omitempty"`
-	Targets       []string `json:"targets,omitempty"`
-	StackTrace    string   `json:"stack_trace,omitempty"`
+	SchemaVersion string                      `json:"schema_version"`
+	Kind          string                      `json:"kind"`
+	Message       string                      `json:"message"`
+	CorrelationID string                      `json:"correlation_id"`
+	Command       []string                    `json:"command,omitempty"`
+	Targets       []string                    `json:"targets,omitempty"`
+	StackTrace    string                      `json:"stack_trace,omitempty"`
+	RunnerResult  *engine.FailureRunnerResult `json:"runner_result,omitempty"`
 }
 
 func finalizeStructuredFailure(command string, args, targets []string, cfg config.Config, kind string, cause error, stack string) error {
@@ -247,6 +248,7 @@ func finalizeStructuredFailure(command string, args, targets []string, cfg confi
 	partialReportPresent := fileExists(filepath.Join(outputDir, "partial-mutation-report.json"))
 	partialSummaryPresent := fileExists(filepath.Join(outputDir, "partial-summary.json"))
 	debugArtifact := ""
+	runnerResult := runnerFailureResultFromError(cause)
 	if outputDir != "" {
 		_ = os.MkdirAll(outputDir, 0o755)
 		debugArtifact = failureDebugFileName
@@ -258,6 +260,7 @@ func finalizeStructuredFailure(command string, args, targets []string, cfg confi
 			Command:       append([]string{"cervomut", command}, args...),
 			Targets:       append([]string{}, targets...),
 			StackTrace:    stack,
+			RunnerResult:  runnerResult,
 		}, "", "  ")
 		if err == nil {
 			_ = os.WriteFile(filepath.Join(outputDir, failureDebugFileName), debugData, 0o644)
@@ -273,6 +276,7 @@ func finalizeStructuredFailure(command string, args, targets []string, cfg confi
 				DebugArtifact:         debugArtifact,
 				PartialReportPresent:  partialReportPresent,
 				PartialSummaryPresent: partialSummaryPresent,
+				RunnerResult:          runnerResult,
 			})
 			if data, err := report.JSON(runResult); err == nil {
 				_ = os.WriteFile(reportPath, data, 0o644)
@@ -314,6 +318,32 @@ func stackFromError(err error) string {
 		return trimCLIStack(panicErr.Stack)
 	}
 	return ""
+}
+
+func runnerFailureResultFromError(err error) *engine.FailureRunnerResult {
+	var baselineErr *engine.BaselineFailureError
+	if !errors.As(err, &baselineErr) {
+		return nil
+	}
+	result := baselineErr.Result
+	if result.Status == "" && result.StatusReason == "" && len(result.TestCommand) == 0 && result.Output == "" {
+		return nil
+	}
+	return &engine.FailureRunnerResult{
+		Status:       result.Status,
+		StatusReason: result.StatusReason,
+		Command:      append([]string{}, result.TestCommand...),
+		Output:       trimFailureOutput(result.Output),
+	}
+}
+
+func trimFailureOutput(output string) string {
+	const maxBytes = 8192
+	output = strings.TrimSpace(output)
+	if len(output) <= maxBytes {
+		return output
+	}
+	return output[:maxBytes]
 }
 
 func trimCLIStack(stack string) string {

@@ -1,6 +1,6 @@
 # Project Maturity Assessment
 
-Tracking issue: https://github.com/cervantesh/cervo-mutants/issues/208
+Tracking issues: #208, #234
 
 Assessment date: 2026-06-19
 
@@ -11,9 +11,10 @@ product, code, and operations. It is intentionally time-bound: maturity can
 move quickly as CI, releases, public adoption, and major features change.
 
 This snapshot evaluates the current `main` branch state on 2026-06-19. The
-latest public release is still `v0.3.0` from 2026-06-17, so some of the
-strongest operational evidence below is proven on `main` but is not yet
-packaged in the latest public tag.
+latest public release is now `v0.4.0` from 2026-06-19, so the biggest
+release-head lag identified earlier is materially closed. The current `main`
+branch still contains a few small post-release guidance follow-ups, but the
+public tag now reflects most of the repository's current hardened surface.
 
 ## Scale
 
@@ -31,8 +32,8 @@ packaged in the latest public tag.
 | --- | ---: | --- |
 | Functional / product maturity | `4.0 / 5` | strong public beta |
 | Code / engineering maturity | `3.8 / 5` | well-structured with a few remaining hotspots |
-| Operational maturity | `3.5 / 5` | credible public automation, still young release practice |
-| Overall maturity | `3.8 / 5` | credible public beta approaching broader external use |
+| Operational maturity | `3.7 / 5` | credible public automation and aligned release surface, still young release practice |
+| Overall maturity | `3.9 / 5` | credible public beta approaching broader external use |
 
 ## Executive Summary
 
@@ -46,35 +47,39 @@ On `main`, it now has:
 - release automation with install, archive, and upgrade verification
 - bounded external validation with committed artifacts and rollout guidance
 
-The biggest remaining gap is no longer broken public automation. The bigger
-gap is that the latest public release still predates much of the recent
-operational hardening, and direct external maintainer adoption evidence is
-still early.
+The biggest remaining gap is no longer broken public automation, and it is no
+longer a major lag between repository head and latest public release. The
+bigger remaining gaps are still direct external maintainer adoption evidence,
+release repetition over time, and deeper proof that the newer review surfaces
+stay useful outside bounded validation waves.
 
 That keeps the project just short of a clean `4 / 5` overall maturity
 classification. The current state is best described as a credible public beta
-whose repository head is stronger than its latest release.
+whose latest public release now represents most of the hardened repository
+surface.
 
 ## Evidence Snapshot
 
 ### Repository and release state
 
 - Public GitHub repository created on 2026-06-17.
-- Public releases present on 2026-06-19: `v0.1.0`, `v0.2.0`, `v0.3.0`.
-- Latest public release remains `v0.3.0` from 2026-06-17 with multi-OS assets
-  and `SHA256SUMS`.
+- Public releases present on 2026-06-19: `v0.1.0`, `v0.2.0`, `v0.3.0`,
+  `v0.4.0`.
+- Latest public release is `v0.4.0` from 2026-06-19 with multi-OS assets,
+  `release-manifest.json`, and `SHA256SUMS`.
 - GitHub Pages is live at `https://cervantesh.github.io/cervo-mutants/`.
 - The seeded Phase 5 and Phase 6 roadmap backlog is closed.
-- New follow-up work is now tracked in `#206`, `#207`, and `#208`.
+- The immediate post-roadmap follow-up trio `#206`, `#207`, and `#208` is
+  closed.
 
 ### Codebase shape
 
 - `17` packages under `pkg/`
-- `59` product source files under `pkg/` and `cmd/`
+- `60` product source files under `pkg/` and `cmd/`
 - `39` test files under `pkg/` and `cmd/`
-- about `14,891` lines of product code
-- about `9,604` lines of test code
-- about `8,186` lines of repo documentation in `README`, `docs/`, `site/`, and
+- about `14,922` lines of product code
+- about `9,654` lines of test code
+- about `10,416` lines of repo documentation in `README`, `docs/`, `site/`, and
   workflow files
 
 ### Local validation on 2026-06-19
@@ -83,7 +88,7 @@ whose repository head is stronger than its latest release.
 - `go test ./...` passed
 - fresh package coverage sample:
   - `pkg/engine`: `89.9%`
-  - `pkg/report`: `93.8%`
+  - `pkg/report`: `93.9%`
   - `pkg/runner`: `97.3%`
   - `pkg/mutator`: `92.9%`
   - `pkg/config`: `94.3%`
@@ -100,26 +105,30 @@ whose repository head is stronger than its latest release.
 
 ### Repo-head versus release-head
 
-The latest release is not yet a full proxy for repository-head maturity.
+The latest release is now a much stronger proxy for repository-head maturity.
 
-`v0.3.0` already proves:
+`v0.4.0` proves:
 
 - Windows-native execution hardening
 - deterministic large-repo slicing
 - survivor-ranking calibration improvements
-
-`main` now additionally proves:
-
-- first-party GitHub Action hardening
+- semantic triage, actionable-only review, and additive actionable reporting
+- first-party GitHub Action support
 - CI-enforced compatibility matrix behavior
 - previous-release upgrade smoke
 - install and archive verification gates
 - expanded adoption guidance, operations guidance, and external-validation
   framing
 
-That gap matters. Operational confidence is materially better than the
-2026-06-17 assessment implied, but some of that confidence still needs a new
-public release before it becomes the default experience for external users.
+`main` now additionally proves:
+
+- post-release rollout-doc tightening from real field friction
+- low-denominator guidance in human-facing summaries for weak first runs
+
+That gap is now narrower and mostly additive. External users get most of the
+current hardened product through the latest public release, while `main`
+contains smaller post-release guidance refinements rather than a major
+unreleased operational leap.
 
 ## Functional Maturity
 
@@ -158,8 +167,8 @@ just a capable engine surrounded by rough edges.
   adoption or long-running production usage across multiple external teams.
 - Recommendation and triage quality still need more field calibration from real
   adoption feedback, not only fixtures and internal review samples.
-- The newest operationally strong workflows are proven on `main`, but not yet
-  shipped in a newer public release than `v0.3.0`.
+- The newest post-release guidance refinements are proven on `main`, but they
+  are smaller additive follow-ups rather than a large unreleased product gap.
 
 ## Code And Engineering Maturity
 
@@ -202,7 +211,7 @@ areas, and much less concentrated orchestration risk.
 
 ## Operational Maturity
 
-### Score: `3.5 / 5`
+### Score: `3.7 / 5`
 
 Operational maturity is no longer the obvious weak point. The project now has
 credible public automation and compatibility discipline, but it is still early
@@ -223,12 +232,13 @@ in release repetition and external adoption proof.
 
 ### What is not mature enough yet
 
-- The strongest operational hardening is on `main`, but the latest public tag
-  is still `v0.3.0`. That means the default install experience for external
-  users has not yet caught up to the current repository state.
-- Public release history is still extremely young and compressed. Three releases
-  on the same day are enough to bootstrap a project, not enough to prove a
-  stable long-term release cadence.
+- The strongest operational hardening is now packaged in `v0.4.0`, but public
+  release history is still extremely young and compressed. Four releases in
+  three days are enough to bootstrap a project, not enough to prove a stable
+  long-term release cadence.
+- Small repo-head versus release-head drift can still reopen quickly if the
+  next release cadence slips, even though the `v0.4.0` catch-up materially
+  reduced that gap.
 - External adoption evidence is better than before, but still too early to
   claim broad field validation across multiple independent teams.
 
@@ -243,8 +253,8 @@ in release repetition and external adoption proof.
 
 ## Main Risks
 
-- Repository-head quality is now ahead of the latest release, which can confuse
-  external users unless the next release lands soon
+- Release-state drift can reopen quickly if the repo keeps improving faster
+  than tagged releases are cut
 - Broad external adoption is still a hypothesis supported by bounded evidence,
   not yet a fully repeated field result
 - Daemon/worker can still create expectation drift if users read it as a mature
@@ -256,17 +266,18 @@ in release repetition and external adoption proof.
 
 ### Immediate
 
-1. Publish the next release so the public install path catches up with the
-   current compatibility and automation hardening.
-2. Refresh the public maturity narrative and keep release-head versus repo-head
-   claims explicit.
+1. Keep release-head aligned with repo-head; the `v0.4.0` catch-up should
+   become the norm, not a one-off.
+2. Refresh the public maturity narrative and install guidance whenever release
+   state changes.
 3. Start the next external adoption and signal-calibration workstream from real
    repository usage, not only internal fixtures.
 
 ### Near term
 
 1. Measure recommendation yield and triage quality from the next adoption wave.
-2. Tighten rollout defaults and docs where repeated field friction appears.
+2. Tighten rollout defaults, docs, or low-signal guidance where repeated field
+   friction appears.
 3. Keep building evidence of stable release operations across more than one
    post-hardening release cycle.
 
@@ -283,10 +294,12 @@ in release repetition and external adoption proof.
 As of 2026-06-19, CervoMutants should be described as:
 
 > a credible public beta mutation-testing toolkit with strong functional depth,
-> materially improved engineering maturity, and operational confidence on
-> `main` that is now ahead of the latest public release.
+> materially improved engineering maturity, and operational confidence that is
+> now represented in the latest public release, with only smaller additive
+> follow-ups currently living on `main`.
 
 That is a materially stronger position than the 2026-06-17 snapshot. The next
-transition is not "make the repo stop looking broken." The next transition is
-"ship the hardened state, gather deeper external evidence, and calibrate the
-remaining judgment-heavy features from real usage."
+transition is not "make the repo stop looking broken," and it is no longer
+"catch the public release up to the hardened repo head." The next transition is
+"gather deeper external evidence, keep release discipline steady, and calibrate
+the remaining judgment-heavy features from real usage."

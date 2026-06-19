@@ -12,6 +12,27 @@ The format is intentionally simple:
 
 - No unreleased entries yet.
 
+## [v0.4.2] - 2026-06-19
+
+### Changed
+
+- Hosted external-wave result and summary generation now run through tested Go
+  helpers in `cmd/actionhelper` instead of large inline workflow scripts.
+- The hosted external-wave workflow now runs those helper commands from the
+  checked-out source module, fixing the post-`#278` working-directory
+  regression on GitHub-hosted runners.
+
+### Documentation
+
+- Published a dated current-main hosted-wave verification note and committed
+  aggregate summary artifact for the post-hardening rerun after the helper-path
+  repair.
+
+### Verification
+
+- `go run ./cmd/releasehelper verify-compat`
+- `go run ./cmd/releasehelper notes --version v0.4.2 --out .tmp/release-notes-v0.4.2.md`
+
 ## [v0.4.1] - 2026-06-19
 
 ### Changed

@@ -11,11 +11,11 @@ product, code, and operations. It is intentionally time-bound: maturity can
 move quickly as CI, releases, public adoption, and major features change.
 
 This snapshot evaluates the current `main` branch state on 2026-06-19. The
-latest public release is now `v0.4.1` from 2026-06-19, so the earlier
-release-head lag plus the immediate release-surface follow-ups are now
-materially closed. The current `main` branch and latest public tag are now
-effectively aligned for the supported install, CI, and reporting surfaces
-described in this assessment.
+latest public release is now `v0.4.2` from 2026-06-19, so the earlier
+release-head lag plus the smaller hosted follow-ups are now also packaged in
+the public release surface. The current `main` branch and latest public tag
+are now effectively aligned for the supported install, CI, and reporting
+surfaces described in this assessment.
 
 ## Scale
 
@@ -65,8 +65,8 @@ surface.
 
 - Public GitHub repository created on 2026-06-17.
 - Public releases present on 2026-06-19: `v0.1.0`, `v0.2.0`, `v0.3.0`,
-  `v0.4.0`, `v0.4.1`.
-- Latest public release is `v0.4.1` from 2026-06-19 with multi-OS assets,
+  `v0.4.0`, `v0.4.1`, `v0.4.2`.
+- Latest public release is `v0.4.2` from 2026-06-19 with multi-OS assets,
   `release-manifest.json`, and `SHA256SUMS`.
 - GitHub Pages is live at `https://cervantesh.github.io/cervo-mutants/`.
 - The seeded Phase 5 and Phase 6 roadmap backlog is closed.
@@ -109,7 +109,7 @@ surface.
 The latest release is now effectively aligned with repository-head maturity for
 the supported public surfaces.
 
-`v0.4.1` proves:
+`v0.4.2` now packages:
 
 - Windows-native execution hardening
 - deterministic large-repo slicing
@@ -117,6 +117,8 @@ the supported public surfaces.
 - semantic triage, actionable-only review, and additive actionable reporting
 - first-party GitHub Action support
 - released GitHub Action alignment on `actions/setup-go@v6`
+- hosted wave result and summary generation through tested Go helpers
+- repaired helper working-directory behavior for hosted external waves
 - CI-enforced compatibility matrix behavior
 - previous-release upgrade smoke
 - install and archive verification gates
@@ -169,8 +171,9 @@ just a capable engine surrounded by rough edges.
   adoption or long-running production usage across multiple external teams.
 - Recommendation and triage quality still need more field calibration from real
   adoption feedback, not only fixtures and internal review samples.
-- The newest post-release guidance refinements are proven on `main`, but they
-  are smaller additive follow-ups rather than a large unreleased product gap.
+- The newest hosted and guidance refinements are now represented in the public
+  release line, but they are still additive polish rather than a fundamental
+  maturity jump by themselves.
 
 ## Code And Engineering Maturity
 
@@ -234,12 +237,12 @@ in release repetition and external adoption proof.
 
 ### What is not mature enough yet
 
-- The strongest operational hardening is now packaged in `v0.4.1`, but public
-  release history is still extremely young and compressed. Five releases in
+- The strongest operational hardening is now packaged in `v0.4.2`, but public
+  release history is still extremely young and compressed. Six releases in
   three days are enough to bootstrap a project, not enough to prove a stable
   long-term release cadence.
 - Small repo-head versus release-head drift can still reopen quickly if the
-  next release cadence slips, even though the `v0.4.1` alignment materially
+  next release cadence slips, even though the `v0.4.2` alignment materially
   reduced that gap.
 - External adoption evidence is better than before, but still too early to
   claim broad field validation across multiple independent teams.
@@ -268,7 +271,7 @@ in release repetition and external adoption proof.
 
 ### Immediate
 
-1. Keep release-head aligned with repo-head; the `v0.4.1` alignment should
+1. Keep release-head aligned with repo-head; the `v0.4.2` alignment should
    become the norm, not a one-off.
 2. Refresh the public maturity narrative and install guidance whenever release
    state changes.
@@ -297,8 +300,8 @@ As of 2026-06-19, CervoMutants should be described as:
 
 > a credible public beta mutation-testing toolkit with strong functional depth,
 > materially improved engineering maturity, and operational confidence that is
-> now represented in the latest public release, with only smaller additive
-> follow-ups currently living on `main`.
+> now represented in the latest public release, without a meaningful supported
+> surface gap between repo-head and release-head.
 
 That is a materially stronger position than the 2026-06-17 snapshot. The next
 transition is not "make the repo stop looking broken," and it is no longer

@@ -1,6 +1,6 @@
 # Adoption Feedback Intake
 
-Tracking issue: #136
+Tracking issues: #136, #190
 
 This document defines the supported path for collecting external adoption
 feedback without relying on private chat notes or maintainer memory.
@@ -18,6 +18,12 @@ whenever a real repository rollout surfaces useful feedback about:
 
 The template intentionally asks for the same fields every time so feedback stays
 comparable across repositories and releases.
+
+It now also captures structured rollout dimensions such as repository profile,
+adoption stage, install path, closest rollout playbook, primary blocker class,
+and the suggested outcome. Those fields are the basis for release-level
+adoption analytics rather than a maintainer trying to reconstruct patterns from
+free-text issues later.
 
 ## What Good Feedback Looks Like
 
@@ -48,6 +54,10 @@ If the same finding repeats, link it from
 [docs/evaluations/follow-up-ledger.md](evaluations/follow-up-ledger.md) so it
 becomes part of the explicit backlog instead of remaining buried in individual
 issue threads.
+
+For the analytics model, promotion rules, and release-level review loop that
+turn those issues into durable product signal, see
+[docs/adoption-analytics.md](adoption-analytics.md).
 
 For the maintainer-side support bundle, triage flow, and upgrade checklist used
 when processing external adoption feedback, see

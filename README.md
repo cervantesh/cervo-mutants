@@ -682,6 +682,8 @@ Latest local Sonar pass after issue #31:
   bundle for external adopters.
 - [docs/feedback-intake.md](docs/feedback-intake.md): durable external-adoption
   feedback path and triage expectations.
+- [docs/adoption-analytics.md](docs/adoption-analytics.md): structured
+  external-adoption dimensions, derived metrics, and release-loop review model.
 - [docs/commercialization-guardrails.md](docs/commercialization-guardrails.md):
   product and architecture guardrails for keeping any future commercial offer
   adjacent to the OSS core.

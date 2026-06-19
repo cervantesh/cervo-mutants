@@ -6,6 +6,33 @@ body:
     attributes:
       value: |
         Use this template when CervoMutants is being tried on a real repository and you want the result to become actionable product feedback instead of a one-off note.
+  - type: dropdown
+    id: repo_profile
+    attributes:
+      label: Repository profile
+      description: Choose the closest repository shape.
+      options:
+        - Compact library
+        - Medium service
+        - Large repository or monorepo
+        - Other or mixed shape
+    validations:
+      required: true
+  - type: dropdown
+    id: adoption_stage
+    attributes:
+      label: Adoption stage
+      description: Which rollout phase produced this feedback?
+      options:
+        - First dry run
+        - First useful report
+        - Baseline setup
+        - Pull request lane
+        - Nightly lane
+        - History or governance review
+        - Comparison or benchmark workflow
+    validations:
+      required: true
   - type: input
     id: repo
     attributes:
@@ -38,6 +65,40 @@ body:
       placeholder: v0.3.0
     validations:
       required: true
+  - type: dropdown
+    id: install_path
+    attributes:
+      label: Install path
+      description: How was CervoMutants installed or invoked?
+      options:
+        - go install
+        - GitHub release archive
+        - Local source build
+        - GitHub Action
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: closest_playbook
+    attributes:
+      label: Closest rollout playbook followed
+      description: Which public rollout path was closest to what you tried?
+      options:
+        - Small library playbook
+        - Medium service playbook
+        - Large repository playbook
+        - Custom rollout, not based on a published playbook
+        - Unsure
+    validations:
+      required: true
+  - type: input
+    id: time_to_first_report
+    attributes:
+      label: Time to first useful report
+      description: If known, how long did it take to get to a reviewable report?
+      placeholder: 20 minutes
+    validations:
+      required: false
   - type: textarea
     id: workflow
     attributes:
@@ -81,6 +142,34 @@ body:
       label: Rollout friction
       description: Setup, config, CI, baseline, or platform friction that slowed adoption.
       placeholder: Needed one extra exclusion rule for generated mocks; otherwise first run was straightforward.
+    validations:
+      required: true
+  - type: dropdown
+    id: primary_blocker
+    attributes:
+      label: Primary blocker class
+      description: Which class best describes the main friction in this report?
+      options:
+        - Signal noise or equivalent-risk survivors
+        - Review UX or report usability
+        - Runtime or resource behavior
+        - CI, install, or platform setup
+        - Baseline, governance, or history workflow
+        - Unsupported workflow expectation
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: suggested_outcome
+    attributes:
+      label: Suggested outcome
+      description: What kind of follow-up does this evidence point to?
+      options:
+        - Documentation clarification
+        - Workflow or example improvement
+        - Product or code change
+        - Explicit support-boundary clarification
+        - Need narrower reproduction before acting
     validations:
       required: true
   - type: textarea

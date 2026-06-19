@@ -18,6 +18,7 @@ This pack gives maintainers a compact operating baseline for:
 - known limits to state explicitly
 - the evidence bundle to request from adopters
 - the issue templates and report artifacts that should anchor triage
+- the adoption analytics loop used to aggregate repeated external friction
 
 ## Current Support Baseline
 
@@ -115,9 +116,11 @@ Use this flow for first-pass maintainer triage:
 3. Check whether the closest rollout playbook was followed.
 4. Review the artifact bundle before classifying the issue as product, docs, or
    unsupported workflow.
-5. If the same friction already exists in docs, point to the current guidance.
-6. If the docs are insufficient, file or link a documentation follow-up.
-7. If the behavior contradicts supported docs or compatibility claims, file or
+5. Record the repository profile, adoption stage, primary blocker, and outcome
+   type from the issue form so the feedback remains aggregatable.
+6. If the same friction already exists in docs, point to the current guidance.
+7. If the docs are insufficient, file or link a documentation follow-up.
+8. If the behavior contradicts supported docs or compatibility claims, file or
    link a product or code follow-up.
 
 ## Report Artifact Cheat Sheet
@@ -139,6 +142,7 @@ over re-running the repo blind.
 - [docs/adoption-guide.md](adoption-guide.md)
 - [docs/rollout-playbooks.md](rollout-playbooks.md)
 - [docs/feedback-intake.md](feedback-intake.md)
+- [docs/adoption-analytics.md](adoption-analytics.md)
 - [docs/go-toolchain-compatibility.md](go-toolchain-compatibility.md)
 - [docs/releasing.md](releasing.md)
 - [docs/branch-release-comparisons.md](branch-release-comparisons.md)

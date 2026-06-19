@@ -210,7 +210,10 @@ type externalWaveManifest struct {
 	ActionRef   string `json:"action_ref"`
 }
 
-var versionRefPattern = regexp.MustCompile(`\bv\d+\.\d+\.\d+\b`)
+var (
+	versionRefPattern          = regexp.MustCompile(`\bv\d+\.\d+\.\d+\b`)
+	currentReleaseMarkerRegexp = regexp.MustCompile(`(?i)(latest public release|latest release|current release)`)
+)
 
 func verifyReleaseAlignment(repoRoot, version string) error {
 	root := resolveRepoPath(repoRoot, ".")
@@ -235,6 +238,15 @@ func verifyReleaseAlignment(repoRoot, version string) error {
 		if err := verifyVersionPinnedDoc(resolveRepoPath(root, path), version); err != nil {
 			return err
 		}
+	}
+	if err := verifyRequiredCurrentReleaseMarker(resolveRepoPath(root, filepath.Join("docs", "project-maturity-assessment.md")), version); err != nil {
+		return err
+	}
+	if err := verifyOptionalCurrentReleaseMarker(resolveRepoPath(root, "README.md"), version); err != nil {
+		return err
+	}
+	if err := verifyReleaseEvidenceTrail(resolveRepoPath(root, filepath.Join("docs", "release-evidence-trail.md")), version); err != nil {
+		return err
 	}
 	return nil
 }
@@ -293,6 +305,73 @@ func verifyVersionPinnedDoc(path, version string) error {
 		if match != version {
 			return fmt.Errorf("%s references release %q, want only %q", filepath.ToSlash(path), match, version)
 		}
+	}
+	return nil
+}
+
+func verifyRequiredCurrentReleaseMarker(path, version string) error {
+	found, err := verifyCurrentReleaseMarker(path, version)
+	if err != nil {
+		return err
+	}
+	if !found {
+		return fmt.Errorf("%s must contain a current-release marker for %q", filepath.ToSlash(path), version)
+	}
+	return nil
+}
+
+func verifyOptionalCurrentReleaseMarker(path, version string) error {
+	_, err := verifyCurrentReleaseMarker(path, version)
+	return err
+}
+
+func verifyCurrentReleaseMarker(path, version string) (bool, error) {
+	body, err := os.ReadFile(path)
+	if err != nil {
+		return false, fmt.Errorf("read current-release doc %s: %w", filepath.ToSlash(path), err)
+	}
+	found := false
+	for _, line := range strings.Split(string(body), "\n") {
+		if !currentReleaseMarkerRegexp.MatchString(line) {
+			continue
+		}
+		matches := uniqueStrings(versionRefPattern.FindAllString(line, -1))
+		if len(matches) == 0 {
+			continue
+		}
+		found = true
+		for _, match := range matches {
+			if match != version {
+				return false, fmt.Errorf("%s current-release marker references %q, want only %q", filepath.ToSlash(path), match, version)
+			}
+		}
+	}
+	return found, nil
+}
+
+func verifyReleaseEvidenceTrail(path, version string) error {
+	body, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("read release evidence trail %s: %w", filepath.ToSlash(path), err)
+	}
+	text := string(body)
+	rowPattern := regexp.MustCompile(fmt.Sprintf(`(?m)^\| \[%s\]\([^)]+\) \| .*$`, regexp.QuoteMeta("`"+version+"`")))
+	row := rowPattern.FindString(text)
+	if row == "" {
+		return fmt.Errorf("%s must contain release trail row for %q", filepath.ToSlash(path), version)
+	}
+	for _, want := range []string{
+		fmt.Sprintf("/releases/tag/%s", version),
+		fmt.Sprintf("/releases/download/%s/release-manifest.json", version),
+		fmt.Sprintf("/releases/download/%s/SHA256SUMS", version),
+		fmt.Sprintf("(upgrade-notes/%s.md)", version),
+	} {
+		if !strings.Contains(row, want) {
+			return fmt.Errorf("%s release trail row for %q must contain %q", filepath.ToSlash(path), version, want)
+		}
+	}
+	if !strings.Contains(text, fmt.Sprintf("| `%s` |", version)) {
+		return fmt.Errorf("%s must contain comparison row for %q", filepath.ToSlash(path), version)
 	}
 	return nil
 }

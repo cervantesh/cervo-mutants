@@ -93,9 +93,21 @@ reviewable denominator health first:
 - `not covered`
 - denominator warnings in `summary.txt`
 
+Then check whether raw survivors and review workload actually match:
+
+- `actionable review units`
+- `semantic group review units`
+- `test-recommendations.md`
+- `governance-review.md`
+
 If the first bounded run finishes but yields near-zero effective mutants or
 mostly not-covered rows, narrow the target before you widen policy depth or set
 CI expectations.
+
+Healthy first useful reports can still look different from each other:
+
+- `generated=10 effective=10 survived=3 actionable_review_units=2 semantic_group_review_units=1` means the lane found real work, but repeated boundary survivors already collapsed into one review-once cluster.
+- `generated=10 covered=7 effective=7 survived=0 actionable_review_units=0 not_covered=3` can still be a healthy bounded lane when denominator warnings stay quiet; it means this slice produced no immediate survivor work, not that the rollout failed.
 
 On Windows, `temp-workdir` runs now harden themselves automatically:
 
@@ -472,6 +484,17 @@ uses:
 The goal is to answer "which test should I touch first and what kind of
 assertion is missing?" without generating tests automatically.
 
+Read raw survivors and actionable workload separately:
+
+1. `survived > 0` and `actionable_review_units > 0`
+   Start with `test-recommendations.md` and review the highest-ranked survivors.
+2. `survived > actionable_review_units` and `semantic_group_review_units > 0`
+   The lane is compressing repeated equivalent-risk families; review the group
+   once before you treat each raw survivor as separate work.
+3. `survived = 0` and `actionable_review_units = 0` with healthy denominator
+   counts
+   That is a valid no-action lane, not a broken run.
+
 ## Quarantine And Suppression
 
 Quarantine is temporary debt, not a way to inflate score.
@@ -500,6 +523,10 @@ for this policy layer. They generate:
 Suppression is stricter. A rule with `action: suppress` requires confirmed
 evidence and at least one reviewer. Lower-confidence rules should use
 `report-only`, `lower-priority`, or `quarantine-required`.
+
+`report-only` is an audit suggestion, not a hidden failure state. It usually
+means "keep this visible, but do not treat it as mandatory test work until a
+human review says otherwise."
 
 Inline ignores are allowed only with reasons:
 

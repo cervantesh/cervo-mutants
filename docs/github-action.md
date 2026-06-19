@@ -154,6 +154,13 @@ Review these first from the uploaded artifacts or step summary:
 - denominator-health warnings
 - whether the run produced any actionable review units or survivor output at all
 
+Then separate raw survivors from real review workload:
+
+- `actionable_review_units`
+- `semantic_group_review_units`
+- `test-recommendations.md`
+- `governance-review.md`
+
 Treat the first hosted result as one of three different states:
 
 1. healthy review signal:
@@ -191,6 +198,22 @@ The released hosted `v0.4.2` wave showed that distinction directly:
   actionable review units
 - `logrus-root` completed successfully, but mostly produced `not covered` rows,
   denominator warnings, and zero actionable review units
+
+It also showed two healthy survivor-interpretation shapes that matter for first
+time reviewers:
+
+- `pflag-root`: `generated=10 effective=10 survived=3 actionable_review_units=3`
+  is a straightforward review lane
+- `gjson-root`: `generated=10 effective=10 survived=3 actionable_review_units=2 semantic_group_review_units=1`
+  means repeated boundary survivors were already compressed into one review-once
+  group
+- `prometheus-labels`: `generated=10 covered=7 effective=7 survived=0 actionable_review_units=0 not_covered=3`
+  is still a healthy bounded result when denominator warnings stay quiet; it is
+  a no-action lane, not a workflow failure
+
+If `survived` is higher than `actionable_review_units`, do not assume the
+action is noisy. Read the grouped review output first. That is usually evidence
+that the semantic triage layer already compressed equivalent-risk duplicates.
 
 That is why the recommended next step for a low-signal first run is retargeting
 before widening scope or judging heuristic quality.

@@ -1,6 +1,6 @@
 # Quickstart
 
-Tracking issues: #161, #212
+Tracking issues: #161, #212, #300
 
 This is the shortest supported path from first install to a useful mutation
 report.
@@ -35,6 +35,17 @@ cervomut baseline update
 ```
 
 That is the default safe adoption point. Do not jump to a raw score gate first.
+
+A healthy first useful report can look like any of these:
+
+- `generated=10 effective=10 survived=3 actionable_review_units=3`
+  Healthy review lane. Start with the ranked survivors and nearby-test hints.
+- `generated=10 effective=10 survived=3 actionable_review_units=2 semantic_group_review_units=1`
+  Healthy grouped-review lane. Repeated equivalent-risk boundary survivors were
+  already collapsed into one review-once group.
+- `generated=10 covered=7 effective=7 survived=0 actionable_review_units=0 not_covered=3`
+  Healthy no-action lane. The slice produced usable denominator evidence but no
+  immediate survivor follow-up work.
 
 ## GitHub Actions 5-Minute Path
 
@@ -90,8 +101,9 @@ Read these first:
 
 1. `summary.txt`
 2. the denominator counts in `mutation-report.json`
-3. `github-summary.md` or the GitHub step summary in CI
-4. survivor details only after the run itself looks healthy
+3. `actionable_review_units` and `semantic_group_review_units`
+4. `github-summary.md` or the GitHub step summary in CI
+5. survivor details only after the run itself looks healthy
 
 Check denominator health before you worry about the score:
 
@@ -106,6 +118,15 @@ The first useful question is:
 Not:
 
 > Is the score already high enough to gate the repo?
+
+If `survived` is higher than `actionable_review_units`, inspect
+`test-recommendations.md` and `governance-review.md` before assuming the lane
+is noisy. That pattern usually means semantic grouping already compressed a
+repeated equivalent-risk family into one review-once task.
+
+If `survived=0` and `actionable_review_units=0` but denominator health is still
+good, that is a useful first result too. It means the bounded slice already
+looks clean enough for this pass, not that the workflow failed.
 
 ## Common First-Run Problems
 

@@ -184,13 +184,23 @@ review semantics:
 - repeated equivalent-risk boundary survivors inside an otherwise healthy run
 
 The released hosted adoption-feedback issues for `pflag`, `gjson`, and
-`apimachinery` make that concrete:
+`apimachinery` make that concrete, and `prometheus` adds the zero-action
+counterexample:
+
+| Shape | Example counts | Meaning | Next move |
+| --- | --- | --- | --- |
+| Healthy direct review lane | `generated=10 effective=10 survived=3 actionable_review_units=3` | Raw survivors and review workload match closely. | Start with `test-recommendations.md`. |
+| Healthy grouped-review lane | `generated=10 effective=10 survived=3 actionable_review_units=2 semantic_group_review_units=1` | Repeated equivalent-risk boundary survivors were collapsed into one review-once family. | Review the semantic group once before adding multiple new tests. |
+| Healthy no-action lane | `generated=10 covered=7 effective=7 survived=0 actionable_review_units=0 not_covered=3` | The slice produced useful denominator evidence but no current survivor work. | Keep the artifact, decide whether this slice is already good enough, and retarget only if the wider rollout still needs more review pressure. |
 
 - raw survivors can be higher than the real review workload
 - `semantic_group_review_units`, `test-recommendations.md`, and
   `governance-review.md` together often tell you that the right action is
   "review once" or `report-only`, not "treat every raw survivor as a separate
   test task"
+- `actionable_review_units=0` is not automatically a failed rollout; if
+  denominator health is still understandable, it can be a healthy bounded lane
+  with no immediate follow-up work
 
 When a bounded run is otherwise healthy, read those artifacts before you decide
 that the lane is noisy.

@@ -22,7 +22,7 @@ Use this template when:
 2. Establish the first accepted baseline:
 
    ```powershell
-   cervomut run ./... --policy ci-fast --budget 5m --out .cervomut/pr
+   cervomut run ./... --policy ci-fast --budget 5m --out .cervomut/reports
    cervomut baseline update
    ```
 

@@ -57,7 +57,7 @@ func (e *Engine) generateMutants(discovered discover.Result) ([]Mutant, error) {
 				GroupReason:         generated[i].GroupReason,
 				PlatformSensitive:   generated[i].PlatformSensitive,
 				NonProgressRisk:     generated[i].NonProgressRisk,
-				Ownership:           e.ownershipRoute(generated[i].Package, generated[i].File),
+				Ownership:           e.ownershipRoute(generated[i].Module, generated[i].Package, generated[i].File),
 				SuggestedSkipReason: generated[i].SuggestedSkipReason,
 				SuppressionAudit:    e.suppressionAudit(generated[i]),
 			})

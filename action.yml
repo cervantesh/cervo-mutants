@@ -15,9 +15,9 @@ inputs:
     required: false
     default: "**/go.sum"
   cervomut-version:
-    description: Version suffix passed to go install, for example latest or v0.3.0.
+    description: Optional version suffix passed to go install, for example v0.3.0 or latest. Leave blank to install the same ref as the pinned action.
     required: false
-    default: "latest"
+    default: ""
   working-directory:
     description: Working directory where the mutation command should run.
     required: false
@@ -81,8 +81,8 @@ inputs:
 
 outputs:
   report-dir:
-    description: Report directory written by the action.
-    value: ${{ inputs.out }}
+    description: Resolved report directory written by the action.
+    value: ${{ steps.run-cervomut.outputs.report-dir }}
 
 runs:
   using: composite
@@ -97,13 +97,42 @@ runs:
     - name: Install CervoMutants
       shell: pwsh
       run: |
-        $version = '${{ inputs.cervomut-version }}'
-        if ([string]::IsNullOrWhiteSpace($version)) {
-          $version = 'latest'
+        function Invoke-GoInstall([string]$target) {
+          go install $target
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
         }
-        go install "github.com/cervantesh/cervo-mutants/cmd/cervomut@$version"
+
+        $version = '${{ inputs.cervomut-version }}'.Trim()
+        if ([string]::IsNullOrWhiteSpace($version)) {
+          if (-not [string]::IsNullOrWhiteSpace($env:GITHUB_ACTION_REF)) {
+            $version = $env:GITHUB_ACTION_REF.Trim()
+            Write-Host "Installing CervoMutants from action ref $version"
+            Invoke-GoInstall "github.com/cervantesh/cervo-mutants/cmd/cervomut@$version"
+            return
+          }
+          if ([string]::IsNullOrWhiteSpace($env:GITHUB_ACTION_PATH)) {
+            throw "GITHUB_ACTION_PATH is not available; set cervomut-version explicitly."
+          }
+          Write-Host "Installing CervoMutants from local action source at $env:GITHUB_ACTION_PATH"
+          Push-Location $env:GITHUB_ACTION_PATH
+          try {
+            go install ./cmd/cervomut
+            if ($LASTEXITCODE -ne 0) {
+              exit $LASTEXITCODE
+            }
+          } finally {
+            Pop-Location
+          }
+          return
+        }
+
+        Write-Host "Installing CervoMutants version $version"
+        Invoke-GoInstall "github.com/cervantesh/cervo-mutants/cmd/cervomut@$version"
 
     - name: Run CervoMutants
+      id: run-cervomut
       shell: pwsh
       working-directory: ${{ inputs.working-directory }}
       run: |
@@ -143,5 +172,21 @@ runs:
         & cervomut @cmdArgs
 
         if ($env:GITHUB_OUTPUT) {
-          "report-dir=${{ inputs.out }}" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          $outDir = '${{ inputs.out }}'
+          $workingDirectory = '${{ inputs.working-directory }}'
+          if ([string]::IsNullOrWhiteSpace($workingDirectory)) {
+            $workingDirectory = '.'
+          }
+
+          if ([System.IO.Path]::IsPathRooted($outDir)) {
+            $reportDir = [System.IO.Path]::GetFullPath($outDir)
+          } else {
+            $workingRoot = $workingDirectory
+            if (-not [System.IO.Path]::IsPathRooted($workingRoot)) {
+              $workingRoot = Join-Path $env:GITHUB_WORKSPACE $workingRoot
+            }
+            $reportDir = [System.IO.Path]::GetFullPath((Join-Path $workingRoot $outDir))
+          }
+
+          "report-dir=$reportDir" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
         }

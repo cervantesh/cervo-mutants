@@ -15,6 +15,7 @@ const (
 	minSupportedGoMinor     = 25
 	currentTestedGoMinor    = 25
 	compatibilityMatrixText = "supported Go versions: 1.25.x validated on Linux, Windows, and macOS; newer versions warn until validated"
+	validatedGoOSText       = "validated operating systems: linux, windows, darwin"
 )
 
 type Check struct {
@@ -146,6 +147,7 @@ func checkRuntimeEnvironment() []Check {
 		Severity: "ok",
 		Message:  fmt.Sprintf("%s/%s temp=%s\n", runtime.GOOS, runtime.GOARCH, temp),
 	})
+	checks = append(checks, goOSCompatibilityCheck(runtime.GOOS))
 	if runtime.GOOS == "windows" {
 		checks = append(checks, windowsChecks(wd, temp)...)
 	}
@@ -153,6 +155,20 @@ func checkRuntimeEnvironment() []Check {
 		checks = append(checks, linuxChecks()...)
 	}
 	return checks
+}
+
+func goOSCompatibilityCheck(goos string) Check {
+	switch strings.TrimSpace(strings.ToLower(goos)) {
+	case "linux", "windows", "darwin":
+		return Check{
+			Name:     "go-os-compatibility",
+			OK:       true,
+			Severity: "ok",
+			Message:  fmt.Sprintf("GOOS=%s is within the validated compatibility matrix; %s\n", goos, validatedGoOSText),
+		}
+	default:
+		return warning("go-os-compatibility", fmt.Sprintf("GOOS=%s is outside the validated compatibility matrix; %s\n", goos, validatedGoOSText))
+	}
 }
 
 func windowsChecks(wd, temp string) []Check {

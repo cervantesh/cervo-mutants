@@ -18,15 +18,15 @@ go install github.com/cervantesh/cervo-mutants/cmd/cervomut@latest
 cervomut init
 cervomut doctor
 cervomut run ./... --dry-run --out .cervomut/preview
-cervomut fast ./... --budget 5m --sample deterministic --out .cervomut/pr
+cervomut fast ./... --budget 5m --sample deterministic --out .cervomut/reports
 ```
 
 What you should get:
 
-- `.cervomut/pr/summary.txt`
-- `.cervomut/pr/mutation-report.json`
-- `.cervomut/pr/junit.xml`
-- `.cervomut/pr/github-summary.md`
+- `.cervomut/reports/summary.txt`
+- `.cervomut/reports/mutation-report.json`
+- `.cervomut/reports/junit.xml`
+- `.cervomut/reports/github-summary.md`
 
 If that works, establish the first baseline:
 

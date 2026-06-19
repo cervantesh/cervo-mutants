@@ -27,7 +27,11 @@ The supported programmatic seams are:
   `engine.DefaultSuppressionEvaluator(cfg)` and
   `engine.ChainSuppressionEvaluators(...)`
 - `engine.SurvivorRanker` plus `engine.DefaultSurvivorRanker()`
-- `engine.NewWithOptions(cfg, ...)` as the composition entry point
+- `engine.EngineOption` plus
+  `engine.WithMutantGenerator(...)`,
+  `engine.WithSuppressionEvaluator(...)`,
+  `engine.WithSurvivorRanker(...)`, and
+  `engine.NewWithOptions(cfg, ...)` as the composition entry point
 
 These are the intended extension points for custom mutators, suppression
 audits, and survivor prioritization.

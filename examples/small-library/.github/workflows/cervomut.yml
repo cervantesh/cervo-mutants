@@ -10,9 +10,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Run CervoMutants
+        id: cervomut
         uses: cervantesh/cervo-mutants@main
         with:
           policy: ci-fast
           budget: 5m
           report: summary,json,junit,github-summary
           out: .cervomut/pr
+      - name: Upload mutation artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cervomut-pr
+          path: ${{ steps.cervomut.outputs.report-dir }}

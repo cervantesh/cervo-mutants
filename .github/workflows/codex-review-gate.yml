@@ -7,6 +7,16 @@ on:
       - reopened
       - synchronize
       - ready_for_review
+  pull_request_review:
+    types:
+      - submitted
+      - edited
+      - dismissed
+  pull_request_review_comment:
+    types:
+      - created
+      - edited
+      - deleted
   pull_request_review_thread:
     types:
       - resolved
@@ -89,51 +99,74 @@ jobs:
             }
 
             async function fetchGateState() {
-              const query = `
-                query($owner:String!, $repo:String!, $number:Int!) {
-                  repository(owner:$owner, name:$repo) {
-                    pullRequest(number:$number) {
-                      number
-                      isDraft
-                      headRefOid
-                      reviews(last:50) {
-                        nodes {
-                          author { login }
-                          state
-                          submittedAt
-                          url
-                          commit { oid }
+              let after = null;
+              let pr = null;
+              const reviewThreads = [];
+
+              while (true) {
+                const query = `
+                  query($owner:String!, $repo:String!, $number:Int!, $after:String) {
+                    repository(owner:$owner, name:$repo) {
+                      pullRequest(number:$number) {
+                        number
+                        isDraft
+                        headRefOid
+                        reviews(last:50) {
+                          nodes {
+                            author { login }
+                            state
+                            submittedAt
+                            url
+                            commit { oid }
+                          }
                         }
-                      }
-                      reviewThreads(first:100) {
-                        nodes {
-                          isResolved
-                          isOutdated
-                          comments(first:20) {
-                            nodes {
-                              author { login }
-                              body
-                              path
-                              line
-                              url
-                              pullRequestReview {
-                                state
-                                submittedAt
-                                url
+                        reviewThreads(first:100, after:$after) {
+                          nodes {
+                            isResolved
+                            isOutdated
+                            comments(first:20) {
+                              nodes {
                                 author { login }
-                                commit { oid }
+                                body
+                                path
+                                line
+                                url
+                                pullRequestReview {
+                                  state
+                                  submittedAt
+                                  url
+                                  author { login }
+                                  commit { oid }
+                                }
                               }
                             }
+                          }
+                          pageInfo {
+                            hasNextPage
+                            endCursor
                           }
                         }
                       }
                     }
                   }
-                }
-              `;
+                `;
 
-              const result = await github.graphql(query, { owner, repo, number });
-              const pr = result.repository.pullRequest;
+                const result = await github.graphql(query, { owner, repo, number, after });
+                const currentPr = result.repository.pullRequest;
+                if (!currentPr) {
+                  throw new Error(`pull request #${number} not found`);
+                }
+
+                if (!pr) {
+                  pr = currentPr;
+                }
+                reviewThreads.push(...currentPr.reviewThreads.nodes);
+                if (!currentPr.reviewThreads.pageInfo.hasNextPage) {
+                  break;
+                }
+                after = currentPr.reviewThreads.pageInfo.endCursor;
+              }
+
               if (!pr) {
                 throw new Error(`pull request #${number} not found`);
               }
@@ -151,7 +184,7 @@ jobs:
               let codexThreadCount = 0;
               const reviewFloor = await getReviewFloor(pr.headRefOid);
 
-              for (const thread of pr.reviewThreads.nodes) {
+              for (const thread of reviewThreads) {
                 if (thread.isOutdated) {
                   continue;
                 }

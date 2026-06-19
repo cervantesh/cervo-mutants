@@ -40,6 +40,7 @@ func (e *Engine) runMutantsWithResume(ctx context.Context, mutants []Mutant, qua
 	remaining := make([]Mutant, 0, len(mutants))
 	for _, mutant := range mutants {
 		if result, ok := completed[mutant.ID]; ok {
+			result = refreshCachedMutantResult(result, mutant)
 			result.PreviousStatus = result.Status
 			result.Status = StatusCached
 			result.StatusReason = "result reused from partial checkpoint"
@@ -177,6 +178,15 @@ func (e *Engine) collectParallelResults(done <-chan indexedResult, results []Mut
 
 func (e *Engine) budgetExhausted(start time.Time) bool {
 	return e.cfg.Execution.Budget > 0 && time.Since(start) >= e.cfg.Execution.Budget
+}
+
+func refreshCachedMutantResult(result MutantResult, mutant Mutant) MutantResult {
+	result.MutantID = mutant.ID
+	result.Mutant = mutant
+	result.SuggestedSkipReason = mutant.SuggestedSkipReason
+	result.SuggestedTestScope = suggestedTestScope(mutant)
+	result.NearestTests = append([]string(nil), mutant.NearbyTests...)
+	return result
 }
 
 func (e *Engine) suppressedResult(mutant Mutant) (MutantResult, bool) {

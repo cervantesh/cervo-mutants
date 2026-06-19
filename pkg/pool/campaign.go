@@ -2,7 +2,9 @@ package pool
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -87,6 +89,7 @@ type CampaignJobResult struct {
 	Name           string            `json:"name"`
 	Kind           string            `json:"kind"`
 	Status         string            `json:"status"`
+	ResumeKey      string            `json:"resume_key,omitempty"`
 	ManifestPath   string            `json:"manifest_path,omitempty"`
 	CorpusPath     string            `json:"corpus_path,omitempty"`
 	WorkRoot       string            `json:"work_root,omitempty"`
@@ -194,24 +197,14 @@ func RunCampaign(ctx context.Context, opts CampaignOptions) (RunSummary[Campaign
 		if jobName == "" {
 			jobName = fmt.Sprintf("%s-%d", strings.TrimSpace(job.Kind), idx+1)
 		}
-		if resumedResult, ok := resumed[jobName]; ok && canResumeCampaignJob(resumedResult) {
-			resumedResult.Resumed = true
-			if !containsNote(resumedResult.Notes, "resumed from existing campaign summary") {
-				resumedResult.Notes = append(resumedResult.Notes, "resumed from existing campaign summary")
-			}
-			results = append(results, resumedResult)
-			if err := writeCampaignSummary(summaryFilePath, campaignPath, manifest, results); err != nil {
-				return RunSummary[CampaignJobResult]{Results: results, SummaryPath: summaryFilePath}, err
-			}
-			continue
-		}
-
 		jobKind := strings.TrimSpace(job.Kind)
 		jobWorkRoot := campaignJobWorkRoot(defaultWorkRoot, baseDir, job, jobName)
 		jobOutputRoot := campaignJobOutputRoot(jobKind, defaultOutputRoot, baseDir, job, jobName, jobWorkRoot)
+		resumeKey := campaignJobResumeKey(baseDir, defaultWorkRoot, defaultOutputRoot, job, jobName)
 		result := CampaignJobResult{
 			Name:         jobName,
 			Kind:         jobKind,
+			ResumeKey:    resumeKey,
 			ManifestPath: resolveCampaignPath(baseDir, job.ManifestPath),
 			CorpusPath:   resolveCampaignPath(baseDir, job.CorpusPath),
 			WorkRoot:     jobWorkRoot,
@@ -227,6 +220,18 @@ func RunCampaign(ctx context.Context, opts CampaignOptions) (RunSummary[Campaign
 			result.Notes = append(result.Notes, "job disabled")
 			result.ElapsedSeconds = seconds(started)
 			results = append(results, result)
+			if err := writeCampaignSummary(summaryFilePath, campaignPath, manifest, results); err != nil {
+				return RunSummary[CampaignJobResult]{Results: results, SummaryPath: summaryFilePath}, err
+			}
+			continue
+		}
+		if resumedResult, ok := resumed[jobName]; ok && canResumeCampaignJob(resumedResult, resumeKey) {
+			resumedResult.Resumed = true
+			resumedResult.ResumeKey = resumeKey
+			if !containsNote(resumedResult.Notes, "resumed from existing campaign summary") {
+				resumedResult.Notes = append(resumedResult.Notes, "resumed from existing campaign summary")
+			}
+			results = append(results, resumedResult)
 			if err := writeCampaignSummary(summaryFilePath, campaignPath, manifest, results); err != nil {
 				return RunSummary[CampaignJobResult]{Results: results, SummaryPath: summaryFilePath}, err
 			}
@@ -354,8 +359,11 @@ func campaignJobEnabled(job CampaignJob) bool {
 	return job.Enabled == nil || *job.Enabled
 }
 
-func canResumeCampaignJob(result CampaignJobResult) bool {
-	return result.Status == "ok" || result.Status == "skipped"
+func canResumeCampaignJob(result CampaignJobResult, wantResumeKey string) bool {
+	if result.Status != "ok" && result.Status != "skipped" {
+		return false
+	}
+	return strings.TrimSpace(result.ResumeKey) != "" && result.ResumeKey == strings.TrimSpace(wantResumeKey)
 }
 
 func campaignRootPath(cliValue, manifestValue, baseDir, fallback string) string {
@@ -408,6 +416,86 @@ func defaultString(value, fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+func campaignJobResumeKey(baseDir, defaultWorkRoot, defaultOutputRoot string, job CampaignJob, jobName string) string {
+	jobKind := strings.TrimSpace(job.Kind)
+	descriptor := struct {
+		Name                       string   `json:"name"`
+		Kind                       string   `json:"kind"`
+		Enabled                    bool     `json:"enabled"`
+		ManifestPath               string   `json:"manifest_path,omitempty"`
+		CorpusPath                 string   `json:"corpus_path,omitempty"`
+		WorkRoot                   string   `json:"work_root,omitempty"`
+		OutputRoot                 string   `json:"output_root,omitempty"`
+		Names                      []string `json:"names,omitempty"`
+		Tools                      []string `json:"tools,omitempty"`
+		Limit                      int      `json:"limit,omitempty"`
+		RunMutation                bool     `json:"run_mutation,omitempty"`
+		MaxMutants                 int      `json:"max_mutants,omitempty"`
+		Workers                    int      `json:"workers,omitempty"`
+		CloneTimeoutSeconds        int      `json:"clone_timeout_seconds,omitempty"`
+		TestTimeoutSeconds         int      `json:"test_timeout_seconds,omitempty"`
+		DryRunTimeoutSeconds       int      `json:"dry_run_timeout_seconds,omitempty"`
+		MutationTimeoutSeconds     int      `json:"mutation_timeout_seconds,omitempty"`
+		CompareTargetMode          string   `json:"compare_target_mode,omitempty"`
+		GremlinsTargetMode         string   `json:"gremlins_target_mode,omitempty"`
+		GremlinsTimeoutCoefficient int      `json:"gremlins_timeout_coefficient,omitempty"`
+		GomuWorkers                int      `json:"gomu_workers,omitempty"`
+		GoMutestingWorkers         int      `json:"go_mutesting_workers,omitempty"`
+		TimeoutSeconds             int      `json:"timeout_seconds,omitempty"`
+		MinFreeMemoryMB            int      `json:"min_free_memory_mb,omitempty"`
+		MinFreeCommitMB            int      `json:"min_free_commit_mb,omitempty"`
+		KillBelowFreeMemoryMB      int      `json:"kill_below_free_memory_mb,omitempty"`
+		KillBelowFreeCommitMB      int      `json:"kill_below_free_commit_mb,omitempty"`
+		MaxUsedMemoryMB            int      `json:"max_used_memory_mb,omitempty"`
+		MaxCommittedMemoryMB       int      `json:"max_committed_memory_mb,omitempty"`
+		MaxProcessTreeMemoryMB     int      `json:"max_process_tree_memory_mb,omitempty"`
+		MemoryWaitSeconds          int      `json:"memory_wait_seconds,omitempty"`
+		MemoryPollSeconds          int      `json:"memory_poll_seconds,omitempty"`
+		GoMemoryLimit              string   `json:"go_memory_limit,omitempty"`
+		GoMaxProcs                 int      `json:"go_max_procs,omitempty"`
+		GoFlags                    string   `json:"go_flags,omitempty"`
+	}{
+		Name:                       jobName,
+		Kind:                       jobKind,
+		Enabled:                    campaignJobEnabled(job),
+		ManifestPath:               resolveCampaignPath(baseDir, job.ManifestPath),
+		CorpusPath:                 resolveCampaignPath(baseDir, job.CorpusPath),
+		WorkRoot:                   campaignJobWorkRoot(defaultWorkRoot, baseDir, job, jobName),
+		OutputRoot:                 campaignJobOutputRoot(jobKind, defaultOutputRoot, baseDir, job, jobName, campaignJobWorkRoot(defaultWorkRoot, baseDir, job, jobName)),
+		Names:                      append([]string(nil), job.Names...),
+		Tools:                      append([]string(nil), job.Tools...),
+		Limit:                      job.Limit,
+		RunMutation:                job.RunMutation,
+		MaxMutants:                 job.MaxMutants,
+		Workers:                    job.Workers,
+		CloneTimeoutSeconds:        job.CloneTimeoutSeconds,
+		TestTimeoutSeconds:         job.TestTimeoutSeconds,
+		DryRunTimeoutSeconds:       job.DryRunTimeoutSeconds,
+		MutationTimeoutSeconds:     job.MutationTimeoutSeconds,
+		CompareTargetMode:          job.CompareTargetMode,
+		GremlinsTargetMode:         job.GremlinsTargetMode,
+		GremlinsTimeoutCoefficient: job.GremlinsTimeoutCoefficient,
+		GomuWorkers:                job.GomuWorkers,
+		GoMutestingWorkers:         job.GoMutestingWorkers,
+		TimeoutSeconds:             job.TimeoutSeconds,
+		MinFreeMemoryMB:            job.MinFreeMemoryMB,
+		MinFreeCommitMB:            job.MinFreeCommitMB,
+		KillBelowFreeMemoryMB:      job.KillBelowFreeMemoryMB,
+		KillBelowFreeCommitMB:      job.KillBelowFreeCommitMB,
+		MaxUsedMemoryMB:            job.MaxUsedMemoryMB,
+		MaxCommittedMemoryMB:       job.MaxCommittedMemoryMB,
+		MaxProcessTreeMemoryMB:     job.MaxProcessTreeMemoryMB,
+		MemoryWaitSeconds:          job.MemoryWaitSeconds,
+		MemoryPollSeconds:          job.MemoryPollSeconds,
+		GoMemoryLimit:              job.GoMemoryLimit,
+		GoMaxProcs:                 job.GoMaxProcs,
+		GoFlags:                    job.GoFlags,
+	}
+	data, _ := json.Marshal(descriptor)
+	sum := sha256.Sum256(data)
+	return hex.EncodeToString(sum[:])
 }
 
 func buildCampaignSummary(campaignPath string, manifest CampaignManifest, results []CampaignJobResult) CampaignSummaryFile {

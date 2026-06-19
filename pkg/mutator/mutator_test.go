@@ -585,6 +585,7 @@ func findCallByName(root ast.Node, want string) *ast.CallExpr {
 func TestChainGeneratorsAppendsCustomMutantsAndDedupes(t *testing.T) {
 	base := GeneratorFunc(func(pkg, filename string, src []byte, profile string) ([]Mutant, error) {
 		return []Mutant{{
+			ID:       "builtin-id",
 			File:     filename,
 			Line:     8,
 			Operator: "logical",
@@ -620,6 +621,12 @@ func TestChainGeneratorsAppendsCustomMutantsAndDedupes(t *testing.T) {
 	}
 	if mutants[1].Operator != "custom-op" {
 		t.Fatalf("expected chained custom mutant to be retained, got %+v", mutants)
+	}
+}
+
+func TestGeneratorMutantKeyFallsBackToID(t *testing.T) {
+	if key := generatorMutantKey(Mutant{ID: "only-id"}); key != "id:only-id" {
+		t.Fatalf("generatorMutantKey fallback = %q, want id fallback", key)
 	}
 }
 

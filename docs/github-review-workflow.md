@@ -40,7 +40,7 @@ Recommended defaults:
 - bounded runtime budget
 - `github-summary` enabled
 - baseline-first governance
-- JSON and JUnit retained for automation
+- JSON and JUnit uploaded as retained artifacts for automation
 
 Example command shape:
 
@@ -55,6 +55,27 @@ cervomut run ./... `
 On GitHub Actions, `github-summary` writes the same markdown to
 `$GITHUB_STEP_SUMMARY`, so the PR lane can expose a compact review summary
 without forcing humans into the raw JSON first.
+
+The maintained example workflows also upload the report directory with
+`actions/upload-artifact@v4`. Without that step, JSON, JUnit, HTML, and SARIF
+only exist in the runner workspace for the duration of the job.
+
+Baseline note:
+
+`cervomut run` records baseline comparison data in `mutation-report.json`, but
+it does not fail the job on baseline regressions or new survivors by itself.
+The maintained examples keep baseline deltas as review signal first. If a team
+wants a hard PR gate, add an explicit follow-up check after the run.
+
+Example gate on Ubuntu runners:
+
+```yaml
+- name: Fail on baseline regression
+  shell: bash
+  run: |
+    jq -e '.baseline.regression == false and (((.baseline.new_survivors // []) | length) == 0)' \
+      .cervomut/pr/mutation-report.json > /dev/null
+```
 
 ## Nightly Or Scheduled Lane
 

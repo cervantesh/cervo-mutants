@@ -7,11 +7,11 @@ import (
 	"github.com/cervantesh/cervo-mutants/pkg/config"
 )
 
-func (e *Engine) ownershipRoute(pkgPath, filePath string) *OwnershipRoute {
+func (e *Engine) ownershipRoute(moduleDir, pkgPath, filePath string) *OwnershipRoute {
 	normalizedPkg := normalizeOwnershipPackage(pkgPath)
-	normalizedFile := filepath.ToSlash(filePath)
+	normalizedFile, absoluteFile := normalizeOwnershipFile(moduleDir, filePath)
 	for _, rule := range e.cfg.Ownership.Rules {
-		if ownershipRuleMatches(rule, normalizedPkg, normalizedFile) {
+		if ownershipRuleMatches(rule, normalizedPkg, normalizedFile, absoluteFile) {
 			return &OwnershipRoute{
 				Owner:   strings.TrimSpace(rule.Owner),
 				Team:    strings.TrimSpace(rule.Team),
@@ -31,14 +31,33 @@ func (e *Engine) ownershipRoute(pkgPath, filePath string) *OwnershipRoute {
 	return nil
 }
 
-func ownershipRuleMatches(rule config.OwnershipRule, pkgPath, filePath string) bool {
+func ownershipRuleMatches(rule config.OwnershipRule, pkgPath, filePath, absoluteFile string) bool {
 	if selector := strings.TrimSpace(rule.Package); selector != "" && !ownershipPackageMatches(selector, pkgPath) {
 		return false
 	}
 	if selector := strings.TrimSpace(rule.File); selector != "" && !suppressionFileMatches(selector, filePath) {
-		return false
+		if absoluteFile == "" || !suppressionFileMatches(selector, absoluteFile) {
+			return false
+		}
 	}
 	return true
+}
+
+func normalizeOwnershipFile(moduleDir, filePath string) (string, string) {
+	filePath = strings.TrimSpace(filePath)
+	if filePath == "" {
+		return "", ""
+	}
+	absoluteFile := filepath.ToSlash(filepath.Clean(filePath))
+	if strings.TrimSpace(moduleDir) != "" {
+		if rel, err := filepath.Rel(moduleDir, filePath); err == nil && rel != "." && !strings.HasPrefix(rel, "..") {
+			return filepath.ToSlash(rel), absoluteFile
+		}
+	}
+	if strings.HasPrefix(absoluteFile, "./") {
+		absoluteFile = strings.TrimPrefix(absoluteFile, "./")
+	}
+	return absoluteFile, absoluteFile
 }
 
 func ownershipPackageMatches(pattern, pkgPath string) bool {

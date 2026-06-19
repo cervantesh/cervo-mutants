@@ -22,7 +22,7 @@ func TestRunIncludesCommandAndRuntimeChecks(t *testing.T) {
 	if len(checks) < 2 {
 		t.Fatalf("checks = %d, want at least command checks", len(checks))
 	}
-	if !containsCheck(checks, "go") || !containsCheck(checks, "git") || !containsCheck(checks, "runtime") || !containsCheck(checks, "go-version-compatibility") {
+	if !containsCheck(checks, "go") || !containsCheck(checks, "git") || !containsCheck(checks, "runtime") || !containsCheck(checks, "go-version-compatibility") || !containsCheck(checks, "go-os-compatibility") {
 		t.Fatalf("expected go/git/runtime checks: %+v", checks)
 	}
 }
@@ -90,6 +90,15 @@ func TestGoVersionCompatibilityChecks(t *testing.T) {
 	unknown := goVersionCompatibilityCheck("not a go version")
 	if !unknown.OK || unknown.Severity != "warn" {
 		t.Fatalf("unknown Go version should warn: %+v", unknown)
+	}
+}
+
+func TestGoOSCompatibilityCheck(t *testing.T) {
+	if check := goOSCompatibilityCheck("linux"); !check.OK || check.Severity != "ok" {
+		t.Fatalf("linux should be validated: %+v", check)
+	}
+	if check := goOSCompatibilityCheck("plan9"); !check.OK || check.Severity != "warn" {
+		t.Fatalf("plan9 should warn as unvalidated: %+v", check)
 	}
 }
 

@@ -13,6 +13,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Run CervoMutants PR lane
+        id: cervomut
         uses: cervantesh/cervo-mutants@main
         with:
           policy: ci-balanced
@@ -20,6 +21,12 @@ jobs:
           coverage-prefilter: "true"
           report: summary,json,junit,github-summary
           out: .cervomut/pr
+      - name: Upload PR mutation artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cervomut-pr
+          path: ${{ steps.cervomut.outputs.report-dir }}
 
   nightly-lane:
     if: github.event_name == 'schedule'
@@ -27,9 +34,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Run CervoMutants nightly lane
+        id: cervomut
         uses: cervantesh/cervo-mutants@main
         with:
           policy: nightly
           budget: 20m
           report: summary,json,junit,html,sarif,github-summary
           out: .cervomut/nightly
+      - name: Upload nightly mutation artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cervomut-nightly
+          path: ${{ steps.cervomut.outputs.report-dir }}

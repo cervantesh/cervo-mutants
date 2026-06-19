@@ -9,7 +9,31 @@ permissions:
   contents: write
 
 jobs:
+  compatibility-smoke:
+    name: compatibility-smoke (${{ matrix.os }}, Go ${{ matrix.go-version }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            go-version: "1.25.6"
+          - os: windows-latest
+            go-version: "1.25.6"
+          - os: macos-latest
+            go-version: "1.25.6"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go-version }}
+      - run: go test ./...
+      - run: go run ./cmd/cervomut doctor
+      - run: go run ./cmd/cervomut list-mutators
+      - run: go run ./cmd/cervomut fast ./pkg/config --max-mutants 1 --workers 1 --out .cervomut/release-compat-smoke
+
   publish:
+    needs: compatibility-smoke
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

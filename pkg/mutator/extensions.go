@@ -45,16 +45,29 @@ func ChainGenerators(generators ...Generator) Generator {
 }
 
 func generatorMutantKey(mutant Mutant) string {
+	if hasCanonicalMutantKey(mutant) {
+		return strings.Join([]string{
+			mutant.File,
+			strconv.Itoa(mutant.Line),
+			mutant.Operator,
+			mutant.Original,
+			mutant.Mutated,
+			strconv.Itoa(mutant.StartOffset),
+			strconv.Itoa(mutant.EndOffset),
+		}, "\x00")
+	}
 	if value := strings.TrimSpace(mutant.ID); value != "" {
 		return "id:" + value
 	}
-	return strings.Join([]string{
-		mutant.File,
-		strconv.Itoa(mutant.Line),
-		mutant.Operator,
-		mutant.Original,
-		mutant.Mutated,
-		strconv.Itoa(mutant.StartOffset),
-		strconv.Itoa(mutant.EndOffset),
-	}, "\x00")
+	return ""
+}
+
+func hasCanonicalMutantKey(mutant Mutant) bool {
+	return strings.TrimSpace(mutant.File) != "" ||
+		mutant.Line != 0 ||
+		strings.TrimSpace(mutant.Operator) != "" ||
+		strings.TrimSpace(mutant.Original) != "" ||
+		strings.TrimSpace(mutant.Mutated) != "" ||
+		mutant.StartOffset != 0 ||
+		mutant.EndOffset != 0
 }

@@ -56,6 +56,7 @@ func isolateArtifacts(cfg *config.Config, dir string) {
 	cfg.Baseline.Path = filepath.Join(dir, ".cervomut", "baseline.json")
 	cfg.Quarantine.Path = filepath.Join(dir, ".cervomut", "quarantine.json")
 	cfg.History.Path = filepath.Join(dir, ".cervomut", "history.json")
+	cfg.Execution.TempRoot = filepath.Join(dir, ".cervomut", "tmp")
 }
 
 func TestRunDryRunDiscoversMutantsWithoutChangingWorkspace(t *testing.T) {
@@ -219,6 +220,7 @@ func TestRunCanResumeFromPartialCheckpoint(t *testing.T) {
 	cfg.Tests.Timeout = 10_000_000_000
 	cfg.Execution.Workers = 1
 	cfg.Limits.MaxMutants = 1
+	cfg.Ownership.Rules = []config.OwnershipRule{{Name: "calc-owner", File: "calc.go", Owner: "fresh-owner"}}
 	isolateArtifacts(&cfg, dir)
 
 	first, err := New(cfg).Run(context.Background(), RunRequest{Targets: []string{dir}})
@@ -227,6 +229,23 @@ func TestRunCanResumeFromPartialCheckpoint(t *testing.T) {
 	}
 	if len(first.Mutants) != 1 {
 		t.Fatalf("first mutants = %d, want 1", len(first.Mutants))
+	}
+	partialPath := filepath.Join(cfg.Reports.Output, "partial-mutation-report.json")
+	partialData, err := os.ReadFile(partialPath)
+	if err != nil {
+		t.Fatalf("ReadFile partial checkpoint returned error: %v", err)
+	}
+	var partialRun RunResult
+	if err := json.Unmarshal(partialData, &partialRun); err != nil {
+		t.Fatalf("Unmarshal partial checkpoint returned error: %v", err)
+	}
+	partialRun.Mutants[0].Mutant.Ownership = &OwnershipRoute{Owner: "stale-owner", Rule: "stale"}
+	updatedPartial, err := json.MarshalIndent(partialRun, "", "  ")
+	if err != nil {
+		t.Fatalf("MarshalIndent partial checkpoint returned error: %v", err)
+	}
+	if err := os.WriteFile(partialPath, updatedPartial, 0o600); err != nil {
+		t.Fatalf("WriteFile partial checkpoint returned error: %v", err)
 	}
 	cfg.Execution.Resume = true
 	second, err := New(cfg).Run(context.Background(), RunRequest{Targets: []string{dir}})
@@ -244,6 +263,9 @@ func TestRunCanResumeFromPartialCheckpoint(t *testing.T) {
 	}
 	if !strings.Contains(second.Mutants[0].StatusReason, "partial checkpoint") {
 		t.Fatalf("resume reason = %q", second.Mutants[0].StatusReason)
+	}
+	if second.Mutants[0].Mutant.Ownership == nil || second.Mutants[0].Mutant.Ownership.Owner != "fresh-owner" {
+		t.Fatalf("resume did not refresh ownership metadata: %+v", second.Mutants[0].Mutant.Ownership)
 	}
 	if second.Summary.Cached != 1 || second.Summary.ExecutedMutants == 0 {
 		t.Fatalf("cached result was not counted in summary: %+v", second.Summary)
@@ -840,6 +862,7 @@ func TestPrepareMutationTempWorkdirAndOverlayBranches(t *testing.T) {
 	}
 	cfg := config.Defaults()
 	cfg.Execution.Isolation = "temp-workdir"
+	cfg.Execution.TempRoot = filepath.Join(dir, ".cervomut", "tmp")
 	workdir, command, cleanup, err := New(cfg).prepareMutation(mutant, []string{"go", "test", "."})
 	if err != nil {
 		t.Fatalf("prepareMutation temp-workdir returned error: %v", err)
@@ -1069,13 +1092,16 @@ func TestRunMutantCacheAndErrorBranches(t *testing.T) {
 		StartOffset: 0,
 		EndOffset:   1,
 		Fingerprint: "fp",
+		Ownership:   &OwnershipRoute{Owner: "fresh-owner", Rule: "current"},
 	}
 	e := New(cfg)
 	key, err := e.cacheKey(mutant, e.selectTests(mutant))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := e.putCached(key, MutantResult{MutantID: mutant.ID, Status: StatusKilled, Mutant: mutant}); err != nil {
+	stale := mutant
+	stale.Ownership = &OwnershipRoute{Owner: "stale-owner", Rule: "stale"}
+	if err := e.putCached(key, MutantResult{MutantID: mutant.ID, Status: StatusKilled, Mutant: stale}); err != nil {
 		t.Fatal(err)
 	}
 	cached, err := e.runMutant(context.Background(), mutant)
@@ -1084,6 +1110,9 @@ func TestRunMutantCacheAndErrorBranches(t *testing.T) {
 	}
 	if cached.Status != StatusCached || cached.PreviousStatus != StatusKilled {
 		t.Fatalf("cached result not reused: %+v", cached)
+	}
+	if cached.Mutant.Ownership == nil || cached.Mutant.Ownership.Owner != "fresh-owner" {
+		t.Fatalf("cached result did not refresh current mutant metadata: %+v", cached.Mutant.Ownership)
 	}
 
 	missing := mutant
@@ -1680,18 +1709,19 @@ func TestOwnershipRouteMatchesPackageFileAndDefault(t *testing.T) {
 		{Name: "cmd-glob", File: "cmd/**/*.go", Owner: "cli-owner", Contact: "@cli"},
 	}
 	e := New(cfg)
+	dir := t.TempDir()
 
-	route := e.ownershipRoute("./pkg/fs", "pkg/fs/fs.go")
+	route := e.ownershipRoute(dir, "./pkg/fs", filepath.Join(dir, "pkg", "fs", "fs.go"))
 	if route == nil || route.Owner != "fs-owner" || route.Team != "platform" || route.Rule != "pkg-fs" {
 		t.Fatalf("package ownership route mismatch: %+v", route)
 	}
 
-	route = e.ownershipRoute("./cmd/cervomut", "cmd/cervomut/main.go")
+	route = e.ownershipRoute(dir, "./cmd/cervomut", filepath.Join(dir, "cmd", "cervomut", "main.go"))
 	if route == nil || route.Owner != "cli-owner" || route.Contact != "@cli" || route.Rule != "cmd-glob" {
 		t.Fatalf("file ownership route mismatch: %+v", route)
 	}
 
-	route = e.ownershipRoute("./pkg/other", "pkg/other/other.go")
+	route = e.ownershipRoute(dir, "./pkg/other", filepath.Join(dir, "pkg", "other", "other.go"))
 	if route == nil || route.Owner != "default-owner" || route.Rule != "default" {
 		t.Fatalf("default ownership route mismatch: %+v", route)
 	}

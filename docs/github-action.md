@@ -26,12 +26,19 @@ normal shell steps around the CLI.
 ```yaml
 - uses: actions/checkout@v4
 - name: Run CervoMutants
+  id: cervomut
   uses: cervantesh/cervo-mutants@main
   with:
     policy: ci-fast
     budget: 5m
     report: summary,json,junit,github-summary
     out: .cervomut/pr
+- name: Upload mutation artifacts
+  if: always()
+  uses: actions/upload-artifact@v4
+  with:
+    name: cervomut-pr
+    path: ${{ steps.cervomut.outputs.report-dir }}
 ```
 
 ## Coverage-Aware Service Lane
@@ -113,8 +120,14 @@ Common inputs:
 - `coverage-prefilter`
 - `actionable-only`
 
-The action also exposes `report-dir` as an output so follow-up artifact steps
-can reference the chosen output path consistently.
+Leave `cervomut-version` blank for the default behavior: the action installs
+the CLI from the same pinned ref as the action itself, or from the local action
+source when you use a checkout path. Set `cervomut-version: latest` only as an
+explicit override.
+
+The action also exposes `report-dir` as a resolved absolute output path so
+follow-up artifact or SARIF steps can reference the chosen output directory
+consistently even when `working-directory` is a subdirectory.
 
 ## Versioning Note
 

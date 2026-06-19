@@ -143,11 +143,13 @@ func TestRunCampaignResumeSkipsCompletedJobs(t *testing.T) {
 }`), 0o600); err != nil {
 		t.Fatal(err)
 	}
+	workRoot := filepath.Join(dir, "work")
 	summaryPath := filepath.Join(dir, "out", "campaign-summary.json")
 	if err := writeCampaignSummary(summaryPath, campaignPath, CampaignManifest{}, []CampaignJobResult{{
 		Name:        "smoke-pass",
 		Kind:        "smoke",
 		Status:      "ok",
+		ResumeKey:   campaignJobResumeKey(dir, workRoot, filepath.Join(dir, "out"), CampaignJob{Name: "smoke-pass", Kind: "smoke", ManifestPath: "repos.json"}, "smoke-pass"),
 		SummaryPath: filepath.Join(dir, "cached-smoke-summary.json"),
 	}}); err != nil {
 		t.Fatal(err)
@@ -156,6 +158,7 @@ func TestRunCampaignResumeSkipsCompletedJobs(t *testing.T) {
 	compareCalled := false
 	run, err := RunCampaign(context.Background(), CampaignOptions{
 		Path:       campaignPath,
+		WorkRoot:   workRoot,
 		OutputRoot: filepath.Join(dir, "out"),
 		Resume:     true,
 		SmokeRunner: func(_ context.Context, _ SmokeOptions) (RunSummary[SmokeResult], error) {
@@ -188,6 +191,89 @@ func TestRunCampaignResumeSkipsCompletedJobs(t *testing.T) {
 	}
 	if summary.Totals.Resumed != 1 || summary.Totals.Succeeded != 2 {
 		t.Fatalf("unexpected totals after resume: %+v", summary.Totals)
+	}
+}
+
+func TestRunCampaignResumeRejectsStaleJobDefinition(t *testing.T) {
+	dir := t.TempDir()
+	campaignPath := filepath.Join(dir, "campaign.json")
+	if err := os.WriteFile(campaignPath, []byte(`{
+  "schema_version": "1",
+  "jobs": [
+    {"name":"smoke-pass","kind":"smoke","manifest_path":"repos.json","workers":2}
+  ]
+}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	summaryPath := filepath.Join(dir, "out", "campaign-summary.json")
+	if err := writeCampaignSummary(summaryPath, campaignPath, CampaignManifest{}, []CampaignJobResult{{
+		Name:      "smoke-pass",
+		Kind:      "smoke",
+		Status:    "ok",
+		ResumeKey: "stale-key",
+	}}); err != nil {
+		t.Fatal(err)
+	}
+
+	smokeCalled := false
+	run, err := RunCampaign(context.Background(), CampaignOptions{
+		Path:       campaignPath,
+		OutputRoot: filepath.Join(dir, "out"),
+		Resume:     true,
+		SmokeRunner: func(_ context.Context, opts SmokeOptions) (RunSummary[SmokeResult], error) {
+			smokeCalled = true
+			return RunSummary[SmokeResult]{
+				Results:     []SmokeResult{{Name: "cobra"}},
+				SummaryPath: filepath.Join(opts.WorkRoot, "summary.json"),
+			}, nil
+		},
+	})
+	if err != nil {
+		t.Fatalf("RunCampaign returned error: %v", err)
+	}
+	if !smokeCalled {
+		t.Fatal("smoke runner should execute when resume key is stale")
+	}
+	if len(run.Results) != 1 || run.Results[0].Resumed {
+		t.Fatalf("unexpected stale resume reuse: %+v", run.Results)
+	}
+}
+
+func TestRunCampaignDisabledJobDoesNotReuseCachedResult(t *testing.T) {
+	dir := t.TempDir()
+	campaignPath := filepath.Join(dir, "campaign.json")
+	if err := os.WriteFile(campaignPath, []byte(`{
+  "schema_version": "1",
+  "jobs": [
+    {"name":"smoke-pass","kind":"smoke","manifest_path":"repos.json","enabled":false}
+  ]
+}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	summaryPath := filepath.Join(dir, "out", "campaign-summary.json")
+	if err := writeCampaignSummary(summaryPath, campaignPath, CampaignManifest{}, []CampaignJobResult{{
+		Name:      "smoke-pass",
+		Kind:      "smoke",
+		Status:    "ok",
+		ResumeKey: campaignJobResumeKey(dir, "", filepath.Join(dir, "out"), CampaignJob{Name: "smoke-pass", Kind: "smoke", ManifestPath: "repos.json"}, "smoke-pass"),
+	}}); err != nil {
+		t.Fatal(err)
+	}
+
+	run, err := RunCampaign(context.Background(), CampaignOptions{
+		Path:       campaignPath,
+		OutputRoot: filepath.Join(dir, "out"),
+		Resume:     true,
+		SmokeRunner: func(_ context.Context, _ SmokeOptions) (RunSummary[SmokeResult], error) {
+			t.Fatal("disabled job should not run")
+			return RunSummary[SmokeResult]{}, nil
+		},
+	})
+	if err != nil {
+		t.Fatalf("RunCampaign returned error: %v", err)
+	}
+	if len(run.Results) != 1 || run.Results[0].Resumed || run.Results[0].Status != "skipped" {
+		t.Fatalf("disabled job reused cached result: %+v", run.Results)
 	}
 }
 

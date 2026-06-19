@@ -253,7 +253,7 @@ func (e *Engine) runMutant(ctx context.Context, mutant Mutant) (MutantResult, er
 	}
 	if e.cfg.Cache.Enabled && e.cfg.Cache.Mode != "off" {
 		if cached, ok, err := e.getCached(key); err == nil && ok {
-			result := cached
+			result := refreshCachedMutantResult(cached, mutant)
 			result.PreviousStatus = result.Status
 			result.Status = StatusCached
 			result.StatusReason = "result reused from incremental cache"

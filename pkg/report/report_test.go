@@ -776,6 +776,8 @@ func TestSARIFAndGitHubSummaryOutputs(t *testing.T) {
 		"## CervoMutants Mutation Summary",
 		"Raw score: **50.00%**",
 		"Actionable score: **66.67%**",
+		"Lane shape: **direct review lane**",
+		"Lane guidance: start with the top survivor queue and nearby-test hints before widening the target or changing policy depth",
 		"Baseline regression: **true**",
 		"| Rank | Mutant | Actionability | Owner route | Operator | Location | Next test | Skip guidance |",
 		"`m-survived`",
@@ -818,6 +820,9 @@ func TestGitHubSummaryIncludesDenominatorGuidanceForLowSignalRuns(t *testing.T) 
 
 	summary := GitHubSummary(run)
 	for _, want := range []string{
+		"- Lane shape: **retargeting signal**",
+		"- Lane note: the run completed, but denominator pressure dominates and this bounded slice did not produce immediate review work",
+		"- Lane guidance: keep the artifact and retarget the next run to a hotter package, subtree, or shard before judging broader rollout fit",
 		"- Denominator warnings: `no_effective_mutants`, `score_denominator_dwarfs_effective`",
 		"- Guidance: Preserve this report and treat the run as target-selection feedback before changing score expectations.",
 		"- Guidance: Retarget the next run to a hotter package, subtree, or bounded shard before widening to ./....",
@@ -827,6 +832,61 @@ func TestGitHubSummaryIncludesDenominatorGuidanceForLowSignalRuns(t *testing.T) 
 			t.Fatalf("github summary missing %q:\n%s", want, summary)
 		}
 	}
+}
+
+func TestGitHubSummaryClassifiesGroupedAndHealthyNoActionLanes(t *testing.T) {
+	t.Run("grouped review lane", func(t *testing.T) {
+		run := engine.RunResult{
+			Summary: engine.Summary{
+				Survived: 3,
+				Actionable: engine.ActionableSummary{
+					ActionableScore:             77.78,
+					TrueActionableSurvivors:     2,
+					SemanticGroupReviewUnits:    1,
+					CollapsedSemanticDuplicates: 1,
+				},
+				DenominatorHealth: engine.DenominatorHealth{Healthy: true},
+			},
+		}
+
+		summary := GitHubSummary(run)
+		for _, want := range []string{
+			"- Semantic review units: **1** (1 collapsed duplicates)",
+			"- Lane shape: **grouped review lane**",
+			"- Lane note: 3 raw survivors collapsed into 2 immediate review units across 1 semantic group",
+			"- Lane guidance: review the grouped equivalent-risk family once before splitting it into multiple separate test tasks",
+		} {
+			if !strings.Contains(summary, want) {
+				t.Fatalf("grouped-review summary missing %q:\n%s", want, summary)
+			}
+		}
+	})
+
+	t.Run("healthy no-action lane", func(t *testing.T) {
+		run := engine.RunResult{
+			Summary: engine.Summary{
+				Survived: 0,
+				Actionable: engine.ActionableSummary{
+					ActionableScore:         100,
+					TrueActionableSurvivors: 0,
+				},
+				DenominatorHealth: engine.DenominatorHealth{
+					Healthy: true,
+				},
+			},
+		}
+
+		summary := GitHubSummary(run)
+		for _, want := range []string{
+			"- Lane shape: **healthy no-action lane**",
+			"- Lane note: this bounded slice produced understandable denominator health and no immediate survivor work",
+			"- Lane guidance: keep the artifact; widen or retarget only if you need more review pressure from a different slice",
+		} {
+			if !strings.Contains(summary, want) {
+				t.Fatalf("healthy-no-action summary missing %q:\n%s", want, summary)
+			}
+		}
+	})
 }
 
 func TestJUnitHTMLAndWriteAll(t *testing.T) {

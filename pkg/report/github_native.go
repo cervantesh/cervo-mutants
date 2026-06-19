@@ -166,9 +166,17 @@ func GitHubSummary(result engine.RunResult) string {
 	fmt.Fprintf(&b, "- Raw score: **%.2f%%**\n", result.Summary.Score)
 	fmt.Fprintf(&b, "- Actionable score: **%.2f%%**\n", result.Summary.Actionable.ActionableScore)
 	fmt.Fprintf(&b, "- Survivors: **%d** total, **%d** true actionable review units\n", result.Summary.Survived, result.Summary.Actionable.TrueActionableSurvivors)
+	if result.Summary.Actionable.SemanticGroupReviewUnits > 0 || result.Summary.Actionable.CollapsedSemanticDuplicates > 0 {
+		fmt.Fprintf(&b, "- Semantic review units: **%d** (%d collapsed duplicates)\n", result.Summary.Actionable.SemanticGroupReviewUnits, result.Summary.Actionable.CollapsedSemanticDuplicates)
+	}
 	fmt.Fprintf(&b, "- Equivalent-risk survivors: **%d**\n", result.Summary.Actionable.EquivalentRiskSurvivors)
 	fmt.Fprintf(&b, "- Platform-sensitive survivors: **%d**\n", result.Summary.PlatformSensitiveSurvivors)
 	fmt.Fprintf(&b, "- Non-progress timeouts: **%d**\n", result.Summary.NonProgressTimeouts)
+	if lane, ok := githubLaneInterpretation(result); ok {
+		fmt.Fprintf(&b, "- Lane shape: **%s**\n", lane.label)
+		fmt.Fprintf(&b, "- Lane note: %s\n", lane.detail)
+		fmt.Fprintf(&b, "- Lane guidance: %s\n", lane.guidance)
+	}
 	if result.Baseline.Enabled {
 		fmt.Fprintf(&b, "- Baseline regression: **%t**\n", result.Baseline.Regression)
 		fmt.Fprintf(&b, "- Baseline new survivors: **%d**\n", len(result.Baseline.NewSurvivors))
@@ -226,6 +234,51 @@ func GitHubSummary(result engine.RunResult) string {
 		}
 	}
 	return b.String()
+}
+
+type githubLaneInfo struct {
+	label    string
+	detail   string
+	guidance string
+}
+
+func githubLaneInterpretation(result engine.RunResult) (githubLaneInfo, bool) {
+	summary := result.Summary
+	actionable := summary.Actionable
+	health := summary.DenominatorHealth
+
+	switch {
+	case actionable.TrueActionableSurvivors == 0 && len(health.Warnings) > 0:
+		return githubLaneInfo{
+			label:    "retargeting signal",
+			detail:   "the run completed, but denominator pressure dominates and this bounded slice did not produce immediate review work",
+			guidance: "keep the artifact and retarget the next run to a hotter package, subtree, or shard before judging broader rollout fit",
+		}, true
+	case actionable.TrueActionableSurvivors == 0 && summary.Survived == 0 && (health.Healthy || len(health.Warnings) == 0):
+		return githubLaneInfo{
+			label:    "healthy no-action lane",
+			detail:   "this bounded slice produced understandable denominator health and no immediate survivor work",
+			guidance: "keep the artifact; widen or retarget only if you need more review pressure from a different slice",
+		}, true
+	case actionable.CollapsedSemanticDuplicates > 0 || (actionable.SemanticGroupReviewUnits > 0 && summary.Survived > actionable.TrueActionableSurvivors):
+		groupLabel := "groups"
+		if actionable.SemanticGroupReviewUnits == 1 {
+			groupLabel = "group"
+		}
+		return githubLaneInfo{
+			label:    "grouped review lane",
+			detail:   fmt.Sprintf("%d raw survivors collapsed into %d immediate review units across %d semantic %s", summary.Survived, actionable.TrueActionableSurvivors, actionable.SemanticGroupReviewUnits, groupLabel),
+			guidance: "review the grouped equivalent-risk family once before splitting it into multiple separate test tasks",
+		}, true
+	case actionable.TrueActionableSurvivors > 0:
+		return githubLaneInfo{
+			label:    "direct review lane",
+			detail:   "raw survivors and immediate review workload are closely aligned in this bounded slice",
+			guidance: "start with the top survivor queue and nearby-test hints before widening the target or changing policy depth",
+		}, true
+	default:
+		return githubLaneInfo{}, false
+	}
 }
 
 func writeGitHubStepSummary(markdown string) error {

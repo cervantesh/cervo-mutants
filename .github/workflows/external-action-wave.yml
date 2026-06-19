@@ -152,244 +152,35 @@ jobs:
           INSTALL_PATH: ${{ needs.plan.outputs.install_path }}
         run: |
           report_dir="target/.cervomut/external-wave/${REPO_NAME}"
-          report_json="$report_dir/mutation-report.json"
-          report_kind="full"
-          if [ ! -f "$report_json" ]; then
-            report_json="$report_dir/partial-mutation-report.json"
-            report_kind="partial"
-          fi
-
           generated_at="$(date -u +%FT%TZ)"
-          if [ -f "$report_json" ]; then
-            ledger_json="$report_dir/semantic-triage-ledger.json"
-            if [ ! -f "$ledger_json" ]; then
-              printf '{"entries":[]}\n' > ledger-fallback.json
-              ledger_json="ledger-fallback.json"
-            fi
-            governance_json="$report_dir/governance-review.json"
-            if [ ! -f "$governance_json" ]; then
-              printf '{"quarantine_templates":[],"suppression_templates":[]}\n' > governance-fallback.json
-              governance_json="governance-fallback.json"
-            fi
-            jq -n \
-              --arg generated_at "$generated_at" \
-              --arg name "$REPO_NAME" \
-              --arg repository "$REPOSITORY" \
-              --arg install_path "$INSTALL_PATH" \
-              --arg action_ref "$ACTION_REF" \
-              --arg ref "$REPO_REF" \
-              --arg target "$TARGET" \
-              --arg profile "$PROFILE" \
-              --arg go_version "$GO_VERSION" \
-              --arg go_version_target "$GO_VERSION_TARGET" \
-              --arg go_version_action_min "$GO_VERSION_ACTION_MIN" \
-              --arg go_version_requested "$GO_VERSION_REQUESTED" \
-              --arg policy "$POLICY" \
-              --arg budget "$BUDGET" \
-              --arg sample "$SAMPLE" \
-              --arg coverage_prefilter "$COVERAGE_PREFILTER" \
-              --arg report_dir "$report_dir" \
-              --arg report_path "$report_json" \
-              --arg report_kind "$report_kind" \
-              --arg job_status "$JOB_STATUS" \
-              --argjson max_mutants "$MAX_MUTANTS" \
-              --argjson workers "$WORKERS" \
-              --slurpfile report "$report_json" \
-              --slurpfile ledger "$ledger_json" \
-              --slurpfile governance "$governance_json" \
-              '
-              ($report[0]) as $r |
-              (($ledger[0].entries // []) | length) as $ledger_entries |
-              ((($governance[0].suppression_templates // []) + ($governance[0].quarantine_templates // []))) as $governance_templates |
-              (($governance[0].quarantine_templates // []) | length) as $governance_quarantine_templates |
-              (($governance[0].suppression_templates // []) | length) as $governance_suppression_templates |
-              ($governance_templates | group_by(.status) | map({key: .[0].status, value: length}) | from_entries) as $governance_suggestions_by_status |
-              ([$r.mutants[]? | select(.test_recommendation != null)]) as $recommended |
-              ($recommended | length) as $recommendation_entries |
-              (
-                ($recommended | map(select((.mutant.semantic_group // "") == "")) | length) +
-                ($recommended | map(.mutant.semantic_group // empty) | unique | length)
-              ) as $recommendation_review_units |
-              {
-                generated_at: $generated_at,
-                name: $name,
-                repository: $repository,
-                install_path: $install_path,
-                action_ref: $action_ref,
-                ref: $ref,
-                target: $target,
-                profile: $profile,
-                go_version: $go_version,
-                go_version_target: (if $go_version_target == "" then null else $go_version_target end),
-                go_version_action_min: $go_version_action_min,
-                go_version_requested: (if $go_version_requested == "" then null else $go_version_requested end),
-                policy: $policy,
-                budget: $budget,
-                sample: $sample,
-                coverage_prefilter: ($coverage_prefilter == "true"),
-                max_mutants: $max_mutants,
-                workers: $workers,
-                job_status: $job_status,
-                report_kind: $report_kind,
-                report_dir: $report_dir,
-                report_path: $report_path,
-                summary: {
-                  total: $r.summary.total,
-                  killed: $r.summary.killed,
-                  survived: $r.summary.survived,
-                  not_covered: $r.summary.not_covered,
-                  timed_out: $r.summary.timed_out,
-                  compile_error: $r.summary.compile_error,
-                  score: $r.summary.score,
-                  actionable_score: ($r.summary.actionable.actionable_score // null),
-                  mutation_coverage: $r.summary.mutation_coverage,
-                  test_efficacy: $r.summary.test_efficacy
-                },
-                triage: {
-                  actionable_review_units: ($r.summary.actionable.true_actionable_survivors // 0),
-                  actionable_survivors: ($r.summary.actionable.actionable_survivors // 0),
-                  equivalent_risk_survivors: ($r.summary.actionable.equivalent_risk_survivors // 0),
-                  semantic_group_review_units: ($r.summary.actionable.semantic_group_review_units // 0),
-                  collapsed_semantic_duplicates: ($r.summary.actionable.collapsed_semantic_duplicates // 0),
-                  semantic_group_count: (($r.summary.semantic_group_statistics // {}) | keys | length),
-                  recommendation_entries: $recommendation_entries,
-                  recommendation_review_units: $recommendation_review_units,
-                  collapsed_recommendation_duplicates: ($recommendation_entries - $recommendation_review_units),
-                  ledger_entries: $ledger_entries,
-                  governance_quarantine_templates: $governance_quarantine_templates,
-                  governance_suppression_templates: $governance_suppression_templates,
-                  governance_suggestions_by_status: $governance_suggestions_by_status,
-                  governance_total_suggestions: ($governance_quarantine_templates + $governance_suppression_templates)
-                },
-                denominator_health: ($r.summary.denominator_health // null),
-                environment: ($r.environment // null),
-                failure: ($r.failure // null)
-              }
-              ' > wave-result.json
-          else
-            failure_json="null"
-            if [ -f "$report_dir/failure-debug.json" ]; then
-              failure_json="$(go run ./cervomut-source/cmd/actionhelper failure-from-debug --path "$report_dir/failure-debug.json")"
-            fi
-            jq -n \
-              --arg generated_at "$generated_at" \
-              --arg name "$REPO_NAME" \
-              --arg repository "$REPOSITORY" \
-              --arg install_path "$INSTALL_PATH" \
-              --arg action_ref "$ACTION_REF" \
-              --arg ref "$REPO_REF" \
-              --arg target "$TARGET" \
-              --arg profile "$PROFILE" \
-              --arg go_version "$GO_VERSION" \
-              --arg go_version_target "$GO_VERSION_TARGET" \
-              --arg go_version_action_min "$GO_VERSION_ACTION_MIN" \
-              --arg go_version_requested "$GO_VERSION_REQUESTED" \
-              --arg policy "$POLICY" \
-              --arg budget "$BUDGET" \
-              --arg sample "$SAMPLE" \
-              --arg coverage_prefilter "$COVERAGE_PREFILTER" \
-              --arg report_dir "$report_dir" \
-              --arg report_kind "missing" \
-              --arg job_status "$JOB_STATUS" \
-              --argjson max_mutants "$MAX_MUTANTS" \
-              --argjson workers "$WORKERS" \
-              --argjson failure "$failure_json" \
-              '
-              {
-                generated_at: $generated_at,
-                name: $name,
-                repository: $repository,
-                install_path: $install_path,
-                action_ref: $action_ref,
-                ref: $ref,
-                target: $target,
-                profile: $profile,
-                go_version: $go_version,
-                go_version_target: (if $go_version_target == "" then null else $go_version_target end),
-                go_version_action_min: $go_version_action_min,
-                go_version_requested: (if $go_version_requested == "" then null else $go_version_requested end),
-                policy: $policy,
-                budget: $budget,
-                sample: $sample,
-                coverage_prefilter: ($coverage_prefilter == "true"),
-                max_mutants: $max_mutants,
-                workers: $workers,
-                job_status: $job_status,
-                report_kind: $report_kind,
-                report_dir: $report_dir,
-                triage: {
-                  actionable_review_units: 0,
-                  actionable_survivors: 0,
-                  equivalent_risk_survivors: 0,
-                  semantic_group_review_units: 0,
-                  collapsed_semantic_duplicates: 0,
-                  semantic_group_count: 0,
-                  recommendation_entries: 0,
-                  recommendation_review_units: 0,
-                  collapsed_recommendation_duplicates: 0,
-                  ledger_entries: 0,
-                  governance_quarantine_templates: 0,
-                  governance_suppression_templates: 0,
-                  governance_suggestions_by_status: {},
-                  governance_total_suggestions: 0
-                },
-                failure: $failure
-              }
-              ' > wave-result.json
-          fi
+          go run ./cervomut-source/cmd/actionhelper build-wave-result \
+            --generated-at "$generated_at" \
+            --name "$REPO_NAME" \
+            --repository "$REPOSITORY" \
+            --install-path "$INSTALL_PATH" \
+            --action-ref "$ACTION_REF" \
+            --ref "$REPO_REF" \
+            --target "$TARGET" \
+            --profile "$PROFILE" \
+            --go-version "$GO_VERSION" \
+            --go-version-target "$GO_VERSION_TARGET" \
+            --go-version-action-min "$GO_VERSION_ACTION_MIN" \
+            --go-version-requested "$GO_VERSION_REQUESTED" \
+            --policy "$POLICY" \
+            --budget "$BUDGET" \
+            --sample "$SAMPLE" \
+            --coverage-prefilter "$COVERAGE_PREFILTER" \
+            --report-dir "$report_dir" \
+            --job-status "$JOB_STATUS" \
+            --max-mutants "$MAX_MUTANTS" \
+            --workers "$WORKERS" \
+            > wave-result.json
 
       - name: Append repo summary
         if: always()
         shell: bash
         run: |
-          jq -r '
-            def compact_inline:
-              gsub("[\r\n\t]+"; " ")
-              | gsub("`"; "")
-              | gsub("  +"; " ")
-              | if length > 240 then .[0:240] + "..." else . end;
-            "## " + .name,
-            "- Repository: `" + .repository + "`",
-            "- Install path: `" + .install_path + "` action_ref=`" + .action_ref + "`",
-            "- Target: `" + .target + "`",
-            "- Profile: `" + .profile + "`",
-            "- Go version: resolved=`" + .go_version + "` action_min=`" + (.go_version_action_min // "") + "`" + (if .go_version_target then " target=`" + .go_version_target + "`" else "" end) + (if .go_version_requested then " requested=`" + .go_version_requested + "`" else "" end),
-            "- Policy: `" + .policy + "` sample=`" + (.sample // "") + "` coverage_prefilter=`" + ((.coverage_prefilter // false)|tostring) + "` max_mutants=`" + (.max_mutants|tostring) + "` workers=`" + (.workers|tostring) + "`",
-            "- Job status: `" + .job_status + "`",
-            (
-              if .report_kind == "missing" then
-                "- Report: missing"
-              else
-                "- Report: " + .report_kind + " (`" + .report_path + "`)"
-              end
-            ),
-            (
-              if .summary then
-                "- Generated: **\(.denominator_health.generated // 0)**, effective: **\(.denominator_health.effective // 0)**, killed: **\(.summary.killed)**, survived: **\(.summary.survived)**, not covered: **\(.summary.not_covered)**, score: **\(.summary.score)%**, actionable: **\(.summary.actionable_score)%**"
-              else
-                "- No report metrics captured"
-              end
-            ),
-            (
-              if .failure then
-                "- Failure: `\(.failure.kind)` \(.failure.message // "")"
-              else
-                empty
-              end
-            ),
-            (
-              if (.failure.runner_result // null) then
-                "- Runner detail: status=`\(.failure.runner_result.status // "")` reason=`\(.failure.runner_result.status_reason // "")` command=`\((.failure.runner_result.command // []) | join(" "))`" +
-                (if ((.failure.runner_result.output // "") != "") then " output=`\((.failure.runner_result.output // "") | compact_inline)`" else "" end)
-              else
-                empty
-              end
-            ),
-            (
-              "- Triage: actionable_review_units=**\(.triage.actionable_review_units // 0)**, semantic_groups=**\(.triage.semantic_group_count // 0)**, recommendations=**\(.triage.recommendation_entries // 0)**, ledger_entries=**\(.triage.ledger_entries // 0)**, governance_suggestions=**\(.triage.governance_total_suggestions // 0)**"
-            ),
-            ""
-          ' wave-result.json >> "$GITHUB_STEP_SUMMARY"
+          go run ./cervomut-source/cmd/actionhelper render-wave-result-markdown --path wave-result.json >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload wave artifact
         if: always()
@@ -409,6 +200,17 @@ jobs:
       - wave
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v7
+        with:
+          path: cervomut-source
+          ref: ${{ needs.plan.outputs.checkout_ref }}
+
+      - name: Setup Go for summary helpers
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: cervomut-source/go.mod
+          cache: false
+
       - name: Download wave artifacts
         uses: actions/download-artifact@v8
         with:
@@ -424,134 +226,16 @@ jobs:
           INSTALL_PATH: ${{ needs.plan.outputs.install_path }}
         run: |
           generated_at="$(date -u +%FT%TZ)"
-          jq -s \
-            --arg generated_at "$generated_at" \
-            --arg tracking_issue "$TRACKING_ISSUE" \
-            --arg manifest_path "$MANIFEST_PATH" \
-            --arg action_ref "$ACTION_REF" \
-            --arg install_path "$INSTALL_PATH" \
-            '
-            {
-              schema_version: "1",
-              tracking_issue: $tracking_issue,
-              manifest_path: $manifest_path,
-              action_ref: $action_ref,
-              install_path: $install_path,
-              generated_at: $generated_at,
-              repos: sort_by(.name),
-              aggregate: {
-                selected: length,
-                reports: (map(select(.report_kind != "missing")) | length),
-                missing_reports: (map(select(.report_kind == "missing")) | length),
-                generated: (map(.denominator_health.generated // 0) | add),
-                covered: (map(.denominator_health.covered // 0) | add),
-                executed: (map(.denominator_health.executed // 0) | add),
-                effective: (map(.denominator_health.effective // 0) | add),
-                killed: (map(.summary.killed // 0) | add),
-                survived: (map(.summary.survived // 0) | add),
-                not_covered: (map(.summary.not_covered // 0) | add),
-                timed_out: (map(.summary.timed_out // 0) | add),
-                compile_error: (map(.summary.compile_error // 0) | add),
-                warning_repos: (map(select((.denominator_health.warnings // []) | length > 0)) | length),
-                failed_reports: (map(select(.failure.kind != null)) | length),
-                failure_kinds: (
-                  map(select(.failure.kind != null) | .failure.kind)
-                  | group_by(.)
-                  | map({key: .[0], value: length})
-                  | from_entries
-                )
-              },
-              triage: {
-                actionable_review_units: (map(.triage.actionable_review_units // 0) | add),
-                actionable_survivors: (map(.triage.actionable_survivors // 0) | add),
-                equivalent_risk_survivors: (map(.triage.equivalent_risk_survivors // 0) | add),
-                semantic_group_review_units: (map(.triage.semantic_group_review_units // 0) | add),
-                collapsed_semantic_duplicates: (map(.triage.collapsed_semantic_duplicates // 0) | add),
-                semantic_group_count: (map(.triage.semantic_group_count // 0) | add),
-                recommendation_entries: (map(.triage.recommendation_entries // 0) | add),
-                recommendation_review_units: (map(.triage.recommendation_review_units // 0) | add),
-                collapsed_recommendation_duplicates: (map(.triage.collapsed_recommendation_duplicates // 0) | add),
-                ledger_entries: (map(.triage.ledger_entries // 0) | add),
-                governance_quarantine_templates: (map(.triage.governance_quarantine_templates // 0) | add),
-                governance_suppression_templates: (map(.triage.governance_suppression_templates // 0) | add),
-                governance_suggestions_by_status: (
-                  reduce (map(.triage.governance_suggestions_by_status // {}))[] as $counts
-                    ({};
-                      reduce ($counts | to_entries[]) as $entry
-                        (.;
-                          .[$entry.key] = ((.[$entry.key] // 0) + $entry.value)
-                        )
-                    )
-                ),
-                governance_total_suggestions: (map(.triage.governance_total_suggestions // 0) | add),
-                repos_with_actionable_review_units: (map(select((.triage.actionable_review_units // 0) > 0)) | length),
-                repos_with_semantic_groups: (map(select((.triage.semantic_group_count // 0) > 0)) | length),
-                repos_with_recommendations: (map(select((.triage.recommendation_entries // 0) > 0)) | length),
-                repos_with_recommendation_review_units: (map(select((.triage.recommendation_review_units // 0) > 0)) | length),
-                repos_with_ledger_entries: (map(select((.triage.ledger_entries // 0) > 0)) | length),
-                repos_with_governance_suggestions: (map(select((.triage.governance_total_suggestions // 0) > 0)) | length)
-              }
-            }
-            ' artifacts/*/wave-result.json > wave-summary.json
+          go run ./cervomut-source/cmd/actionhelper build-wave-summary \
+            --generated-at "$generated_at" \
+            --tracking-issue "$TRACKING_ISSUE" \
+            --manifest-path "$MANIFEST_PATH" \
+            --action-ref "$ACTION_REF" \
+            --install-path "$INSTALL_PATH" \
+            --artifacts-dir artifacts \
+            > wave-summary.json
 
-          {
-            echo "# External GitHub Action Wave Summary"
-            echo
-            jq -r '
-              def format_status_counts:
-                ((. // {}) | to_entries | sort_by(.key) | map("\(.key)=\(.value)") | join(", "));
-              def compact_inline:
-                gsub("[\r\n\t]+"; " ")
-                | gsub("`"; "")
-                | gsub("  +"; " ")
-                | if length > 240 then .[0:240] + "..." else . end;
-              (if (.tracking_issue // "") != "" then "- Tracking issue: **\(.tracking_issue)**" else empty end),
-              (if (.manifest_path // "") != "" then "- Manifest: `\(.manifest_path)`" else empty end),
-              (if (.install_path // "") != "" then "- Install path: `\(.install_path)` action_ref=`\(.action_ref // "")`" else empty end),
-              "- Selected repos: **\(.aggregate.selected)**",
-              "- Reports captured: **\(.aggregate.reports)**",
-              "- Missing reports: **\(.aggregate.missing_reports)**",
-              "- Generated mutants: **\(.aggregate.generated)**",
-              "- Covered mutants: **\(.aggregate.covered)**",
-              "- Executed mutants: **\(.aggregate.executed)**",
-              "- Effective mutants: **\(.aggregate.effective)**",
-              "- Killed: **\(.aggregate.killed)**",
-              "- Survived: **\(.aggregate.survived)**",
-              "- Not covered: **\(.aggregate.not_covered)**",
-              "- Timed out: **\(.aggregate.timed_out)**",
-              "- Compile errors: **\(.aggregate.compile_error)**",
-              "- Repos with denominator warnings: **\(.aggregate.warning_repos)**",
-              "- Repos with reported failures: **\(.aggregate.failed_reports)**",
-              (if ((.aggregate.failure_kinds // {}) | length) > 0 then "- Failure kinds: `\(.aggregate.failure_kinds | format_status_counts)`" else empty end),
-              "- Triage actionable review units: **\(.triage.actionable_review_units)**",
-              "- Semantic group review units: **\(.triage.semantic_group_review_units)**",
-              "- Semantic groups formed: **\(.triage.semantic_group_count)**",
-              "- Recommendation entries: **\(.triage.recommendation_entries)**",
-              "- Recommendation review units: **\(.triage.recommendation_review_units)**",
-              "- Collapsed recommendation duplicates: **\(.triage.collapsed_recommendation_duplicates)**",
-              "- Ledger entries: **\(.triage.ledger_entries)**",
-              "- Governance suggestions: **\(.triage.governance_total_suggestions)**",
-              (if ((.triage.governance_suggestions_by_status // {}) | length) > 0 then "- Governance suggestions by status: `\(.triage.governance_suggestions_by_status | format_status_counts)`" else empty end),
-              ""
-            ' wave-summary.json
-            jq -r '
-              def format_status_counts:
-                ((. // {}) | to_entries | sort_by(.key) | map("\(.key)=\(.value)") | join(", "));
-              .repos[] |
-              "## \(.name)\n- Repository: `\(.repository)`\n- Install path: `\(.install_path)` action_ref=`\(.action_ref)`\n- Target: `\(.target)`\n- Profile: `\(.profile)`\n- Go version: resolved=`\(.go_version)` action_min=`\(.go_version_action_min // "")`" + (if .go_version_target then " target=`\(.go_version_target)`" else "" end) + (if .go_version_requested then " requested=`\(.go_version_requested)`" else "" end) + "\n- Policy: `\(.policy)` sample=`\(.sample // "")` coverage_prefilter=`\((.coverage_prefilter // false)|tostring)` max_mutants=`\(.max_mutants)` workers=`\(.workers)`\n- Job status: `\(.job_status)`\n- Report kind: `\(.report_kind)`\n" +
-              (
-                if .summary then
-                  "- Generated: **\(.denominator_health.generated // 0)**, effective: **\(.denominator_health.effective // 0)**, killed: **\(.summary.killed)**, survived: **\(.summary.survived)**, not covered: **\(.summary.not_covered)**, score: **\(.summary.score)%**, actionable: **\(.summary.actionable_score)%**\n- Triage: actionable_review_units=**\(.triage.actionable_review_units // 0)**, semantic_groups=**\(.triage.semantic_group_count // 0)**, recommendations=**\(.triage.recommendation_entries // 0)**, recommendation_review_units=**\(.triage.recommendation_review_units // 0)**, collapsed_recommendation_duplicates=**\(.triage.collapsed_recommendation_duplicates // 0)**, ledger_entries=**\(.triage.ledger_entries // 0)**, governance_suggestions=**\(.triage.governance_total_suggestions // 0)**" +
-                  (if ((.triage.governance_suggestions_by_status // {}) | length) > 0 then " (`\(.triage.governance_suggestions_by_status | format_status_counts)`)" else "" end) +
-                  (if .failure then "\n- Failure: `\(.failure.kind)` \(.failure.message // "")" else "" end) +
-                  (if (.failure.runner_result // null) then "\n- Runner detail: status=`\(.failure.runner_result.status // "")` reason=`\(.failure.runner_result.status_reason // "")` command=`\((.failure.runner_result.command // []) | join(" "))`" + (if ((.failure.runner_result.output // "") != "") then " output=`\((.failure.runner_result.output // "") | compact_inline)`" else "" end) else "" end) +
-                  "\n"
-                else
-                  "- No report metrics captured\n"
-                end
-              )
-            ' wave-summary.json
-          } > wave-summary.md
+          go run ./cervomut-source/cmd/actionhelper render-wave-summary-markdown --path wave-summary.json > wave-summary.md
 
       - name: Publish combined summary
         shell: bash

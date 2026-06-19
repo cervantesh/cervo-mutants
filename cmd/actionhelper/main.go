@@ -49,7 +49,7 @@ func main() {
 
 func run(args []string, stdout io.Writer) error {
 	if len(args) == 0 {
-		return fmt.Errorf("usage: actionhelper <install-plan|report-dir|resolve-go-version|failure-from-debug>")
+		return fmt.Errorf("usage: actionhelper <install-plan|report-dir|resolve-go-version|failure-from-debug|build-wave-result|render-wave-result-markdown|build-wave-summary|render-wave-summary-markdown>")
 	}
 	switch args[0] {
 	case "install-plan":
@@ -60,6 +60,14 @@ func run(args []string, stdout io.Writer) error {
 		return cmdResolveGoVersion(args[1:], stdout)
 	case "failure-from-debug":
 		return cmdFailureFromDebug(args[1:], stdout)
+	case "build-wave-result":
+		return cmdBuildWaveResult(args[1:], stdout)
+	case "render-wave-result-markdown":
+		return cmdRenderWaveResultMarkdown(args[1:], stdout)
+	case "build-wave-summary":
+		return cmdBuildWaveSummary(args[1:], stdout)
+	case "render-wave-summary-markdown":
+		return cmdRenderWaveSummaryMarkdown(args[1:], stdout)
 	default:
 		return fmt.Errorf("unknown command %q", args[0])
 	}

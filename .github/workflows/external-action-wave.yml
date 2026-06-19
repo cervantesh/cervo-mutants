@@ -240,7 +240,9 @@ jobs:
 
   summarize:
     if: always()
-    needs: wave
+    needs:
+      - plan
+      - wave
     runs-on: ubuntu-latest
     steps:
       - name: Download wave artifacts

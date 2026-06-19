@@ -1,14 +1,14 @@
 {
   "schema_version": "1",
-  "tracking_issue": "#224",
-  "description": "Default hosted GitHub Action wave manifest tuned for better effective-mutant yield after the first hosted adoption wave under-produced actionable units.",
-  "action_ref": "3adfa28",
+  "tracking_issue": "#227",
+  "description": "Default hosted GitHub Action wave manifest retargeted for better denominator health after cobra-doc and grpc-metadata repeatedly collapsed to no_effective_mutants on GitHub-hosted runners.",
+  "action_ref": "beee8dd",
   "jobs": [
     {
-      "name": "cobra-doc",
-      "url": "https://github.com/spf13/cobra.git",
-      "ref": "v1.10.1",
-      "target": "./doc",
+      "name": "pflag-root",
+      "url": "https://github.com/spf13/pflag.git",
+      "ref": "v1.0.10",
+      "target": "./...",
       "profile": "small-library",
       "policy": "ci-balanced",
       "budget": "5m",
@@ -29,11 +29,11 @@
       "workers": 2
     },
     {
-      "name": "grpc-metadata",
-      "url": "https://github.com/grpc/grpc-go.git",
-      "ref": "v1.63.2",
-      "target": "./metadata",
-      "profile": "scoped-large-validation",
+      "name": "gjson-root",
+      "url": "https://github.com/tidwall/gjson.git",
+      "ref": "v1.18.0",
+      "target": "./...",
+      "profile": "validation-library",
       "policy": "ci-balanced",
       "budget": "5m",
       "sample": "deterministic",

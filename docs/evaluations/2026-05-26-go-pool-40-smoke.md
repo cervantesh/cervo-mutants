@@ -49,7 +49,7 @@ Repos needing scope/setup adjustment:
 | `kubernetes/kubernetes` | 1 | 2 | Special repo layout / workspace setup needed. |
 | `gin-gonic/gin` | 1 | 0 | CervoMutants discovery works; baseline test scope needs dependency/setup review. |
 | `etcd-io/etcd` | 1 | 0 | Discovery works; target likely needs narrowed package or env. |
-| `go-gitea/gitea` | 124 | 0 | Discovery works; baseline target too broad for 30s. |
+| `historical public devtools sample` | 124 | 0 | Discovery works; baseline target too broad for 30s. |
 | `rclone/rclone` | 124 | 0 | Discovery works; baseline target too broad for 30s. |
 | `ethereum/go-ethereum` | 0 | 2 | Baseline passes; dry-run target needs module/discovery adjustment. |
 | `hashicorp/consul` | 1 | 0 | Discovery works; baseline setup needed. |

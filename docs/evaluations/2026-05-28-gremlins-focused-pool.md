@@ -110,7 +110,7 @@ should be run one at a time or in WSL2/cgroup-protected mode when possible.
 | 2 | `moby` | `./pkg/...` | holdout | containers | Large production codebase; previous tools struggled. |
 | 3 | `prometheus` | `./model/...` | holdout | observability | Metrics/parser-heavy production Go. |
 | 4 | `terraform` | `./internal/addrs/...` | holdout | iac | Config/state semantics with bounded package target. |
-| 5 | `gitea` | `./modules/...` | validation | devtools | Large Go app relevant to Cervo infrastructure. |
+| 5 | `helm` | `./pkg/...` | validation | devtools | Large Go delivery/devtools codebase with a broad package graph. |
 | 6 | `rclone` | `./fs/...` | holdout | storage | IO-heavy behavior and broad package graph. |
 | 7 | `etcd` | `./client/v3/...` | holdout | distributed-systems | Distributed systems client code with concurrency. |
 | 8 | `kubernetes` | `./pkg/scheduler/cache` | special | orchestration | Empirical-study-grade large repo; scoped target only. |

@@ -117,7 +117,7 @@ func goldenReportFixture() engine.RunResult {
 			Arch:            "amd64",
 			GoVersion:       "go1.25.6",
 			ToolVersion:     "v0.2.0",
-			WorkingDir:      `C:\dev\CervoSoft\CervoMutant`,
+			WorkingDir:      `C:\workspace\cervo-mutants`,
 			TempDir:         `C:\Users\tester\AppData\Local\Temp\cervomut-123`,
 			TempRoot:        `C:\Users\tester\AppData\Local\CervoMutants\tmp`,
 			Isolation:       "overlay",

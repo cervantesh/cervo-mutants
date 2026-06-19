@@ -66,7 +66,7 @@ cervomut pool smoke --limit 12 --run-mutation --max-mutants 25 --workers 2
 | 7 | `gin-gonic/gin` | validation | web | `./...` |
 | 8 | `etcd-io/etcd` | holdout | distributed-systems | `./client/v3/...` |
 | 9 | `prometheus/prometheus` | holdout | observability | `./model/...` |
-| 10 | `go-gitea/gitea` | validation | devtools | `./modules/...` |
+| 10 | `helm/helm` | validation | devtools | `./pkg/...` |
 | 11 | `rclone/rclone` | holdout | storage | `./fs/...` |
 | 12 | `ethereum/go-ethereum` | special | blockchain | `./common/...` |
 | 13 | `hashicorp/terraform` | holdout | iac | `./internal/addrs/...` |

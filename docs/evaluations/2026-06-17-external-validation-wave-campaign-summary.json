@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "campaign_path": "C:\\dev\\CervoSoft\\CervoMutant\\docs\\evaluations\\external-validation-wave-5-campaign.json",
+  "campaign_path": "C:\\workspace\\cervo-mutants\\docs\\evaluations\\external-validation-wave-5-campaign.json",
   "tracking_issue": "#95",
   "description": "First external validation wave across five public Go repositories using bounded mutation runs.",
   "generated_at": "2026-06-17T14:31:49.9373808Z",
@@ -16,10 +16,10 @@
       "name": "public-wave-smoke",
       "kind": "smoke",
       "status": "ok",
-      "manifest_path": "C:\\dev\\CervoSoft\\CervoMutant\\docs\\evaluations\\go-repo-pool-40.json",
-      "work_root": "C:\\dev\\CervoSoft\\CervoMutant\\.cervomut\\external-validation-wave\\work\\public-wave-smoke",
-      "output_root": "C:\\dev\\CervoSoft\\CervoMutant\\.cervomut\\external-validation-wave\\work\\public-wave-smoke",
-      "summary_path": "C:\\dev\\CervoSoft\\CervoMutant\\.cervomut\\external-validation-wave\\work\\public-wave-smoke\\summary.json",
+      "manifest_path": "C:\\workspace\\cervo-mutants\\docs\\evaluations\\go-repo-pool-40.json",
+      "work_root": "C:\\workspace\\cervo-mutants\\.cervomut\\external-validation-wave\\work\\public-wave-smoke",
+      "output_root": "C:\\workspace\\cervo-mutants\\.cervomut\\external-validation-wave\\work\\public-wave-smoke",
+      "summary_path": "C:\\workspace\\cervo-mutants\\.cervomut\\external-validation-wave\\work\\public-wave-smoke\\summary.json",
       "result_count": 5,
       "elapsed_seconds": 107.261,
       "notes": [

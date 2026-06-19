@@ -207,7 +207,7 @@
           "executionSuccessful": true,
           "commandLine": "go test ./pkg/review",
           "workingDirectory": {
-            "uri": "C:/dev/CervoSoft/CervoMutant"
+            "uri": "C:/workspace/cervo-mutants"
           }
         }
       ],
@@ -220,7 +220,7 @@
       },
       "originalUriBaseIds": {
         "SRCROOT": {
-          "uri": "C:/dev/CervoSoft/CervoMutant"
+          "uri": "C:/workspace/cervo-mutants"
         }
       }
     }

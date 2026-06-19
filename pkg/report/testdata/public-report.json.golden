@@ -136,7 +136,7 @@
     "arch": "amd64",
     "go_version": "go1.25.6",
     "tool_version": "v0.2.0",
-    "working_dir": "C:\\dev\\CervoSoft\\CervoMutant",
+    "working_dir": "C:\\workspace\\cervo-mutants",
     "temp_dir": "C:\\Users\\tester\\AppData\\Local\\Temp\\cervomut-123",
     "temp_root": "C:\\Users\\tester\\AppData\\Local\\CervoMutants\\tmp",
     "isolation": "overlay",

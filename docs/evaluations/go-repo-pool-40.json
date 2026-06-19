@@ -12,7 +12,7 @@
     {"name": "gin", "url": "https://github.com/gin-gonic/gin.git", "target": "./...", "lane": "validation", "domain": "web", "reason": "Popular web framework mentioned in Go repository studies."},
     {"name": "etcd", "url": "https://github.com/etcd-io/etcd.git", "target": "./client/v3/...", "lane": "holdout", "domain": "distributed-systems", "reason": "CNCF distributed-systems code with real tests and concurrency."},
     {"name": "prometheus", "url": "https://github.com/prometheus/prometheus.git", "target": "./model/...", "lane": "holdout", "domain": "observability", "reason": "Metrics and parser-heavy production Go."},
-    {"name": "gitea", "url": "https://github.com/go-gitea/gitea.git", "target": "./modules/...", "lane": "validation", "domain": "devtools", "reason": "Large Go web/devops app relevant to Cervo infrastructure."},
+    {"name": "helm", "url": "https://github.com/helm/helm.git", "target": "./pkg/...", "lane": "validation", "domain": "devtools", "reason": "Large Go delivery/devtools codebase with a broad package graph."},
     {"name": "rclone", "url": "https://github.com/rclone/rclone.git", "target": "./fs/...", "lane": "holdout", "domain": "storage", "reason": "Cloud storage and IO-heavy behavior."},
     {"name": "go-ethereum", "url": "https://github.com/ethereum/go-ethereum.git", "target": "./common/...", "lane": "special", "domain": "blockchain", "reason": "Large complex Go codebase; scoped correctness-heavy packages only."},
     {"name": "terraform", "url": "https://github.com/hashicorp/terraform.git", "target": "./internal/addrs/...", "lane": "holdout", "domain": "iac", "reason": "Config/state semantics; not CLI-parser-only."},

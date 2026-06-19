@@ -1,0 +1,59 @@
+{
+  "schema_version": "1",
+  "tracking_issue": "#327",
+  "description": "Deeper released-surface GitHub Action calibration wave for v0.4.2 across the current mixed-profile control set, increasing mutant depth while staying CI-shaped and hosted-runner friendly.",
+  "install_path": "github-action@v0.4.2",
+  "action_ref": "v0.4.2",
+  "jobs": [
+    {
+      "name": "pflag-root",
+      "url": "https://github.com/spf13/pflag.git",
+      "ref": "v1.0.10",
+      "target": "./...",
+      "profile": "small-library-control-deeper",
+      "policy": "ci-balanced",
+      "budget": "8m",
+      "sample": "deterministic",
+      "max_mutants": 15,
+      "workers": 2
+    },
+    {
+      "name": "gjson-root",
+      "url": "https://github.com/tidwall/gjson.git",
+      "ref": "v1.18.0",
+      "target": "./...",
+      "profile": "validation-library-control-deeper",
+      "policy": "ci-balanced",
+      "budget": "8m",
+      "sample": "deterministic",
+      "max_mutants": 15,
+      "workers": 2
+    },
+    {
+      "name": "prometheus-labels",
+      "url": "https://github.com/prometheus/prometheus.git",
+      "ref": "505095b64b43dd76baf08839e1800a8d473c97e0",
+      "target": "./model/labels",
+      "profile": "medium-service-scoped-deeper",
+      "policy": "ci-balanced",
+      "budget": "8m",
+      "sample": "deterministic",
+      "max_mutants": 15,
+      "workers": 2,
+      "coverage_prefilter": true
+    },
+    {
+      "name": "apimachinery-resource",
+      "url": "https://github.com/kubernetes/apimachinery.git",
+      "ref": "6bdb38e7395b5518f3111f71bdf16152db13ad46",
+      "target": "./pkg/api/resource",
+      "profile": "large-multipackage-scoped-retargeted-deeper",
+      "policy": "ci-balanced",
+      "budget": "8m",
+      "sample": "deterministic",
+      "max_mutants": 15,
+      "workers": 2,
+      "coverage_prefilter": true
+    }
+  ]
+}

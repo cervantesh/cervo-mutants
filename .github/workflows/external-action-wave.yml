@@ -6,7 +6,7 @@ on:
       manifest_path:
         description: Path to the hosted-wave manifest checked into this repository.
         required: false
-        default: docs/evaluations/external-github-action-wave-v0.4.1-candidates.json
+        default: docs/evaluations/external-github-action-wave-v0.4.2-candidates.json
 
 permissions:
   contents: read

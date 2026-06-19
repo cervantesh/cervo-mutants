@@ -33,7 +33,7 @@ These rules apply before choosing a repository profile:
 
 The current released hosted evidence to model against is:
 
-- [docs/evaluations/2026-06-19-external-github-action-wave-v0.4.1.md](evaluations/2026-06-19-external-github-action-wave-v0.4.1.md)
+- [docs/evaluations/2026-06-19-external-github-action-wave-v0.4.2.md](evaluations/2026-06-19-external-github-action-wave-v0.4.2.md)
 - [docs/evaluations/2026-06-19-post-release-field-findings.md](evaluations/2026-06-19-post-release-field-findings.md)
 
 ## Playbook 1: Compact Library

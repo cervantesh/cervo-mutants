@@ -12,7 +12,7 @@ questions:
 The guidance below is grounded in the current public release, the maintained
 example workspaces, the first reproducible external validation wave across five
 public Go repositories, and the latest released-surface GitHub Action wave
-against `v0.4.1`.
+against `v0.4.2`.
 
 ## Current Best Fit
 
@@ -71,7 +71,7 @@ What is proven:
 - the current release works as a local and CI mutation runner
 - bounded external validation succeeded across five public Go repositories on a
   Windows host without repo-specific patches
-- the released GitHub Action surface `github-action@v0.4.1` completed a hosted
+- the released GitHub Action surface `github-action@v0.4.2` completed a hosted
   public-wave sample with persisted actionable-yield evidence
 - example workspaces exist for small, medium, and large-repo rollout patterns
 - baseline-first governance, actionable review, and compatibility surfaces are
@@ -87,7 +87,7 @@ What is not yet proven:
 See:
 
 - [docs/evaluations/2026-06-17-external-validation-wave.md](evaluations/2026-06-17-external-validation-wave.md)
-- [docs/evaluations/2026-06-19-external-github-action-wave-v0.4.1.md](evaluations/2026-06-19-external-github-action-wave-v0.4.1.md)
+- [docs/evaluations/2026-06-19-external-github-action-wave-v0.4.2.md](evaluations/2026-06-19-external-github-action-wave-v0.4.2.md)
 - [docs/example-repos.md](example-repos.md)
 - [docs/rollout-playbooks.md](rollout-playbooks.md)
 - [docs/feedback-intake.md](feedback-intake.md)
@@ -163,7 +163,7 @@ Treat that as rollout feedback:
 
 That is the safer interpretation supported by the current field evidence in:
 
-- [docs/evaluations/2026-06-19-external-github-action-wave-v0.4.1.md](evaluations/2026-06-19-external-github-action-wave-v0.4.1.md)
+- [docs/evaluations/2026-06-19-external-github-action-wave-v0.4.2.md](evaluations/2026-06-19-external-github-action-wave-v0.4.2.md)
 - [docs/evaluations/2026-06-19-post-release-field-findings.md](evaluations/2026-06-19-post-release-field-findings.md)
 - [docs/evaluations/2026-06-19-external-github-action-wave-candidate-retargeting.md](evaluations/2026-06-19-external-github-action-wave-candidate-retargeting.md)
 

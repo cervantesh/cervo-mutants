@@ -185,7 +185,7 @@ That sequence matches the post-release field evidence: the largest early
 hosted-wave gains came from healthier targets and candidate choice, not from
 panic-tuning semantic heuristics first.
 
-The released hosted `v0.4.1` wave showed that distinction directly:
+The released hosted `v0.4.2` wave showed that distinction directly:
 
 - `pflag-root` and `gjson-root` produced healthy denominator behavior plus real
   actionable review units
@@ -213,7 +213,7 @@ then widen the target or add nightly depth.
 
 Evidence for the current hosted guidance:
 
-- [docs/evaluations/2026-06-19-external-github-action-wave-v0.4.1.md](evaluations/2026-06-19-external-github-action-wave-v0.4.1.md)
+- [docs/evaluations/2026-06-19-external-github-action-wave-v0.4.2.md](evaluations/2026-06-19-external-github-action-wave-v0.4.2.md)
 - [docs/evaluations/2026-06-19-post-release-field-findings.md](evaluations/2026-06-19-post-release-field-findings.md)
 
 ## Validation Coverage

@@ -42,6 +42,7 @@ jobs:
                     ref,
                     target,
                     profile,
+                    go_version: (.go_version // ""),
                     policy,
                     budget,
                     max_mutants,
@@ -93,11 +94,32 @@ jobs:
           path: target
           fetch-depth: 1
 
+      - name: Resolve Go version
+        id: resolve-go-version
+        shell: bash
+        env:
+          REQUESTED_GO_VERSION: ${{ matrix.go_version }}
+        run: |
+          resolved="$REQUESTED_GO_VERSION"
+          if [ -z "$resolved" ] && [ -f target/go.mod ]; then
+            toolchain="$(awk '/^toolchain / { print $2; exit }' target/go.mod)"
+            if [ -n "$toolchain" ]; then
+              resolved="${toolchain#go}"
+            else
+              resolved="$(awk '/^go / { print $2; exit }' target/go.mod)"
+            fi
+          fi
+          if [ -z "$resolved" ]; then
+            resolved="1.25.6"
+          fi
+          echo "go_version=$resolved" >> "$GITHUB_OUTPUT"
+          echo "go_version_requested=$REQUESTED_GO_VERSION" >> "$GITHUB_OUTPUT"
+
       - name: Run CervoMutants
         id: cervomut
         uses: ./cervomut-source
         with:
-          go-version: "1.25.6"
+          go-version: ${{ steps.resolve-go-version.outputs.go_version }}
           working-directory: target
           targets: ${{ matrix.target }}
           policy: ${{ matrix.policy }}
@@ -122,6 +144,8 @@ jobs:
           POLICY: ${{ matrix.policy }}
           BUDGET: ${{ matrix.budget }}
           SAMPLE: ${{ matrix.sample }}
+          GO_VERSION: ${{ steps.resolve-go-version.outputs.go_version }}
+          GO_VERSION_REQUESTED: ${{ steps.resolve-go-version.outputs.go_version_requested }}
           COVERAGE_PREFILTER: ${{ matrix.coverage_prefilter }}
           MAX_MUTANTS: ${{ matrix.max_mutants }}
           WORKERS: ${{ matrix.workers }}
@@ -157,6 +181,8 @@ jobs:
               --arg ref "$REPO_REF" \
               --arg target "$TARGET" \
               --arg profile "$PROFILE" \
+              --arg go_version "$GO_VERSION" \
+              --arg go_version_requested "$GO_VERSION_REQUESTED" \
               --arg policy "$POLICY" \
               --arg budget "$BUDGET" \
               --arg sample "$SAMPLE" \
@@ -192,6 +218,8 @@ jobs:
                 ref: $ref,
                 target: $target,
                 profile: $profile,
+                go_version: $go_version,
+                go_version_requested: (if $go_version_requested == "" then null else $go_version_requested end),
                 policy: $policy,
                 budget: $budget,
                 sample: $sample,
@@ -231,7 +259,8 @@ jobs:
                   governance_total_suggestions: ($governance_quarantine_templates + $governance_suppression_templates)
                 },
                 denominator_health: ($r.summary.denominator_health // null),
-                environment: ($r.environment // null)
+                environment: ($r.environment // null),
+                failure: ($r.failure // null)
               }
               ' > wave-result.json
           else
@@ -244,6 +273,8 @@ jobs:
               --arg ref "$REPO_REF" \
               --arg target "$TARGET" \
               --arg profile "$PROFILE" \
+              --arg go_version "$GO_VERSION" \
+              --arg go_version_requested "$GO_VERSION_REQUESTED" \
               --arg policy "$POLICY" \
               --arg budget "$BUDGET" \
               --arg sample "$SAMPLE" \
@@ -263,6 +294,8 @@ jobs:
                 ref: $ref,
                 target: $target,
                 profile: $profile,
+                go_version: $go_version,
+                go_version_requested: (if $go_version_requested == "" then null else $go_version_requested end),
                 policy: $policy,
                 budget: $budget,
                 sample: $sample,
@@ -287,7 +320,8 @@ jobs:
                   governance_suppression_templates: 0,
                   governance_suggestions_by_status: {},
                   governance_total_suggestions: 0
-                }
+                },
+                failure: null
               }
               ' > wave-result.json
           fi
@@ -302,6 +336,7 @@ jobs:
             "- Install path: `" + .install_path + "` action_ref=`" + .action_ref + "`",
             "- Target: `" + .target + "`",
             "- Profile: `" + .profile + "`",
+            "- Go version: resolved=`" + .go_version + "`" + (if .go_version_requested then " requested=`" + .go_version_requested + "`" else "" end),
             "- Policy: `" + .policy + "` sample=`" + (.sample // "") + "` coverage_prefilter=`" + ((.coverage_prefilter // false)|tostring) + "` max_mutants=`" + (.max_mutants|tostring) + "` workers=`" + (.workers|tostring) + "`",
             "- Job status: `" + .job_status + "`",
             (
@@ -316,6 +351,13 @@ jobs:
                 "- Generated: **\(.denominator_health.generated // 0)**, effective: **\(.denominator_health.effective // 0)**, killed: **\(.summary.killed)**, survived: **\(.summary.survived)**, not covered: **\(.summary.not_covered)**, score: **\(.summary.score)%**, actionable: **\(.summary.actionable_score)%**"
               else
                 "- No report metrics captured"
+              end
+            ),
+            (
+              if .failure then
+                "- Failure: `\(.failure.kind)` \(.failure.message // "")"
+              else
+                empty
               end
             ),
             (
@@ -385,7 +427,14 @@ jobs:
                 not_covered: (map(.summary.not_covered // 0) | add),
                 timed_out: (map(.summary.timed_out // 0) | add),
                 compile_error: (map(.summary.compile_error // 0) | add),
-                warning_repos: (map(select((.denominator_health.warnings // []) | length > 0)) | length)
+                warning_repos: (map(select((.denominator_health.warnings // []) | length > 0)) | length),
+                failed_reports: (map(select(.failure.kind != null)) | length),
+                failure_kinds: (
+                  map(select(.failure.kind != null) | .failure.kind)
+                  | group_by(.)
+                  | map({key: .[0], value: length})
+                  | from_entries
+                )
               },
               triage: {
                 actionable_review_units: (map(.triage.actionable_review_units // 0) | add),
@@ -442,6 +491,8 @@ jobs:
               "- Timed out: **\(.aggregate.timed_out)**",
               "- Compile errors: **\(.aggregate.compile_error)**",
               "- Repos with denominator warnings: **\(.aggregate.warning_repos)**",
+              "- Repos with reported failures: **\(.aggregate.failed_reports)**",
+              (if ((.aggregate.failure_kinds // {}) | length) > 0 then "- Failure kinds: `\(.aggregate.failure_kinds | format_status_counts)`" else empty end),
               "- Triage actionable review units: **\(.triage.actionable_review_units)**",
               "- Semantic group review units: **\(.triage.semantic_group_review_units)**",
               "- Semantic groups formed: **\(.triage.semantic_group_count)**",
@@ -457,11 +508,12 @@ jobs:
               def format_status_counts:
                 ((. // {}) | to_entries | sort_by(.key) | map("\(.key)=\(.value)") | join(", "));
               .repos[] |
-              "## \(.name)\n- Repository: `\(.repository)`\n- Install path: `\(.install_path)` action_ref=`\(.action_ref)`\n- Target: `\(.target)`\n- Profile: `\(.profile)`\n- Policy: `\(.policy)` sample=`\(.sample // "")` coverage_prefilter=`\((.coverage_prefilter // false)|tostring)` max_mutants=`\(.max_mutants)` workers=`\(.workers)`\n- Job status: `\(.job_status)`\n- Report kind: `\(.report_kind)`\n" +
+              "## \(.name)\n- Repository: `\(.repository)`\n- Install path: `\(.install_path)` action_ref=`\(.action_ref)`\n- Target: `\(.target)`\n- Profile: `\(.profile)`\n- Go version: resolved=`\(.go_version)`" + (if .go_version_requested then " requested=`\(.go_version_requested)`" else "" end) + "\n- Policy: `\(.policy)` sample=`\(.sample // "")` coverage_prefilter=`\((.coverage_prefilter // false)|tostring)` max_mutants=`\(.max_mutants)` workers=`\(.workers)`\n- Job status: `\(.job_status)`\n- Report kind: `\(.report_kind)`\n" +
               (
                 if .summary then
                   "- Generated: **\(.denominator_health.generated // 0)**, effective: **\(.denominator_health.effective // 0)**, killed: **\(.summary.killed)**, survived: **\(.summary.survived)**, not covered: **\(.summary.not_covered)**, score: **\(.summary.score)%**, actionable: **\(.summary.actionable_score)%**\n- Triage: actionable_review_units=**\(.triage.actionable_review_units // 0)**, semantic_groups=**\(.triage.semantic_group_count // 0)**, recommendations=**\(.triage.recommendation_entries // 0)**, recommendation_review_units=**\(.triage.recommendation_review_units // 0)**, collapsed_recommendation_duplicates=**\(.triage.collapsed_recommendation_duplicates // 0)**, ledger_entries=**\(.triage.ledger_entries // 0)**, governance_suggestions=**\(.triage.governance_total_suggestions // 0)**" +
                   (if ((.triage.governance_suggestions_by_status // {}) | length) > 0 then " (`\(.triage.governance_suggestions_by_status | format_status_counts)`)" else "" end) +
+                  (if .failure then "\n- Failure: `\(.failure.kind)` \(.failure.message // "")" else "" end) +
                   "\n"
                 else
                   "- No report metrics captured\n"

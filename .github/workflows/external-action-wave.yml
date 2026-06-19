@@ -136,6 +136,8 @@ jobs:
               --arg generated_at "$generated_at" \
               --arg name "$REPO_NAME" \
               --arg repository "$REPOSITORY" \
+              --arg install_path "$INSTALL_PATH" \
+              --arg action_ref "$ACTION_REF" \
               --arg ref "$REPO_REF" \
               --arg target "$TARGET" \
               --arg profile "$PROFILE" \

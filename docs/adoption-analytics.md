@@ -30,6 +30,18 @@ Each issue should capture enough structure to answer:
 That gives maintainers something they can aggregate later without inventing a
 parallel spreadsheet or private tracker.
 
+When maintainers want a dated rollup from existing GitHub issues, they can
+export the issue set and feed it to the helper workflow:
+
+```powershell
+gh issue list --state all --search "\"Adoption Feedback\" in:title" --json number,title,state,url,closedAt,body > adoption-issues.json
+go run ./cmd/actionhelper build-adoption-summary --issues-json adoption-issues.json --tracking-issue "#313" > adoption-summary.json
+go run ./cmd/actionhelper render-adoption-summary-markdown --path adoption-summary.json > adoption-summary.md
+```
+
+That path is intentionally JSON-in and markdown-out so release reviews can keep
+their issue-query step explicit while still reusing one tested summarizer.
+
 ## Structured Dimensions To Capture
 
 Every adoption-feedback issue should preserve these dimensions explicitly:

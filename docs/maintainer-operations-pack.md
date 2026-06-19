@@ -120,6 +120,18 @@ discussion, maintainers should also record in the issue body:
 That turns response-follow-up into a durable operating loop instead of a later
 forensic audit.
 
+For release reviews or adoption retrospectives, maintainers can export the
+matching issues and summarize them with:
+
+```powershell
+gh issue list --state all --search "\"Adoption Feedback\" in:title" --json number,title,state,url,closedAt,body > adoption-issues.json
+go run ./cmd/actionhelper build-adoption-summary --issues-json adoption-issues.json > adoption-summary.json
+go run ./cmd/actionhelper render-adoption-summary-markdown --path adoption-summary.json > adoption-summary.md
+```
+
+That keeps the rollup process reproducible instead of depending on manual
+counting across issue threads.
+
 ## Triage Decision Flow
 
 Use this flow for first-pass maintainer triage:

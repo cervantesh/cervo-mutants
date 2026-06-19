@@ -169,8 +169,10 @@ jobs:
               '
               ($report[0]) as $r |
               (($ledger[0].entries // []) | length) as $ledger_entries |
+              ((($governance[0].suppression_templates // []) + ($governance[0].quarantine_templates // []))) as $governance_templates |
               (($governance[0].quarantine_templates // []) | length) as $governance_quarantine_templates |
               (($governance[0].suppression_templates // []) | length) as $governance_suppression_templates |
+              ($governance_templates | group_by(.status) | map({key: .[0].status, value: length}) | from_entries) as $governance_suggestions_by_status |
               ([$r.mutants[]? | select(.test_recommendation != null)]) as $recommended |
               ($recommended | length) as $recommendation_entries |
               (
@@ -220,6 +222,7 @@ jobs:
                   ledger_entries: $ledger_entries,
                   governance_quarantine_templates: $governance_quarantine_templates,
                   governance_suppression_templates: $governance_suppression_templates,
+                  governance_suggestions_by_status: $governance_suggestions_by_status,
                   governance_total_suggestions: ($governance_quarantine_templates + $governance_suppression_templates)
                 },
                 denominator_health: ($r.summary.denominator_health // null),
@@ -275,6 +278,7 @@ jobs:
                   ledger_entries: 0,
                   governance_quarantine_templates: 0,
                   governance_suppression_templates: 0,
+                  governance_suggestions_by_status: {},
                   governance_total_suggestions: 0
                 }
               }
@@ -389,6 +393,15 @@ jobs:
                 ledger_entries: (map(.triage.ledger_entries // 0) | add),
                 governance_quarantine_templates: (map(.triage.governance_quarantine_templates // 0) | add),
                 governance_suppression_templates: (map(.triage.governance_suppression_templates // 0) | add),
+                governance_suggestions_by_status: (
+                  reduce (map(.triage.governance_suggestions_by_status // {}))[] as $counts
+                    ({};
+                      reduce ($counts | to_entries[]) as $entry
+                        (.;
+                          .[$entry.key] = ((.[$entry.key] // 0) + $entry.value)
+                        )
+                    )
+                ),
                 governance_total_suggestions: (map(.triage.governance_total_suggestions // 0) | add),
                 repos_with_actionable_review_units: (map(select((.triage.actionable_review_units // 0) > 0)) | length),
                 repos_with_semantic_groups: (map(select((.triage.semantic_group_count // 0) > 0)) | length),
@@ -404,6 +417,8 @@ jobs:
             echo "# External GitHub Action Wave Summary"
             echo
             jq -r '
+              def format_status_counts:
+                ((. // {}) | to_entries | sort_by(.key) | map("\(.key)=\(.value)") | join(", "));
               (if (.tracking_issue // "") != "" then "- Tracking issue: **\(.tracking_issue)**" else empty end),
               (if (.manifest_path // "") != "" then "- Manifest: `\(.manifest_path)`" else empty end),
               (if (.install_path // "") != "" then "- Install path: `\(.install_path)` action_ref=`\(.action_ref // "")`" else empty end),
@@ -428,14 +443,19 @@ jobs:
               "- Collapsed recommendation duplicates: **\(.triage.collapsed_recommendation_duplicates)**",
               "- Ledger entries: **\(.triage.ledger_entries)**",
               "- Governance suggestions: **\(.triage.governance_total_suggestions)**",
+              (if ((.triage.governance_suggestions_by_status // {}) | length) > 0 then "- Governance suggestions by status: `\(.triage.governance_suggestions_by_status | format_status_counts)`" else empty end),
               ""
             ' wave-summary.json
             jq -r '
+              def format_status_counts:
+                ((. // {}) | to_entries | sort_by(.key) | map("\(.key)=\(.value)") | join(", "));
               .repos[] |
               "## \(.name)\n- Repository: `\(.repository)`\n- Install path: `\(.install_path)` action_ref=`\(.action_ref)`\n- Target: `\(.target)`\n- Profile: `\(.profile)`\n- Policy: `\(.policy)` sample=`\(.sample // "")` max_mutants=`\(.max_mutants)` workers=`\(.workers)`\n- Job status: `\(.job_status)`\n- Report kind: `\(.report_kind)`\n" +
               (
                 if .summary then
-                  "- Generated: **\(.denominator_health.generated // 0)**, effective: **\(.denominator_health.effective // 0)**, killed: **\(.summary.killed)**, survived: **\(.summary.survived)**, not covered: **\(.summary.not_covered)**, score: **\(.summary.score)%**, actionable: **\(.summary.actionable_score)%**\n- Triage: actionable_review_units=**\(.triage.actionable_review_units // 0)**, semantic_groups=**\(.triage.semantic_group_count // 0)**, recommendations=**\(.triage.recommendation_entries // 0)**, recommendation_review_units=**\(.triage.recommendation_review_units // 0)**, collapsed_recommendation_duplicates=**\(.triage.collapsed_recommendation_duplicates // 0)**, ledger_entries=**\(.triage.ledger_entries // 0)**, governance_suggestions=**\(.triage.governance_total_suggestions // 0)**\n"
+                  "- Generated: **\(.denominator_health.generated // 0)**, effective: **\(.denominator_health.effective // 0)**, killed: **\(.summary.killed)**, survived: **\(.summary.survived)**, not covered: **\(.summary.not_covered)**, score: **\(.summary.score)%**, actionable: **\(.summary.actionable_score)%**\n- Triage: actionable_review_units=**\(.triage.actionable_review_units // 0)**, semantic_groups=**\(.triage.semantic_group_count // 0)**, recommendations=**\(.triage.recommendation_entries // 0)**, recommendation_review_units=**\(.triage.recommendation_review_units // 0)**, collapsed_recommendation_duplicates=**\(.triage.collapsed_recommendation_duplicates // 0)**, ledger_entries=**\(.triage.ledger_entries // 0)**, governance_suggestions=**\(.triage.governance_total_suggestions // 0)**" +
+                  (if ((.triage.governance_suggestions_by_status // {}) | length) > 0 then " (`\(.triage.governance_suggestions_by_status | format_status_counts)`)" else "" end) +
+                  "\n"
                 else
                   "- No report metrics captured\n"
                 end

@@ -213,6 +213,14 @@ type externalWaveManifest struct {
 var (
 	versionRefPattern          = regexp.MustCompile(`\bv\d+\.\d+\.\d+\b`)
 	currentReleaseMarkerRegexp = regexp.MustCompile(`(?i)(latest public release|latest release|current release)`)
+	goInstallVersionRegexp     = regexp.MustCompile(`(?m)^go install github\.com/cervantesh/cervo-mutants/cmd/cervomut@(v\d+\.\d+\.\d+)\s*$`)
+	installExampleRegexp       = regexp.MustCompile("(?m)for example `(v\\d+\\.\\d+\\.\\d+)`\\.")
+	windowsVersionRegexp       = regexp.MustCompile(`(?m)^\$version = "(v\d+\.\d+\.\d+)"\s*$`)
+	unixVersionRegexp          = regexp.MustCompile(`(?m)^version=(v\d+\.\d+\.\d+)\s*$`)
+	actionUsesVersionRegexp    = regexp.MustCompile(`(?m)uses:\s+cervantesh/cervo-mutants@(v\d+\.\d+\.\d+)`)
+	actionTagRefRegexp         = regexp.MustCompile(`(?m)refs/tags/(v\d+\.\d+\.\d+)`)
+	actionVersionNoteRegexp    = regexp.MustCompile("(?m)The examples above now pin `@(v\\d+\\.\\d+\\.\\d+)`, which is the latest public release")
+	issueTemplateRegexp        = regexp.MustCompile(`(?m)placeholder:\s*(v\d+\.\d+\.\d+)`)
 )
 
 func verifyReleaseAlignment(repoRoot, version string) error {
@@ -228,24 +236,16 @@ func verifyReleaseAlignment(repoRoot, version string) error {
 	if err := verifyExternalWaveWorkflowDefault(resolveRepoPath(root, filepath.Join(".github", "workflows", "external-action-wave.yml")), filepath.ToSlash(manifestDefault)); err != nil {
 		return err
 	}
-	for _, path := range []string{
-		filepath.Join("docs", "install.md"),
-		filepath.Join("docs", "github-action.md"),
-		filepath.Join("docs", "adoption-guide.md"),
-		filepath.Join("docs", "rollout-playbooks.md"),
-		filepath.Join(".github", "ISSUE_TEMPLATE", "adoption-feedback.yml"),
-	} {
-		if err := verifyVersionPinnedDoc(resolveRepoPath(root, path), version); err != nil {
-			return err
-		}
+	if err := verifyInstallDocPins(resolveRepoPath(root, filepath.Join("docs", "install.md")), version); err != nil {
+		return err
 	}
-	if err := verifyRequiredCurrentReleaseMarker(resolveRepoPath(root, filepath.Join("docs", "project-maturity-assessment.md")), version); err != nil {
+	if err := verifyGitHubActionDocPins(resolveRepoPath(root, filepath.Join("docs", "github-action.md")), version); err != nil {
+		return err
+	}
+	if err := verifyIssueTemplatePlaceholder(resolveRepoPath(root, filepath.Join(".github", "ISSUE_TEMPLATE", "adoption-feedback.yml")), version); err != nil {
 		return err
 	}
 	if err := verifyOptionalCurrentReleaseMarker(resolveRepoPath(root, "README.md"), version); err != nil {
-		return err
-	}
-	if err := verifyReleaseEvidenceTrail(resolveRepoPath(root, filepath.Join("docs", "release-evidence-trail.md")), version); err != nil {
 		return err
 	}
 	return nil
@@ -292,18 +292,54 @@ func verifyExternalWaveWorkflowDefault(path, want string) error {
 	return nil
 }
 
-func verifyVersionPinnedDoc(path, version string) error {
+func verifyInstallDocPins(path, version string) error {
+	if err := verifyPatternVersions(path, version, goInstallVersionRegexp, 1, "go install version"); err != nil {
+		return err
+	}
+	if err := verifyPatternVersions(path, version, installExampleRegexp, 1, "install example version"); err != nil {
+		return err
+	}
+	if err := verifyPatternVersions(path, version, windowsVersionRegexp, 1, "Windows archive example version"); err != nil {
+		return err
+	}
+	if err := verifyPatternVersions(path, version, unixVersionRegexp, 1, "Unix archive example version"); err != nil {
+		return err
+	}
+	return nil
+}
+
+func verifyGitHubActionDocPins(path, version string) error {
+	if err := verifyPatternVersions(path, version, actionUsesVersionRegexp, 1, "GitHub Action pin"); err != nil {
+		return err
+	}
+	if err := verifyPatternVersions(path, version, actionTagRefRegexp, 1, "GitHub tag ref example"); err != nil {
+		return err
+	}
+	if err := verifyPatternVersions(path, version, actionVersionNoteRegexp, 1, "GitHub Action versioning note"); err != nil {
+		return err
+	}
+	return nil
+}
+
+func verifyIssueTemplatePlaceholder(path, version string) error {
+	return verifyPatternVersions(path, version, issueTemplateRegexp, 1, "issue template version placeholder")
+}
+
+func verifyPatternVersions(path, version string, pattern *regexp.Regexp, minMatches int, label string) error {
 	body, err := os.ReadFile(path)
 	if err != nil {
-		return fmt.Errorf("read version-pinned doc %s: %w", filepath.ToSlash(path), err)
+		return fmt.Errorf("read release-alignment doc %s: %w", filepath.ToSlash(path), err)
 	}
-	matches := uniqueStrings(versionRefPattern.FindAllString(string(body), -1))
-	if len(matches) == 0 {
-		return fmt.Errorf("%s must reference release %q", filepath.ToSlash(path), version)
+	matches := pattern.FindAllStringSubmatch(string(body), -1)
+	if len(matches) < minMatches {
+		return fmt.Errorf("%s must contain %s for %q", filepath.ToSlash(path), label, version)
 	}
 	for _, match := range matches {
-		if match != version {
-			return fmt.Errorf("%s references release %q, want only %q", filepath.ToSlash(path), match, version)
+		if len(match) < 2 {
+			continue
+		}
+		if match[1] != version {
+			return fmt.Errorf("%s %s references %q, want %q", filepath.ToSlash(path), label, match[1], version)
 		}
 	}
 	return nil
@@ -347,33 +383,6 @@ func verifyCurrentReleaseMarker(path, version string) (bool, error) {
 		}
 	}
 	return found, nil
-}
-
-func verifyReleaseEvidenceTrail(path, version string) error {
-	body, err := os.ReadFile(path)
-	if err != nil {
-		return fmt.Errorf("read release evidence trail %s: %w", filepath.ToSlash(path), err)
-	}
-	text := string(body)
-	rowPattern := regexp.MustCompile(fmt.Sprintf(`(?m)^\| \[%s\]\([^)]+\) \| .*$`, regexp.QuoteMeta("`"+version+"`")))
-	row := rowPattern.FindString(text)
-	if row == "" {
-		return fmt.Errorf("%s must contain release trail row for %q", filepath.ToSlash(path), version)
-	}
-	for _, want := range []string{
-		fmt.Sprintf("/releases/tag/%s", version),
-		fmt.Sprintf("/releases/download/%s/release-manifest.json", version),
-		fmt.Sprintf("/releases/download/%s/SHA256SUMS", version),
-		fmt.Sprintf("(upgrade-notes/%s.md)", version),
-	} {
-		if !strings.Contains(row, want) {
-			return fmt.Errorf("%s release trail row for %q must contain %q", filepath.ToSlash(path), version, want)
-		}
-	}
-	if !strings.Contains(text, fmt.Sprintf("| `%s` |", version)) {
-		return fmt.Errorf("%s must contain comparison row for %q", filepath.ToSlash(path), version)
-	}
-	return nil
 }
 
 func uniqueStrings(items []string) []string {

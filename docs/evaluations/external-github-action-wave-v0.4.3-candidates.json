@@ -1,0 +1,45 @@
+{
+  "schema_version": "1",
+  "tracking_issue": "#335",
+  "description": "Candidate repository mix for an external adoption wave that uses the released v0.4.3 GitHub Action surface instead of current repo-head.",
+  "install_path": "github-action@v0.4.3",
+  "action_ref": "v0.4.3",
+  "jobs": [
+    {
+      "name": "pflag-root",
+      "url": "https://github.com/spf13/pflag.git",
+      "ref": "v1.0.10",
+      "target": "./...",
+      "profile": "small-library",
+      "policy": "ci-balanced",
+      "budget": "5m",
+      "sample": "deterministic",
+      "max_mutants": 10,
+      "workers": 2
+    },
+    {
+      "name": "logrus-root",
+      "url": "https://github.com/sirupsen/logrus.git",
+      "ref": "v1.9.3",
+      "target": "./...",
+      "profile": "medium-library",
+      "policy": "ci-balanced",
+      "budget": "5m",
+      "sample": "deterministic",
+      "max_mutants": 10,
+      "workers": 2
+    },
+    {
+      "name": "gjson-root",
+      "url": "https://github.com/tidwall/gjson.git",
+      "ref": "v1.18.0",
+      "target": "./...",
+      "profile": "validation-library",
+      "policy": "ci-balanced",
+      "budget": "5m",
+      "sample": "deterministic",
+      "max_mutants": 10,
+      "workers": 2
+    }
+  ]
+}

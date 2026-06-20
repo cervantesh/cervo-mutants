@@ -12,6 +12,29 @@ The format is intentionally simple:
 
 - No unreleased entries yet.
 
+## [v0.4.3] - 2026-06-20
+
+### Changed
+
+- The hosted external-wave workflow now supports optional manifest-driven
+  module prewarm so dependency-heavy targets can run an explicit `go mod
+  download` step before mutation execution when needed.
+- Hosted wave result and aggregate summary helpers are now decoupled from the
+  action version under test, so newer workflow metadata can still summarize
+  runs that intentionally pin older released action refs such as `v0.4.2`.
+
+### Documentation
+
+- Published dated hosted validation notes and committed summary artifacts for:
+  - the Prometheus medium-service prewarm validation wave
+  - the `v0.4.2` helper-compatibility rerun after helper/action-source
+    decoupling
+
+### Verification
+
+- `go run ./cmd/releasehelper verify-compat`
+- `go run ./cmd/releasehelper notes --version v0.4.3 --out .tmp/release-notes-v0.4.3.md`
+
 ## [v0.4.2] - 2026-06-19
 
 ### Changed

@@ -10,12 +10,13 @@ This document records a dated maturity snapshot for CervoMutants across
 product, code, and operations. It is intentionally time-bound: maturity can
 move quickly as CI, releases, public adoption, and major features change.
 
-This snapshot evaluates the current `main` branch state on 2026-06-19. The
-latest public release is now `v0.4.2` from 2026-06-19, so the earlier
-release-head lag plus the smaller hosted follow-ups are now also packaged in
-the public release surface. The current `main` branch and latest public tag
-are now effectively aligned for the supported install, CI, and reporting
-surfaces described in this assessment.
+This snapshot evaluates the current `main` branch state on 2026-06-19. At
+capture time, the latest public release was `v0.4.2` from 2026-06-19, so the
+earlier release-head lag plus the smaller hosted follow-ups were already
+packaged in the public release surface. The conclusions below therefore
+describe a repo state where `main` and the then-current public tag were
+effectively aligned for the supported install, CI, and reporting surfaces
+covered by this assessment.
 
 ## Scale
 
@@ -64,19 +65,19 @@ closed one.
 
 That keeps the project just short of a clean `4 / 5` overall maturity
 classification. The current state is best described as a credible public beta
-whose latest public release now represents most of the hardened repository
-surface.
+whose then-current public release already represented most of the hardened
+repository surface.
 
 ## Evidence Snapshot
 
 ### Repository and release state
 
 - Public GitHub repository created on 2026-06-17.
-- Public releases present on 2026-06-19: `v0.1.0`, `v0.2.0`, `v0.3.0`,
+- Public releases present at capture time on 2026-06-19: `v0.1.0`, `v0.2.0`, `v0.3.0`,
   `v0.4.0`, `v0.4.1`, `v0.4.2`.
-- Latest public release is `v0.4.2` from 2026-06-19 with multi-OS assets,
+- At capture time, the latest public release was `v0.4.2` from 2026-06-19 with multi-OS assets,
   `release-manifest.json`, and `SHA256SUMS`.
-- Released broader-profile hosted validation on `v0.4.2` now shows `37`
+- The broader-profile released hosted validation on `v0.4.2` showed `37`
   effective mutants, `9` survivors, `8` actionable review units, and `0`
   denominator-warning repos across four mixed repository profiles.
 - GitHub Pages is live at `https://cervantesh.github.io/cervo-mutants/`.
@@ -117,10 +118,10 @@ surface.
 
 ### Repo-head versus release-head
 
-The latest release is now effectively aligned with repository-head maturity for
-the supported public surfaces.
+At capture time, the latest release was effectively aligned with
+repository-head maturity for the supported public surfaces.
 
-`v0.4.2` now packages:
+`v0.4.2` packaged:
 
 - Windows-native execution hardening
 - deterministic large-repo slicing
@@ -141,9 +142,9 @@ the supported public surfaces.
   framing
 
 There is no material supported-surface gap called out in this snapshot between
-the latest release and `main`. The remaining maturity limits are now about
-release repetition, external adoption depth, and continued field calibration,
-not about a missing public catch-up release.
+the then-current latest release and `main`. The remaining maturity limits were
+about release repetition, external adoption depth, and continued field
+calibration, not about a missing public catch-up release.
 
 ## Functional Maturity
 

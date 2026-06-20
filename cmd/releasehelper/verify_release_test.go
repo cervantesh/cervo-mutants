@@ -290,6 +290,11 @@ on:
     inputs:
       manifest_path:
         default: docs/evaluations/external-github-action-wave-%s-candidates.json
+
+jobs:
+  wave:
+    strategy:
+      matrix: ${{ fromJson(needs.plan.outputs.matrix) }}
 `, version))
 	writeFile(t, filepath.Join(root, "docs", "evaluations", fmt.Sprintf("external-github-action-wave-%s-candidates.json", version)), fmt.Sprintf(`{
   "install_path": "github-action@%s",

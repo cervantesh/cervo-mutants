@@ -149,7 +149,7 @@ type workflowJob struct {
 }
 
 type workflowConfig struct {
-	Matrix workflowMatrix `yaml:"matrix"`
+	Matrix yaml.Node `yaml:"matrix"`
 }
 
 type workflowMatrix struct {
@@ -280,14 +280,18 @@ func verifyCompatibilityMatrixJob(workflow workflowDoc, path, jobName string) er
 	if !ok {
 		return fmt.Errorf("%s is missing job %q", filepath.ToSlash(path), jobName)
 	}
+	var matrix workflowMatrix
+	if err := job.Strategy.Matrix.Decode(&matrix); err != nil {
+		return fmt.Errorf("%s job %q matrix is not a compatibility include list: %w", filepath.ToSlash(path), jobName, err)
+	}
 	expected := map[string]string{}
 	for _, target := range compatmatrix.Targets() {
 		expected[target.Runner] = compatmatrix.SupportedGoVersion
 	}
-	if len(job.Strategy.Matrix.Include) != len(expected) {
-		return fmt.Errorf("%s job %q must define %d compatibility targets, got %d", filepath.ToSlash(path), jobName, len(expected), len(job.Strategy.Matrix.Include))
+	if len(matrix.Include) != len(expected) {
+		return fmt.Errorf("%s job %q must define %d compatibility targets, got %d", filepath.ToSlash(path), jobName, len(expected), len(matrix.Include))
 	}
-	for _, include := range job.Strategy.Matrix.Include {
+	for _, include := range matrix.Include {
 		runner := include["os"]
 		goVersion := include["go-version"]
 		wantVersion, ok := expected[runner]

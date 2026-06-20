@@ -11,8 +11,8 @@ questions:
 
 The guidance below is grounded in the current public release, the maintained
 example workspaces, the first reproducible external validation wave across five
-public Go repositories, and the latest released-surface GitHub Action wave
-against `v0.4.2`.
+public Go repositories, and the most recent committed released-surface GitHub
+Action wave in this repo, which was run against `v0.4.2`.
 
 ## Current Best Fit
 
@@ -167,7 +167,7 @@ That is the safer interpretation supported by the current field evidence in:
 - [docs/evaluations/2026-06-19-post-release-field-findings.md](evaluations/2026-06-19-post-release-field-findings.md)
 - [docs/evaluations/2026-06-19-external-github-action-wave-candidate-retargeting.md](evaluations/2026-06-19-external-github-action-wave-candidate-retargeting.md)
 
-The latest released hosted wave makes the interpretation concrete:
+The released `v0.4.2` hosted wave makes the interpretation concrete:
 
 - `pflag-root` and `gjson-root` produced healthy denominator behavior with real
   actionable review units

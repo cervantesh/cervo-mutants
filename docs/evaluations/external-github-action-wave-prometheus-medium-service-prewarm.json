@@ -1,9 +1,7 @@
 {
   "schema_version": "1",
   "tracking_issue": "#331",
-  "description": "Hosted follow-up for the Prometheus medium-service comparison that enables optional module prewarm on dependency-heavy candidate targets before mutation execution.",
-  "install_path": "github-action@v0.4.2",
-  "action_ref": "v0.4.2",
+  "description": "Hosted follow-up for the Prometheus medium-service comparison that enables optional module prewarm on dependency-heavy candidate targets before mutation execution. This manifest intentionally uses the workflow's current branch action source so the new prewarm metadata stays aligned with the helper code under validation.",
   "jobs": [
     {
       "name": "prometheus-labels-cold",

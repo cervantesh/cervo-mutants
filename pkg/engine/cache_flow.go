@@ -15,10 +15,6 @@ import (
 	"github.com/cervantesh/cervo-mutants/pkg/discover"
 )
 
-func (e *Engine) cacheKeyForTest(mutant Mutant, plan TestPlan) (string, error) {
-	return e.newRunSession().cacheKey(mutant, plan)
-}
-
 func (s *runSession) getCached(key string) (MutantResult, bool, error) {
 	data, err := os.ReadFile(filepath.Join(s.engine.cfg.Cache.Path, key+".json"))
 	if os.IsNotExist(err) {

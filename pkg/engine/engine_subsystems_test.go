@@ -86,13 +86,14 @@ func TestWritePartialResultsUsesAtomicReplacement(t *testing.T) {
 	cfg := config.Defaults()
 	cfg.Reports.Output = t.TempDir()
 	engine := New(cfg)
+	session := engine.newRunSession()
 
-	engine.writePartialResults([]MutantResult{{
+	session.writePartialResults([]MutantResult{{
 		MutantID: "old",
 		Status:   StatusSurvived,
 		Mutant:   Mutant{ID: "old", Operator: "boolean-literal"},
 	}})
-	engine.writePartialResults([]MutantResult{{
+	session.writePartialResults([]MutantResult{{
 		MutantID: "new",
 		Status:   StatusKilled,
 		Mutant:   Mutant{ID: "new", Operator: "nil-check"},
@@ -333,7 +334,8 @@ func TestCacheKeyChangesWhenGoModOrTestsChange(t *testing.T) {
 	if len(mutants) == 0 {
 		t.Fatal("no mutants generated")
 	}
-	first, err := e.cacheKeyForTest(mutants[0], TestPlan{Command: []string{"go", "test", "."}})
+	session := e.newRunSession()
+	first, err := session.cacheKey(mutants[0], TestPlan{Command: []string{"go", "test", "."}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -348,7 +350,7 @@ func TestCacheKeyChangesWhenGoModOrTestsChange(t *testing.T) {
 	if err := f.Close(); err != nil {
 		t.Fatal(err)
 	}
-	second, err := e.cacheKeyForTest(mutants[0], TestPlan{Command: []string{"go", "test", "."}})
+	second, err := session.cacheKey(mutants[0], TestPlan{Command: []string{"go", "test", "."}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -435,7 +437,7 @@ func TestCoverageSelectionCanClassifyUncoveredMutantWithoutRunningAllTests(t *te
 	}
 
 	e := New(cfg)
-	result, err := e.runMutant(context.Background(), Mutant{
+	result, err := e.newRunSession().runMutant(context.Background(), Mutant{
 		ID:          "m-uncovered",
 		Module:      dir,
 		Package:     ".",
@@ -471,8 +473,9 @@ func TestCoverageSelectionUsesLineRangesNotOnlyFilePresence(t *testing.T) {
 	}
 
 	e := New(cfg)
-	covered := e.coverageMentions(Mutant{Module: dir, File: filepath.Join(dir, "calc.go"), Line: 1})
-	uncovered := e.coverageMentions(Mutant{Module: dir, File: filepath.Join(dir, "calc.go"), Line: 3})
+	session := e.newRunSession()
+	covered := session.coverageMentions(Mutant{Module: dir, File: filepath.Join(dir, "calc.go"), Line: 1})
+	uncovered := session.coverageMentions(Mutant{Module: dir, File: filepath.Join(dir, "calc.go"), Line: 3})
 	if !covered {
 		t.Fatal("coverage range should cover line 1")
 	}
@@ -494,7 +497,7 @@ func TestCoverageSelectionFallsBackToPackageWhenFileCoveredButLineMissing(t *tes
 		t.Fatal(err)
 	}
 
-	plan := New(cfg).selectTests(Mutant{Module: dir, Package: "./target", File: filepath.Join(dir, "calc.go"), Line: 4})
+	plan := New(cfg).newRunSession().selectTests(Mutant{Module: dir, Package: "./target", File: filepath.Join(dir, "calc.go"), Line: 4})
 	if !plan.CoversMutant {
 		t.Fatalf("covered file fallback should run package tests: %+v", plan)
 	}
@@ -520,7 +523,7 @@ func TestPackagePrefilterUsesFileCoverageBeforeReportingNotCovered(t *testing.T)
 		t.Fatal(err)
 	}
 
-	plan := New(cfg).selectTests(Mutant{Module: dir, Package: "./target", File: filepath.Join(dir, "calc.go"), Line: 4})
+	plan := New(cfg).newRunSession().selectTests(Mutant{Module: dir, Package: "./target", File: filepath.Join(dir, "calc.go"), Line: 4})
 	if !plan.CoversMutant {
 		t.Fatalf("package prefilter should not reject a covered file: %+v", plan)
 	}
@@ -543,7 +546,7 @@ func TestPackageSelectionCanPrefilterUncoveredMutants(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	result, err := New(cfg).runMutant(context.Background(), Mutant{
+	result, err := New(cfg).newRunSession().runMutant(context.Background(), Mutant{
 		ID:          "m-package-prefilter",
 		Module:      dir,
 		Package:     ".",
@@ -640,7 +643,7 @@ func TestSuppressionRuleCanIgnoreMutantBeforeExecution(t *testing.T) {
 		SuppressionAudit: New(cfg).suppressionAudit(mutator.Mutant{Operator: "conditionals-boundary", EquivalentRisk: "medium"}),
 	}
 
-	results, err := New(cfg).runMutantsSerial(context.Background(), []Mutant{mutant}, map[string]bool{})
+	results, err := New(cfg).newRunSession().runMutantsSerial(context.Background(), []Mutant{mutant}, map[string]bool{})
 	if err != nil {
 		t.Fatalf("runMutantsSerial returned error: %v", err)
 	}
@@ -672,7 +675,7 @@ func TestSerialRunnerHandlesQuarantineAndBudgetBranches(t *testing.T) {
 		{ID: "q", Operator: "conditionals-negation"},
 		{ID: "budget", Operator: "conditionals-negation"},
 	}
-	results, err := e.runMutantsSerial(context.Background(), mutants, map[string]bool{"q": true})
+	results, err := e.newRunSession().runMutantsSerial(context.Background(), mutants, map[string]bool{"q": true})
 	if err != nil {
 		t.Fatalf("runMutantsSerial returned error: %v", err)
 	}
@@ -686,7 +689,8 @@ func TestRunTestClassifiesPassFailureAndTimeout(t *testing.T) {
 	cfg := config.Defaults()
 	cfg.Tests.Timeout = 10 * time.Second
 	e := New(cfg)
-	pass, err := e.runTest(context.Background(), MutantJob{Mutant: Mutant{ID: "pass"}, WorkDir: dir, TestCommand: []string{"go", "test", "."}})
+	session := e.newRunSession()
+	pass, err := session.runTest(context.Background(), MutantJob{Mutant: Mutant{ID: "pass"}, WorkDir: dir, TestCommand: []string{"go", "test", "."}})
 	if err != nil {
 		t.Fatalf("pass runTest returned error: %v", err)
 	}
@@ -694,7 +698,7 @@ func TestRunTestClassifiesPassFailureAndTimeout(t *testing.T) {
 		t.Fatalf("pass status = %q", pass.Status)
 	}
 
-	fail, err := e.runTest(context.Background(), MutantJob{Mutant: Mutant{ID: "fail"}, WorkDir: dir, TestCommand: []string{"go", "test", "./missing"}})
+	fail, err := session.runTest(context.Background(), MutantJob{Mutant: Mutant{ID: "fail"}, WorkDir: dir, TestCommand: []string{"go", "test", "./missing"}})
 	if err != nil {
 		t.Fatalf("fail runTest returned error: %v", err)
 	}
@@ -703,7 +707,7 @@ func TestRunTestClassifiesPassFailureAndTimeout(t *testing.T) {
 	}
 
 	cfg.Tests.Timeout = time.Nanosecond
-	timeout, err := New(cfg).runTest(context.Background(), MutantJob{Mutant: Mutant{ID: "timeout"}, WorkDir: dir, TestCommand: []string{"go", "test", "."}})
+	timeout, err := New(cfg).newRunSession().runTest(context.Background(), MutantJob{Mutant: Mutant{ID: "timeout"}, WorkDir: dir, TestCommand: []string{"go", "test", "."}})
 	if err != nil {
 		t.Fatalf("timeout runTest returned error: %v", err)
 	}
@@ -714,7 +718,7 @@ func TestRunTestClassifiesPassFailureAndTimeout(t *testing.T) {
 	if runtime.GOOS != "windows" {
 		cfg := config.Defaults()
 		cfg.Execution.Resources.MaxProcessMemoryMB = 64
-		resourceSkipped, err := New(cfg).runTest(context.Background(), MutantJob{Mutant: Mutant{ID: "resource"}, WorkDir: dir, TestCommand: []string{"go", "test", "."}})
+		resourceSkipped, err := New(cfg).newRunSession().runTest(context.Background(), MutantJob{Mutant: Mutant{ID: "resource"}, WorkDir: dir, TestCommand: []string{"go", "test", "."}})
 		if err != nil {
 			t.Fatalf("resource-limited runTest returned error: %v", err)
 		}
@@ -769,7 +773,7 @@ func TestPrepareMutationTempWorkdirAndOverlayBranches(t *testing.T) {
 	cfg := config.Defaults()
 	cfg.Execution.Isolation = "temp-workdir"
 	cfg.Execution.TempRoot = filepath.Join(dir, ".cervomut", "tmp")
-	workdir, command, cleanup, err := New(cfg).prepareMutation(mutant, []string{"go", "test", "."})
+	workdir, command, cleanup, err := New(cfg).newRunSession().prepareMutation(mutant, []string{"go", "test", "."})
 	if err != nil {
 		t.Fatalf("prepareMutation temp-workdir returned error: %v", err)
 	}
@@ -786,7 +790,7 @@ func TestPrepareMutationTempWorkdirAndOverlayBranches(t *testing.T) {
 	}
 
 	cfg.Execution.Isolation = "overlay"
-	workdir, command, cleanup, err = New(cfg).prepareMutation(mutant, []string{"go", "test", "."})
+	workdir, command, cleanup, err = New(cfg).newRunSession().prepareMutation(mutant, []string{"go", "test", "."})
 	if err != nil {
 		t.Fatalf("prepareMutation overlay returned error: %v", err)
 	}
@@ -797,7 +801,7 @@ func TestPrepareMutationTempWorkdirAndOverlayBranches(t *testing.T) {
 
 	bad := mutant
 	bad.File = filepath.Join(t.TempDir(), "outside.go")
-	if _, _, cleanup, err := New(cfg).prepareMutation(bad, []string{"go", "test", "."}); err == nil {
+	if _, _, cleanup, err := New(cfg).newRunSession().prepareMutation(bad, []string{"go", "test", "."}); err == nil {
 		cleanup()
 		t.Fatal("prepareMutation accepted outside file")
 	}
@@ -808,7 +812,8 @@ func TestPartialCheckpointErrorBranches(t *testing.T) {
 	cfg := config.Defaults()
 	isolateArtifacts(&cfg, dir)
 	e := New(cfg)
-	if completed, err := e.loadPartialResults(nil); err != nil || len(completed) != 0 {
+	session := e.newRunSession()
+	if completed, err := session.loadPartialResults(nil); err != nil || len(completed) != 0 {
 		t.Fatalf("missing partial results = %+v err=%v", completed, err)
 	}
 	if err := os.MkdirAll(cfg.Reports.Output, 0o700); err != nil {
@@ -818,13 +823,13 @@ func TestPartialCheckpointErrorBranches(t *testing.T) {
 	if err := os.WriteFile(partial, []byte("{bad json"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := e.loadPartialResults(nil); err == nil {
+	if _, err := session.loadPartialResults(nil); err == nil {
 		t.Fatal("loadPartialResults accepted malformed JSON")
 	}
 	if err := os.WriteFile(partial, []byte(`{"schema_version":"1","checkpoint":{},"mutants":[]}`), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := e.loadPartialResults(nil); err == nil {
+	if _, err := session.loadPartialResults(nil); err == nil {
 		t.Fatal("loadPartialResults accepted missing fingerprint")
 	}
 }
@@ -837,7 +842,7 @@ func TestResumeWithoutCheckpointUsesConfiguredWorkerPath(t *testing.T) {
 	cfg.Execution.Resume = true
 	cfg.Execution.Workers = 1
 	cfg.Reports.Output = t.TempDir()
-	results, err := New(cfg).runMutantsWithResume(context.Background(), mutants, quarantined)
+	results, err := New(cfg).newRunSession().runMutantsWithResume(context.Background(), mutants, quarantined)
 	if err != nil {
 		t.Fatalf("serial resume without checkpoint returned error: %v", err)
 	}
@@ -847,7 +852,7 @@ func TestResumeWithoutCheckpointUsesConfiguredWorkerPath(t *testing.T) {
 
 	cfg.Execution.Workers = 2
 	cfg.Reports.Output = t.TempDir()
-	results, err = New(cfg).runMutantsWithResume(context.Background(), mutants, quarantined)
+	results, err = New(cfg).newRunSession().runMutantsWithResume(context.Background(), mutants, quarantined)
 	if err != nil {
 		t.Fatalf("parallel resume without checkpoint returned error: %v", err)
 	}
@@ -878,16 +883,18 @@ func TestRunMutantCacheAndErrorBranches(t *testing.T) {
 		Ownership:   &OwnershipRoute{Owner: "fresh-owner", Rule: "current"},
 	}
 	e := New(cfg)
-	key, err := e.cacheKey(mutant, e.selectTests(mutant))
+	session := e.newRunSession()
+	plan := session.selectTests(mutant)
+	key, err := session.cacheKey(mutant, plan)
 	if err != nil {
 		t.Fatal(err)
 	}
 	stale := mutant
 	stale.Ownership = &OwnershipRoute{Owner: "stale-owner", Rule: "stale"}
-	if err := e.putCached(key, MutantResult{MutantID: mutant.ID, Status: StatusKilled, Mutant: stale}); err != nil {
+	if err := session.putCached(key, MutantResult{MutantID: mutant.ID, Status: StatusKilled, Mutant: stale}); err != nil {
 		t.Fatal(err)
 	}
-	cached, err := e.runMutant(context.Background(), mutant)
+	cached, err := session.runMutant(context.Background(), mutant)
 	if err != nil {
 		t.Fatalf("runMutant cached returned error: %v", err)
 	}
@@ -900,7 +907,7 @@ func TestRunMutantCacheAndErrorBranches(t *testing.T) {
 
 	missing := mutant
 	missing.File = filepath.Join(dir, "missing.go")
-	if _, err := e.runMutant(context.Background(), missing); err == nil {
+	if _, err := session.runMutant(context.Background(), missing); err == nil {
 		t.Fatal("runMutant accepted missing source file")
 	}
 }
@@ -970,8 +977,9 @@ func TestCacheKeyChangesWhenSliceConfigChanges(t *testing.T) {
 	}
 	baseCfg := config.Defaults()
 	baseCfg.Tests.Command = []string{"go", "test", "."}
-	basePlan := New(baseCfg).selectTests(mutant)
-	baseKey, err := New(baseCfg).cacheKey(mutant, basePlan)
+	baseSession := New(baseCfg).newRunSession()
+	basePlan := baseSession.selectTests(mutant)
+	baseKey, err := baseSession.cacheKey(mutant, basePlan)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -980,7 +988,7 @@ func TestCacheKeyChangesWhenSliceConfigChanges(t *testing.T) {
 	slicedCfg.Scope.SliceBy = "package"
 	slicedCfg.Scope.ShardIndex = 1
 	slicedCfg.Scope.ShardCount = 4
-	slicedKey, err := New(slicedCfg).cacheKey(mutant, basePlan)
+	slicedKey, err := New(slicedCfg).newRunSession().cacheKey(mutant, basePlan)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -995,19 +1003,20 @@ func TestLoadCorruptCacheAndBaselineBranches(t *testing.T) {
 	cfg.Cache.Path = filepath.Join(dir, "cache")
 	cfg.Baseline.Path = filepath.Join(dir, "baseline.json")
 	e := New(cfg)
+	session := e.newRunSession()
 	if err := os.MkdirAll(cfg.Cache.Path, 0o700); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(cfg.Cache.Path, "bad.json"), []byte("{bad json"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err := e.getCached("bad"); err == nil {
+	if _, _, err := session.getCached("bad"); err == nil {
 		t.Fatal("getCached accepted malformed JSON")
 	}
 	if err := os.WriteFile(cfg.Baseline.Path, []byte("{bad json"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err := e.loadBaseline(); err == nil {
+	if _, _, err := session.loadBaseline(); err == nil {
 		t.Fatal("loadBaseline accepted malformed JSON")
 	}
 }
@@ -1019,10 +1028,10 @@ func TestWriteReportsAndTimingNoopBranches(t *testing.T) {
 		t.Fatalf("writeReports with empty output returned error: %v", err)
 	}
 	cfg.Selection.UseTimings = false
-	New(cfg).recordTiming("m", time.Millisecond)
+	New(cfg).newRunSession().recordTiming("m", time.Millisecond)
 	cfg.Selection.UseTimings = true
 	cfg.Selection.TimingsPath = ""
-	New(cfg).recordTiming("m", time.Millisecond)
+	New(cfg).newRunSession().recordTiming("m", time.Millisecond)
 }
 
 func TestHistoryTracksNewAndLongStandingSurvivors(t *testing.T) {
@@ -1561,11 +1570,12 @@ func TestSelectionPatchAndRunTestErrorBranches(t *testing.T) {
 	cfg := config.Defaults()
 	cfg.Tests.Command = nil
 	e := New(cfg)
-	plan := e.selectTests(Mutant{ID: "m1"})
+	session := e.newRunSession()
+	plan := session.selectTests(Mutant{ID: "m1"})
 	if len(plan.Command) != 3 || plan.Command[0] != "go" || plan.Reason != "all tests selected" {
 		t.Fatalf("default selectTests plan = %+v", plan)
 	}
-	if _, err := e.runTest(context.Background(), MutantJob{}); err == nil {
+	if _, err := session.runTest(context.Background(), MutantJob{}); err == nil {
 		t.Fatal("runTest accepted empty command")
 	}
 
@@ -1659,7 +1669,7 @@ func TestParallelWorkerAndCollectorErrorBranches(t *testing.T) {
 	failed := make(chan indexedResult, 1)
 	failed <- indexedResult{index: 0, err: errors.New("boom")}
 	close(failed)
-	_, err := e.collectParallelResults(failed, []MutantResult{{MutantID: "m1"}}, 1, time.Now(), func() {})
+	_, err := e.newRunSession().collectParallelResults(failed, []MutantResult{{MutantID: "m1"}}, 1, time.Now(), func() {})
 	if err == nil || !strings.Contains(err.Error(), "boom") {
 		t.Fatalf("collectParallelResults err = %v, want boom", err)
 	}
@@ -1708,7 +1718,7 @@ func TestParallelRunnerHandlesPreExecutionOutcomes(t *testing.T) {
 		{ID: "also-quarantined"},
 	}
 
-	results, err := e.runMutantsParallel(context.Background(), mutants, map[string]bool{"quarantined": true, "also-quarantined": true}, 2)
+	results, err := e.newRunSession().runMutantsParallel(context.Background(), mutants, map[string]bool{"quarantined": true, "also-quarantined": true}, 2)
 	if err != nil {
 		t.Fatalf("runMutantsParallel returned error: %v", err)
 	}
@@ -1736,20 +1746,22 @@ func TestLoadStoresAndPriorityHelpers(t *testing.T) {
 
 func assertCacheStore(t *testing.T, e *Engine) {
 	t.Helper()
-	if _, ok, err := e.getCached("missing"); err != nil || ok {
+	session := e.newRunSession()
+	if _, ok, err := session.getCached("missing"); err != nil || ok {
 		t.Fatalf("missing cache = ok %t err %v", ok, err)
 	}
-	if err := e.putCached("hit", MutantResult{MutantID: "m1", Status: StatusKilled}); err != nil {
+	if err := session.putCached("hit", MutantResult{MutantID: "m1", Status: StatusKilled}); err != nil {
 		t.Fatalf("putCached returned error: %v", err)
 	}
-	if cached, ok, err := e.getCached("hit"); err != nil || !ok || cached.MutantID != "m1" {
+	if cached, ok, err := session.getCached("hit"); err != nil || !ok || cached.MutantID != "m1" {
 		t.Fatalf("cached = %+v ok=%t err=%v", cached, ok, err)
 	}
 }
 
 func assertBaselineStore(t *testing.T, e *Engine, path string) {
 	t.Helper()
-	if _, ok, err := e.loadBaseline(); err != nil || ok {
+	session := e.newRunSession()
+	if _, ok, err := session.loadBaseline(); err != nil || ok {
 		t.Fatalf("missing baseline = ok %t err %v", ok, err)
 	}
 	baseline := RunResult{SchemaVersion: "1", Summary: Summary{Score: 90}}
@@ -1760,13 +1772,14 @@ func assertBaselineStore(t *testing.T, e *Engine, path string) {
 	if err := os.WriteFile(path, data, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if loaded, ok, err := e.loadBaseline(); err != nil || !ok || loaded.Summary.Score != 90 {
+	if loaded, ok, err := session.loadBaseline(); err != nil || !ok || loaded.Summary.Score != 90 {
 		t.Fatalf("loaded baseline = %+v ok=%t err=%v", loaded, ok, err)
 	}
 }
 
 func assertQuarantineLoad(t *testing.T, e *Engine, path string) {
 	t.Helper()
+	session := e.newRunSession()
 	entries := []map[string]any{{
 		"mutant_id":  "m-active",
 		"reason":     "temporary",
@@ -1779,7 +1792,7 @@ func assertQuarantineLoad(t *testing.T, e *Engine, path string) {
 	if err := os.WriteFile(path, quarantineData, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	active, expired, err := e.loadQuarantine()
+	active, expired, err := session.loadQuarantine()
 	if err != nil {
 		t.Fatalf("loadQuarantine returned error: %v", err)
 	}

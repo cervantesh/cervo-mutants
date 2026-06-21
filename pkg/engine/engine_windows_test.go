@@ -46,7 +46,7 @@ func main() {
 	cfg := config.Defaults()
 	cfg.Tests.Timeout = 10 * time.Second
 	cfg.Execution.Resources.MaxProcessMemoryMB = 64
-	result, err := New(cfg).runTest(context.Background(), MutantJob{
+	result, err := New(cfg).newRunSession().runTest(context.Background(), MutantJob{
 		Mutant:      Mutant{ID: "memory"},
 		WorkDir:     dir,
 		TestCommand: []string{probeExe},

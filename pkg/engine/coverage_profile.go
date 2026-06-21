@@ -9,10 +9,6 @@ import (
 	internalcoverage "github.com/cervantesh/cervo-mutants/pkg/internal/coverageprofile"
 )
 
-func (e *Engine) coverageMentions(mutant Mutant) bool {
-	return e.newRunSession().coverageMentions(mutant)
-}
-
 func (s *runSession) coverageMentions(mutant Mutant) bool {
 	lineCovered, _ := s.coverageSignal(mutant)
 	return lineCovered

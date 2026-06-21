@@ -47,23 +47,22 @@ func TestHelpCommandDoesNotError(t *testing.T) {
 }
 
 func TestDaemonCommandRequiresExperimentalOptIn(t *testing.T) {
-	oldServeDaemon := serveDaemonFn
-	serveDaemonFn = func(context.Context, io.Reader, io.Writer, engine.Runner) error {
+	app := newCLIApp()
+	app.deps.serveDaemon = func(context.Context, io.Reader, io.Writer, engine.Runner) error {
 		t.Fatal("serveDaemonFn should not be called without experimental opt-in")
 		return nil
 	}
-	t.Cleanup(func() { serveDaemonFn = oldServeDaemon })
 
-	err := run([]string{"daemon"})
+	err := app.run([]string{"daemon"})
 	if err == nil || !strings.Contains(err.Error(), "experimental") || !strings.Contains(err.Error(), daemonExperimentalEnvVar) {
 		t.Fatalf("daemon error = %v, want experimental opt-in guidance", err)
 	}
 }
 
 func TestDaemonAndWorkerCommandsAcceptExperimentalOptIn(t *testing.T) {
-	oldServeDaemon := serveDaemonFn
+	app := newCLIApp()
 	var calls []int
-	serveDaemonFn = func(_ context.Context, _ io.Reader, _ io.Writer, runner engine.Runner) error {
+	app.deps.serveDaemon = func(_ context.Context, _ io.Reader, _ io.Writer, runner engine.Runner) error {
 		workerRunner, ok := runner.(daemon.WorkerRunner)
 		if !ok {
 			t.Fatalf("runner type = %T, want daemon.WorkerRunner", runner)
@@ -71,13 +70,12 @@ func TestDaemonAndWorkerCommandsAcceptExperimentalOptIn(t *testing.T) {
 		calls = append(calls, workerRunner.MaxOutputBytes)
 		return nil
 	}
-	t.Cleanup(func() { serveDaemonFn = oldServeDaemon })
 
-	if err := run([]string{"daemon", "--experimental", "--max-output-bytes", "321"}); err != nil {
+	if err := app.run([]string{"daemon", "--experimental", "--max-output-bytes", "321"}); err != nil {
 		t.Fatalf("daemon command returned error: %v", err)
 	}
 	t.Setenv(daemonExperimentalEnvVar, "1")
-	if err := run([]string{"worker"}); err != nil {
+	if err := app.run([]string{"worker"}); err != nil {
 		t.Fatalf("worker command returned error with env opt-in: %v", err)
 	}
 	if len(calls) != 2 || calls[0] != 321 || calls[1] != 12000 {
@@ -354,8 +352,8 @@ func TestReportAndShowAcceptOutputDirectory(t *testing.T) {
 func TestRunAndReportActionableOnlyViews(t *testing.T) {
 	dir := writeCLIFixture(t)
 	out := filepath.Join(dir, "actionable-out")
-	restoreCLIHooks(t)
-	runEngineFn = func(cfg config.Config, req engine.RunRequest) (engine.RunResult, error) {
+	app := newCLIApp()
+	app.deps.runEngine = func(cfg config.Config, req engine.RunRequest) (engine.RunResult, error) {
 		if !cfg.Reports.ActionableOnly {
 			t.Fatalf("run config should enable actionable-only: %+v", cfg.Reports)
 		}
@@ -364,7 +362,7 @@ func TestRunAndReportActionableOnlyViews(t *testing.T) {
 	}
 
 	runOutput := captureStdout(t, func() {
-		if err := run([]string{"run", dir, "--out", out, "--actionable-only"}); err != nil {
+		if err := app.run([]string{"run", dir, "--out", out, "--actionable-only"}); err != nil {
 			t.Fatalf("run --actionable-only returned error: %v", err)
 		}
 	})
@@ -500,9 +498,9 @@ func TestRunCommandWritesStructuredFailureArtifactsOnConfigError(t *testing.T) {
 func TestRunCommandPersistsBaselineFailureDiagnostics(t *testing.T) {
 	dir := writeCLIFixture(t)
 	out := filepath.Join(dir, "baseline-failure-out")
-	restoreCLIHooks(t)
+	app := newCLIApp()
 	baselineOutput := "go: go.mod requires go >= 1.26.0 (running go 1.25.6; GOTOOLCHAIN=local)\n" + strings.Repeat("x", 9000)
-	runEngineFn = func(_ config.Config, _ engine.RunRequest) (engine.RunResult, error) {
+	app.deps.runEngine = func(_ config.Config, _ engine.RunRequest) (engine.RunResult, error) {
 		baselineErr := &engine.BaselineFailureError{Result: engine.MutantResult{
 			Status:       engine.StatusCompileError,
 			StatusReason: "baseline compile failed",
@@ -512,7 +510,7 @@ func TestRunCommandPersistsBaselineFailureDiagnostics(t *testing.T) {
 		return engine.RunResult{}, fmt.Errorf("runner_error: %w", baselineErr)
 	}
 
-	err := run([]string{"run", dir, "--out", out})
+	err := app.run([]string{"run", dir, "--out", out})
 	if err == nil || !strings.Contains(err.Error(), "runner_error:") {
 		t.Fatalf("run should return runner_error, got %v", err)
 	}
@@ -547,12 +545,12 @@ func TestRunCommandPersistsBaselineFailureDiagnostics(t *testing.T) {
 func TestRunCommandWritesStructuredFailureArtifactsOnEnginePanic(t *testing.T) {
 	dir := writeCLIFixture(t)
 	out := filepath.Join(dir, "panic-out")
-	restoreCLIHooks(t)
-	runEngineFn = func(_ config.Config, _ engine.RunRequest) (engine.RunResult, error) {
+	app := newCLIApp()
+	app.deps.runEngine = func(_ config.Config, _ engine.RunRequest) (engine.RunResult, error) {
 		panic("engine panic")
 	}
 
-	err := run([]string{"run", dir, "--out", out})
+	err := app.run([]string{"run", dir, "--out", out})
 	if err == nil || !strings.Contains(err.Error(), "internal_error:") {
 		t.Fatalf("run should return internal_error, got %v", err)
 	}
@@ -595,12 +593,12 @@ func TestEvalCommandWritesStructuredFailureArtifactsOnConfigError(t *testing.T) 
 func TestEvalCommandKeepsMutationReportWhenEvaluationWriteFails(t *testing.T) {
 	dir := writeCLIFixture(t)
 	out := filepath.Join(dir, "eval-write-fail-out")
-	restoreCLIHooks(t)
-	writeEvalFn = func(string, evalpkg.Evaluation) error {
+	app := newCLIApp()
+	app.deps.writeEval = func(string, evalpkg.Evaluation) error {
 		return errors.New("evaluation write failed")
 	}
 
-	err := run([]string{"eval", dir, "--max-mutants", "1", "--workers", "1", "--out", out})
+	err := app.run([]string{"eval", dir, "--max-mutants", "1", "--workers", "1", "--out", out})
 	if err == nil || !strings.Contains(err.Error(), "internal_error:") {
 		t.Fatalf("eval should return internal_error, got %v", err)
 	}
@@ -755,20 +753,6 @@ func extractMutantIDForTest(t *testing.T, report string) string {
 		t.Fatalf("report has malformed mutant_id: %s", report)
 	}
 	return report[start : start+end]
-}
-
-func restoreCLIHooks(t *testing.T) {
-	t.Helper()
-	oldRunEngine := runEngineFn
-	oldWriteRunResult := writeRunResultFn
-	oldBuildEval := buildEvalFn
-	oldWriteEval := writeEvalFn
-	t.Cleanup(func() {
-		runEngineFn = oldRunEngine
-		writeRunResultFn = oldWriteRunResult
-		buildEvalFn = oldBuildEval
-		writeEvalFn = oldWriteEval
-	})
 }
 
 func readRunReportForTest(t *testing.T, out string) engine.RunResult {

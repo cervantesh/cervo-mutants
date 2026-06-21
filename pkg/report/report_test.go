@@ -865,6 +865,47 @@ func TestGitHubSummaryIncludesDenominatorGuidanceForLowSignalRuns(t *testing.T) 
 	}
 }
 
+func TestRenderRequestedFormatsBuildsGitHubSummaryWithoutSinkEffects(t *testing.T) {
+	stepSummaryPath := filepath.Join(t.TempDir(), "step-summary.md")
+	t.Setenv("GITHUB_STEP_SUMMARY", stepSummaryPath)
+
+	run := goldenReportFixture()
+	plan, err := renderRequestedFormats(run, []string{"github-summary"}, WriteOptions{})
+	if err != nil {
+		t.Fatalf("renderRequestedFormats returned error: %v", err)
+	}
+	if got := string(plan.artifacts["github-summary.md"]); got != GitHubSummary(run) {
+		t.Fatalf("github summary artifact mismatch:\nwant:\n%s\n\ngot:\n%s", GitHubSummary(run), got)
+	}
+	if len(plan.sinks) != 1 {
+		t.Fatalf("post-write sinks = %d, want 1", len(plan.sinks))
+	}
+	if _, err := os.Stat(stepSummaryPath); !os.IsNotExist(err) {
+		t.Fatalf("renderRequestedFormats should not write step summary, stat err=%v", err)
+	}
+}
+
+func TestRunPostWriteSinksPublishesGitHubSummary(t *testing.T) {
+	stepSummaryPath := filepath.Join(t.TempDir(), "step-summary.md")
+	t.Setenv("GITHUB_STEP_SUMMARY", stepSummaryPath)
+
+	run := goldenReportFixture()
+	plan, err := renderRequestedFormats(run, []string{"github-summary"}, WriteOptions{})
+	if err != nil {
+		t.Fatalf("renderRequestedFormats returned error: %v", err)
+	}
+	if err := runPostWriteSinks(plan.sinks); err != nil {
+		t.Fatalf("runPostWriteSinks returned error: %v", err)
+	}
+	data, err := os.ReadFile(stepSummaryPath)
+	if err != nil {
+		t.Fatalf("step summary missing: %v", err)
+	}
+	if got, want := string(data), string(plan.artifacts["github-summary.md"]); got != want {
+		t.Fatalf("step summary mismatch:\nwant:\n%s\n\ngot:\n%s", want, got)
+	}
+}
+
 func TestGitHubSummaryClassifiesGroupedAndHealthyNoActionLanes(t *testing.T) {
 	t.Run("grouped review lane", func(t *testing.T) {
 		run := engine.RunResult{

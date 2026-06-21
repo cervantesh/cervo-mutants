@@ -251,6 +251,33 @@ func TestDefinitionsCarryGovernanceMetadata(t *testing.T) {
 	}
 }
 
+func TestOperatorCatalogIsCompleteAndConsistent(t *testing.T) {
+	if len(operatorCatalog) == 0 {
+		t.Fatal("operator catalog should not be empty")
+	}
+	seen := map[string]bool{}
+	for _, spec := range operatorCatalog {
+		if spec.Name == "" || spec.Risk == "" || spec.EquivalentMutantRisk == "" || spec.CompileErrorRisk == "" || spec.Reason == "" || spec.Hint == "" || spec.Recommendation == "" {
+			t.Fatalf("operator spec missing required metadata: %+v", spec)
+		}
+		if len(spec.ASTNodes) == 0 || len(spec.EnabledProfiles) == 0 || len(spec.DefinitionProfiles) == 0 {
+			t.Fatalf("operator spec missing structural metadata: %+v", spec)
+		}
+		if seen[spec.Name] {
+			t.Fatalf("duplicate operator spec: %s", spec.Name)
+		}
+		seen[spec.Name] = true
+		if lookup, ok := operatorSpecFor(spec.Name); !ok || lookup.Name != spec.Name {
+			t.Fatalf("operatorSpecFor(%q) mismatch: ok=%v spec=%+v", spec.Name, ok, lookup)
+		}
+		for _, profile := range spec.DefinitionProfiles {
+			if !containsProfile(spec.EnabledProfiles, profile) {
+				t.Fatalf("definition profile %q should also be enabled for %s", profile, spec.Name)
+			}
+		}
+	}
+}
+
 func TestInlineIgnoreRequiresReasonWhenConfigured(t *testing.T) {
 	src := `package sample
 

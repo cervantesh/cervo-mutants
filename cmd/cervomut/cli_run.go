@@ -17,7 +17,7 @@ import (
 	"github.com/cervantesh/cervo-mutants/pkg/report"
 )
 
-func cmdRun(args []string) (err error) {
+func (app *cliApp) cmdRun(args []string) (err error) {
 	opts, targets, err := parseRunOptions(args)
 	if err != nil {
 		return err
@@ -37,11 +37,11 @@ func cmdRun(args []string) (err error) {
 	if err := cfg.Validate(); err != nil {
 		return finalizeStructuredFailure("run", args, targets, cfg, "config_error", err, "")
 	}
-	result, err := runEngineFn(cfg, engine.RunRequest{Targets: targets, DryRun: opts.dryRun})
+	result, err := app.deps.runEngine(cfg, engine.RunRequest{Targets: targets, DryRun: opts.dryRun})
 	if err != nil {
 		return finalizeStructuredFailure("run", args, targets, cfg, classifyStructuredFailure(err), err, stackFromError(err))
 	}
-	if err := writeRunResultFn(cfg, result, opts.dryRun); err != nil {
+	if err := app.deps.writeRunResult(cfg, result, opts.dryRun); err != nil {
 		if strings.Contains(err.Error(), "threshold") {
 			return err
 		}
@@ -388,7 +388,11 @@ func parseShard(value string) (int, int, error) {
 	return index, count, nil
 }
 
-func cmdFast(args []string) error {
+func (app *cliApp) cmdFast(args []string) error {
 	next := append([]string{"--policy", "ci-fast", "--report", "summary,json,junit"}, args...)
-	return cmdRun(next)
+	return app.cmdRun(next)
+}
+
+func cmdFast(args []string) error {
+	return newCLIApp().cmdFast(args)
 }

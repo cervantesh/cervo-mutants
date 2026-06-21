@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -17,7 +16,7 @@ import (
 	"github.com/cervantesh/cervo-mutants/pkg/report"
 )
 
-func cmdEval(args []string) (err error) {
+func (app *cliApp) cmdEval(args []string) (err error) {
 	fs := flag.NewFlagSet("eval", flag.ContinueOnError)
 	out := fs.String("out", ".cervomut/evaluation", "evaluation output directory")
 	framework := fs.String("framework", "generic-go", "evaluation framework")
@@ -104,14 +103,14 @@ func cmdEval(args []string) (err error) {
 	if err := cfg.Validate(); err != nil {
 		return finalizeStructuredFailure("eval", args, targets, cfg, "config_error", err, "")
 	}
-	runResult, err := runEngineFn(cfg, engine.RunRequest{Targets: targets})
+	runResult, err := app.deps.runEngine(cfg, engine.RunRequest{Targets: targets})
 	if err != nil {
 		return finalizeStructuredFailure("eval", args, targets, cfg, classifyStructuredFailure(err), err, stackFromError(err))
 	}
 	if err := report.WriteFormats(cfg.Reports.Output, runResult, cfg.Reports.Formats); err != nil {
 		return finalizeStructuredFailure("eval", args, targets, cfg, classifyStructuredFailure(err), err, stackFromError(err))
 	}
-	evaluation := buildEvalFn(evalpkg.BuildRequest{
+	evaluation := app.deps.buildEval(evalpkg.BuildRequest{
 		Tool:       "cervo-mutants",
 		Target:     strings.Join(targets, " "),
 		Commit:     currentCommit(),
@@ -120,7 +119,7 @@ func cmdEval(args []string) (err error) {
 		Run:        runResult,
 		ManualMode: true,
 	})
-	if err := writeEvalFn(*out, evaluation); err != nil {
+	if err := app.deps.writeEval(*out, evaluation); err != nil {
 		return finalizeStructuredFailure("eval", args, targets, cfg, "internal_error", err, stackFromError(err))
 	}
 	fmt.Printf("Evaluation written to %s\n", *out)
@@ -146,25 +145,25 @@ func cmdCompare(args []string) error {
 	return nil
 }
 
-func cmdPool(args []string) error {
+func (app *cliApp) cmdPool(args []string) error {
 	if len(args) == 0 {
 		return fmt.Errorf("pool requires smoke, compare, benchmark, or campaign")
 	}
 	switch args[0] {
 	case "smoke":
-		return cmdPoolSmoke(args[1:])
+		return app.cmdPoolSmoke(args[1:])
 	case "compare":
-		return cmdPoolCompare(args[1:])
+		return app.cmdPoolCompare(args[1:])
 	case "benchmark":
-		return cmdPoolBenchmark(args[1:])
+		return app.cmdPoolBenchmark(args[1:])
 	case "campaign":
-		return cmdPoolCampaign(args[1:])
+		return app.cmdPoolCampaign(args[1:])
 	default:
 		return fmt.Errorf("unknown pool command %q", args[0])
 	}
 }
 
-func cmdPoolSmoke(args []string) error {
+func (app *cliApp) cmdPoolSmoke(args []string) error {
 	fs := flag.NewFlagSet("pool smoke", flag.ContinueOnError)
 	manifest := fs.String("manifest", "docs/evaluations/go-repo-pool-40.json", "repository pool manifest")
 	workRoot := fs.String("work-root", filepath.Join(os.TempDir(), "cervomut-go-pool-40"), "working root for cloned repositories and reports")
@@ -184,7 +183,7 @@ func cmdPoolSmoke(args []string) error {
 	})); err != nil {
 		return err
 	}
-	run, err := runPoolSmokeFn(context.Background(), pool.SmokeOptions{
+	run, err := app.deps.runPoolSmoke(app.deps.background(), pool.SmokeOptions{
 		ManifestPath:           *manifest,
 		WorkRoot:               *workRoot,
 		Names:                  splitList(*names),
@@ -206,7 +205,7 @@ func cmdPoolSmoke(args []string) error {
 	return nil
 }
 
-func cmdPoolCompare(args []string) error {
+func (app *cliApp) cmdPoolCompare(args []string) error {
 	fs := flag.NewFlagSet("pool compare", flag.ContinueOnError)
 	manifest := fs.String("manifest", "docs/evaluations/go-repo-pool-40.json", "repository pool manifest")
 	workRoot := fs.String("work-root", filepath.Join(os.TempDir(), "cervomut-go-pool-40"), "working root containing checked-out repositories")
@@ -242,7 +241,7 @@ func cmdPoolCompare(args []string) error {
 	})); err != nil {
 		return err
 	}
-	run, err := runPoolCompareFn(context.Background(), pool.CompareOptions{
+	run, err := app.deps.runPoolCompare(app.deps.background(), pool.CompareOptions{
 		ManifestPath:               *manifest,
 		WorkRoot:                   *workRoot,
 		OutputRoot:                 *outputRoot,
@@ -286,7 +285,7 @@ func cmdPoolCompare(args []string) error {
 	return nil
 }
 
-func cmdPoolBenchmark(args []string) error {
+func (app *cliApp) cmdPoolBenchmark(args []string) error {
 	fs := flag.NewFlagSet("pool benchmark", flag.ContinueOnError)
 	corpus := fs.String("corpus", "docs/evaluations/benchmark-corpus.json", "benchmark corpus manifest")
 	workRoot := fs.String("work-root", filepath.Join(os.TempDir(), "cervomut-benchmark-corpus"), "working root containing cloned benchmark repositories")
@@ -301,7 +300,7 @@ func cmdPoolBenchmark(args []string) error {
 	})); err != nil {
 		return err
 	}
-	run, err := runPoolBenchmarkFn(context.Background(), pool.BenchmarkOptions{
+	run, err := app.deps.runPoolBenchmark(app.deps.background(), pool.BenchmarkOptions{
 		CorpusPath:  *corpus,
 		WorkRoot:    *workRoot,
 		OutputRoot:  *outputRoot,

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -10,7 +9,7 @@ import (
 	"github.com/cervantesh/cervo-mutants/pkg/pool"
 )
 
-func cmdPoolCampaign(args []string) error {
+func (app *cliApp) cmdPoolCampaign(args []string) error {
 	fs := flag.NewFlagSet("pool campaign", flag.ContinueOnError)
 	file := fs.String("file", "docs/evaluations/pool-campaign-example.json", "campaign manifest")
 	workRoot := fs.String("work-root", "", "override campaign-level work root")
@@ -26,7 +25,7 @@ func cmdPoolCampaign(args []string) error {
 	})); err != nil {
 		return err
 	}
-	run, err := runPoolCampaignFn(context.Background(), pool.CampaignOptions{
+	run, err := app.deps.runPoolCampaign(app.deps.background(), pool.CampaignOptions{
 		Path:              *file,
 		WorkRoot:          *workRoot,
 		OutputRoot:        *outputRoot,

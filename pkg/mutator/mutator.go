@@ -52,6 +52,231 @@ type Definition struct {
 	Reason               string   `json:"reason"`
 }
 
+type operatorSpec struct {
+	Name                 string
+	Risk                 string
+	EquivalentMutantRisk string
+	CompileErrorRisk     string
+	ASTNodes             []string
+	Example              string
+	Reason               string
+	Hint                 string
+	Recommendation       string
+	EnabledProfiles      []string
+	DefinitionProfiles   []string
+}
+
+var operatorCatalog = []operatorSpec{
+	{
+		Name:                 opConditionalsNegation,
+		Risk:                 "low",
+		EquivalentMutantRisk: "medium",
+		CompileErrorRisk:     "low",
+		ASTNodes:             []string{astBinaryExpr},
+		Example:              "a == b -> a != b",
+		Reason:               "Fast branch behavior signal.",
+		Hint:                 "Add assertions for the opposite branch or boundary condition.",
+		Recommendation:       "fast-ci",
+		EnabledProfiles:      []string{ProfileGremlinsCompatible, ProfileConservativeFast, ProfileConservative, ProfileDefault, ProfileAggressive},
+		DefinitionProfiles:   []string{ProfileGremlinsCompatible, ProfileConservativeFast},
+	},
+	{
+		Name:                 opConditionalsBoundary,
+		Risk:                 "low",
+		EquivalentMutantRisk: "high",
+		CompileErrorRisk:     "low",
+		ASTNodes:             []string{astBinaryExpr},
+		Example:              "a < b -> a <= b",
+		Reason:               "Fast boundary-condition signal.",
+		Hint:                 "Add assertions for the opposite branch or boundary condition.",
+		Recommendation:       "fast-ci",
+		EnabledProfiles:      []string{ProfileGremlinsCompatible, ProfileConservativeFast, ProfileConservative, ProfileDefault, ProfileAggressive},
+		DefinitionProfiles:   []string{ProfileGremlinsCompatible, ProfileConservativeFast},
+	},
+	{
+		Name:                 opArithmeticBasic,
+		Risk:                 "medium",
+		EquivalentMutantRisk: "low",
+		CompileErrorRisk:     "medium",
+		ASTNodes:             []string{astBinaryExpr},
+		Example:              "a + b -> a - b",
+		Reason:               "Numeric result signal for fast CI.",
+		Hint:                 "Add assertions for the computed numeric result and edge cases.",
+		Recommendation:       "fast-ci",
+		EnabledProfiles:      []string{ProfileGremlinsCompatible, ProfileConservativeFast, ProfileConservative, ProfileDefault, ProfileAggressive},
+		DefinitionProfiles:   []string{ProfileGremlinsCompatible, ProfileConservativeFast},
+	},
+	{
+		Name:                 opLogical,
+		Risk:                 "low",
+		EquivalentMutantRisk: "medium",
+		CompileErrorRisk:     "low",
+		ASTNodes:             []string{astBinaryExpr},
+		Example:              "a && b -> a || b",
+		Reason:               "Captures missing boolean combination assertions.",
+		Hint:                 "Add a test where only one side of the boolean expression changes the outcome.",
+		Recommendation:       "conservative",
+		EnabledProfiles:      []string{ProfileConservative, ProfileDefault, ProfileAggressive},
+		DefinitionProfiles:   []string{ProfileConservative},
+	},
+	{
+		Name:                 opBooleanLiterals,
+		Risk:                 "low",
+		EquivalentMutantRisk: "low",
+		CompileErrorRisk:     "low",
+		ASTNodes:             []string{"ast.Ident"},
+		Example:              "true -> false",
+		Reason:               "Simple branch outcome signal.",
+		Hint:                 "Assert both boolean outcomes instead of only executing the path.",
+		Recommendation:       "conservative",
+		EnabledProfiles:      []string{ProfileConservative, ProfileDefault, ProfileAggressive},
+		DefinitionProfiles:   []string{ProfileConservative},
+	},
+	{
+		Name:                 opStringEmptyLiterals,
+		Risk:                 "medium",
+		EquivalentMutantRisk: "medium",
+		CompileErrorRisk:     "low",
+		ASTNodes:             []string{astBasicLit},
+		Example:              `"error" -> ""`,
+		Reason:               "Controlled string behavior signal with low compile risk.",
+		Hint:                 "Add an assertion for non-empty text or exact message behavior.",
+		Recommendation:       "conservative",
+		EnabledProfiles:      []string{ProfileConservative, ProfileDefault, ProfileAggressive},
+		DefinitionProfiles:   []string{ProfileConservative},
+	},
+	{
+		Name:                 opNilChecks,
+		Risk:                 "medium",
+		EquivalentMutantRisk: "high",
+		CompileErrorRisk:     "low",
+		ASTNodes:             []string{astBinaryExpr},
+		Example:              "err == nil -> err != nil",
+		Reason:               "Important Go error-path signal but high equivalence risk.",
+		Hint:                 "Add assertions for the opposite branch or boundary condition.",
+		Recommendation:       "default",
+		EnabledProfiles:      []string{ProfileDefault, ProfileAggressive},
+		DefinitionProfiles:   []string{ProfileDefault},
+	},
+	{
+		Name:                 opErrorReturns,
+		Risk:                 "medium",
+		EquivalentMutantRisk: "high",
+		CompileErrorRisk:     "medium",
+		ASTNodes:             []string{"ast.IfStmt"},
+		Example:              "err == nil -> err != nil",
+		Reason:               "Controlled error-path mutation for nightly/default runs.",
+		Hint:                 "Add an assertion that observes the changed behavior.",
+		Recommendation:       "default",
+		EnabledProfiles:      []string{ProfileDefault, ProfileAggressive},
+		DefinitionProfiles:   []string{ProfileDefault},
+	},
+	{
+		Name:                 opNumericLiterals,
+		Risk:                 "medium",
+		EquivalentMutantRisk: "medium",
+		CompileErrorRisk:     "low",
+		ASTNodes:             []string{astBasicLit},
+		Example:              "2 -> 1",
+		Reason:               "Controlled numeric literal signal for default runs.",
+		Hint:                 "Add an assertion for numeric boundaries and configured constants.",
+		Recommendation:       "default",
+		EnabledProfiles:      []string{ProfileDefault, ProfileAggressive},
+		DefinitionProfiles:   []string{ProfileDefault},
+	},
+	{
+		Name:                 opReturnBoolLiterals,
+		Risk:                 "medium",
+		EquivalentMutantRisk: "medium",
+		CompileErrorRisk:     "low",
+		ASTNodes:             []string{"ast.ReturnStmt"},
+		Example:              "return true -> return false",
+		Reason:               "Return behavior signal without broad return rewrites.",
+		Hint:                 "Assert both boolean outcomes instead of only executing the path.",
+		Recommendation:       "default",
+		EnabledProfiles:      []string{ProfileDefault, ProfileAggressive},
+		DefinitionProfiles:   []string{ProfileDefault},
+	},
+	{
+		Name:                 opAssignmentArithmetic,
+		Risk:                 "medium",
+		EquivalentMutantRisk: "medium",
+		CompileErrorRisk:     "medium",
+		ASTNodes:             []string{"ast.AssignStmt"},
+		Example:              "x += n -> x -= n",
+		Reason:               "Assignment-update signal from Go-heavy operator catalogs.",
+		Hint:                 "Add assertions for cumulative updates and arithmetic assignment effects.",
+		Recommendation:       "default",
+		EnabledProfiles:      []string{ProfileDefault, ProfileAggressive},
+		DefinitionProfiles:   []string{ProfileDefault},
+	},
+	{
+		Name:                 opIncDec,
+		Risk:                 "medium",
+		EquivalentMutantRisk: "medium",
+		CompileErrorRisk:     "low",
+		ASTNodes:             []string{"ast.IncDecStmt"},
+		Example:              "i++ -> i--",
+		Reason:               "Loop and counter update signal without broad loop-control mutation.",
+		Hint:                 "Add assertions for counter direction and loop iteration counts.",
+		Recommendation:       "default",
+		EnabledProfiles:      []string{ProfileDefault, ProfileAggressive},
+		DefinitionProfiles:   []string{ProfileDefault},
+	},
+	{
+		Name:                 opLiterals,
+		Risk:                 "high",
+		EquivalentMutantRisk: "high",
+		CompileErrorRisk:     "medium",
+		ASTNodes:             []string{astBasicLit},
+		Example:              "1 -> 0",
+		Reason:               "Broad campaign-only literal exploration.",
+		Hint:                 "Add an assertion that observes the changed behavior.",
+		Recommendation:       "aggressive",
+		EnabledProfiles:      []string{ProfileAggressive},
+		DefinitionProfiles:   []string{ProfileAggressive},
+	},
+	{
+		Name:                 opReturns,
+		Risk:                 "high",
+		EquivalentMutantRisk: "high",
+		CompileErrorRisk:     "medium",
+		ASTNodes:             []string{"ast.ReturnStmt"},
+		Example:              "return true -> return false",
+		Reason:               "Campaign-only return behavior exploration.",
+		Hint:                 "Add an assertion that observes the changed behavior.",
+		Recommendation:       "aggressive",
+		EnabledProfiles:      []string{ProfileAggressive},
+		DefinitionProfiles:   []string{ProfileAggressive},
+	},
+	{
+		Name:                 opLoopControl,
+		Risk:                 "high",
+		EquivalentMutantRisk: "high",
+		CompileErrorRisk:     "medium",
+		ASTNodes:             []string{"ast.ForStmt"},
+		Example:              "i < n -> i <= n",
+		Reason:               "Campaign-only loop boundary exploration.",
+		Hint:                 "Add tests for loop boundary counts and off-by-one behavior.",
+		Recommendation:       "aggressive",
+		EnabledProfiles:      []string{ProfileAggressive},
+		DefinitionProfiles:   []string{ProfileAggressive},
+	},
+	{
+		Name:                 opSliceMapLenBoundary,
+		Risk:                 "high",
+		EquivalentMutantRisk: "medium",
+		CompileErrorRisk:     "low",
+		ASTNodes:             []string{astBinaryExpr},
+		Example:              "len(xs) > 0 -> len(xs) >= 0",
+		Reason:               "Targets collection boundary assumptions.",
+		Hint:                 "Add tests for empty and single-element collection boundaries.",
+		Recommendation:       "review",
+		EnabledProfiles:      []string{ProfileAggressive},
+		DefinitionProfiles:   []string{ProfileAggressive},
+	},
+}
+
 type Mutant struct {
 	ID                  string   `json:"id"`
 	Module              string   `json:"module"`
@@ -81,27 +306,25 @@ type Mutant struct {
 }
 
 func Definitions() []Definition {
-	return []Definition{
-		{Name: opConditionalsNegation, Profile: ProfileGremlinsCompatible, Risk: "low", EquivalentMutantRisk: "medium", CompileErrorRisk: "low", ASTNodes: []string{astBinaryExpr}, Example: "a == b -> a != b", Reason: "Fast branch behavior signal."},
-		{Name: opConditionalsBoundary, Profile: ProfileGremlinsCompatible, Risk: "low", EquivalentMutantRisk: "medium", CompileErrorRisk: "low", ASTNodes: []string{astBinaryExpr}, Example: "a < b -> a <= b", Reason: "Fast boundary-condition signal."},
-		{Name: opArithmeticBasic, Profile: ProfileGremlinsCompatible, Risk: "medium", EquivalentMutantRisk: "low", CompileErrorRisk: "medium", ASTNodes: []string{astBinaryExpr}, Example: "a + b -> a - b", Reason: "Numeric result signal for fast CI."},
-		{Name: opConditionalsNegation, Profile: ProfileConservativeFast, Risk: "low", EquivalentMutantRisk: "medium", CompileErrorRisk: "low", ASTNodes: []string{astBinaryExpr}, Example: "a == b -> a != b", Reason: "Fast branch behavior signal."},
-		{Name: opConditionalsBoundary, Profile: ProfileConservativeFast, Risk: "low", EquivalentMutantRisk: "medium", CompileErrorRisk: "low", ASTNodes: []string{astBinaryExpr}, Example: "a < b -> a <= b", Reason: "Fast boundary-condition signal."},
-		{Name: opArithmeticBasic, Profile: ProfileConservativeFast, Risk: "medium", EquivalentMutantRisk: "low", CompileErrorRisk: "medium", ASTNodes: []string{astBinaryExpr}, Example: "a + b -> a - b", Reason: "Numeric result signal for fast CI."},
-		{Name: opLogical, Profile: ProfileConservative, Risk: "low", EquivalentMutantRisk: "medium", CompileErrorRisk: "low", ASTNodes: []string{astBinaryExpr}, Example: "a && b -> a || b", Reason: "Captures missing boolean combination assertions."},
-		{Name: opBooleanLiterals, Profile: ProfileConservative, Risk: "low", EquivalentMutantRisk: "low", CompileErrorRisk: "low", ASTNodes: []string{"ast.Ident"}, Example: "true -> false", Reason: "Simple branch outcome signal."},
-		{Name: opStringEmptyLiterals, Profile: ProfileConservative, Risk: "medium", EquivalentMutantRisk: "medium", CompileErrorRisk: "low", ASTNodes: []string{astBasicLit}, Example: `"error" -> ""`, Reason: "Controlled string behavior signal with low compile risk."},
-		{Name: opNilChecks, Profile: ProfileDefault, Risk: "medium", EquivalentMutantRisk: "high", CompileErrorRisk: "low", ASTNodes: []string{astBinaryExpr}, Example: "err == nil -> err != nil", Reason: "Important Go error-path signal but high equivalence risk."},
-		{Name: opErrorReturns, Profile: ProfileDefault, Risk: "medium", EquivalentMutantRisk: "high", CompileErrorRisk: "medium", ASTNodes: []string{"ast.IfStmt"}, Example: "err == nil -> err != nil", Reason: "Controlled error-path mutation for nightly/default runs."},
-		{Name: opNumericLiterals, Profile: ProfileDefault, Risk: "medium", EquivalentMutantRisk: "medium", CompileErrorRisk: "low", ASTNodes: []string{astBasicLit}, Example: "2 -> 1", Reason: "Controlled numeric literal signal for default runs."},
-		{Name: opReturnBoolLiterals, Profile: ProfileDefault, Risk: "medium", EquivalentMutantRisk: "medium", CompileErrorRisk: "low", ASTNodes: []string{"ast.ReturnStmt"}, Example: "return true -> return false", Reason: "Return behavior signal without broad return rewrites."},
-		{Name: opAssignmentArithmetic, Profile: ProfileDefault, Risk: "medium", EquivalentMutantRisk: "medium", CompileErrorRisk: "medium", ASTNodes: []string{"ast.AssignStmt"}, Example: "x += n -> x -= n", Reason: "Assignment-update signal from Go-heavy operator catalogs."},
-		{Name: opIncDec, Profile: ProfileDefault, Risk: "medium", EquivalentMutantRisk: "medium", CompileErrorRisk: "low", ASTNodes: []string{"ast.IncDecStmt"}, Example: "i++ -> i--", Reason: "Loop and counter update signal without broad loop-control mutation."},
-		{Name: opLiterals, Profile: ProfileAggressive, Risk: "high", EquivalentMutantRisk: "high", CompileErrorRisk: "medium", ASTNodes: []string{astBasicLit}, Example: "1 -> 0", Reason: "Broad campaign-only literal exploration."},
-		{Name: opReturns, Profile: ProfileAggressive, Risk: "high", EquivalentMutantRisk: "high", CompileErrorRisk: "medium", ASTNodes: []string{"ast.ReturnStmt"}, Example: "return true -> return false", Reason: "Campaign-only return behavior exploration."},
-		{Name: opLoopControl, Profile: ProfileAggressive, Risk: "high", EquivalentMutantRisk: "high", CompileErrorRisk: "medium", ASTNodes: []string{"ast.ForStmt"}, Example: "i < n -> i <= n", Reason: "Campaign-only loop boundary exploration."},
-		{Name: opSliceMapLenBoundary, Profile: ProfileAggressive, Risk: "high", EquivalentMutantRisk: "medium", CompileErrorRisk: "low", ASTNodes: []string{astBinaryExpr}, Example: "len(xs) > 0 -> len(xs) >= 0", Reason: "Targets collection boundary assumptions."},
+	definitions := make([]Definition, 0, len(operatorCatalog))
+	for _, profile := range []string{ProfileGremlinsCompatible, ProfileConservativeFast, ProfileConservative, ProfileDefault, ProfileAggressive} {
+		for _, spec := range operatorCatalog {
+			if !containsProfile(spec.DefinitionProfiles, profile) {
+				continue
+			}
+			definitions = append(definitions, Definition{
+				Name:                 spec.Name,
+				Profile:              profile,
+				Risk:                 spec.Risk,
+				EquivalentMutantRisk: spec.EquivalentMutantRisk,
+				CompileErrorRisk:     spec.CompileErrorRisk,
+				ASTNodes:             append([]string{}, spec.ASTNodes...),
+				Example:              spec.Example,
+				Reason:               spec.Reason,
+			})
+		}
 	}
+	return definitions
 }
 
 type inlineIgnore struct {
@@ -796,57 +1019,35 @@ func normalizeTag(value string) string {
 }
 
 func operatorEnabled(operator, profile string) bool {
-	switch operator {
-	case opConditionalsNegation, opConditionalsBoundary, opArithmeticBasic:
-		return true
-	case opLogical, opBooleanLiterals, opStringEmptyLiterals:
-		return profile == ProfileConservative || profile == ProfileDefault || profile == ProfileAggressive
-	case opNilChecks, opErrorReturns, opNumericLiterals, opReturnBoolLiterals, opAssignmentArithmetic, opIncDec:
-		return profile == ProfileDefault || profile == ProfileAggressive
-	case opLiterals, opReturns, opLoopControl, opSliceMapLenBoundary:
-		return profile == ProfileAggressive
-	default:
+	spec, ok := operatorSpecFor(operator)
+	if !ok {
 		return false
 	}
+	return containsProfile(spec.EnabledProfiles, profile)
 }
 
 func equivalentRisk(operator string) string {
-	switch operator {
-	case opArithmeticBasic, opBooleanLiterals:
-		return "low"
-	case opConditionalsNegation, opLogical, opStringEmptyLiterals, opNumericLiterals, opReturnBoolLiterals, opAssignmentArithmetic, opIncDec, opSliceMapLenBoundary:
-		return "medium"
-	case opConditionalsBoundary, opNilChecks, opErrorReturns, opLiterals, opReturns, opLoopControl:
-		return "high"
-	default:
+	spec, ok := operatorSpecFor(operator)
+	if !ok {
 		return "unknown"
 	}
+	return spec.EquivalentMutantRisk
 }
 
 func recommendation(operator string) string {
-	switch operator {
-	case opArithmeticBasic, opConditionalsNegation, opConditionalsBoundary:
-		return "fast-ci"
-	case opLogical, opBooleanLiterals, opStringEmptyLiterals:
-		return "conservative"
-	case opNilChecks, opErrorReturns, opNumericLiterals, opReturnBoolLiterals, opAssignmentArithmetic, opIncDec:
-		return "default"
-	case opLiterals, opReturns, opLoopControl:
-		return "aggressive"
-	default:
+	spec, ok := operatorSpecFor(operator)
+	if !ok {
 		return "review"
 	}
+	return spec.Recommendation
 }
 
 func compileErrorRisk(operator string) string {
-	switch operator {
-	case opConditionalsNegation, opConditionalsBoundary, opLogical, opBooleanLiterals, opNilChecks, opStringEmptyLiterals, opNumericLiterals, opReturnBoolLiterals, opIncDec, opSliceMapLenBoundary:
-		return "low"
-	case opArithmeticBasic, opErrorReturns, opLiterals, opReturns, opLoopControl:
-		return "medium"
-	default:
+	spec, ok := operatorSpecFor(operator)
+	if !ok {
 		return "unknown"
 	}
+	return spec.CompileErrorRisk
 }
 
 func ignored(line int, operator string, ignores []inlineIgnore) bool {
@@ -886,30 +1087,29 @@ func fingerprint(parts ...string) string {
 }
 
 func hint(operator string) string {
-	switch operator {
-	case opConditionalsNegation, opConditionalsBoundary, opNilChecks:
-		return "Add assertions for the opposite branch or boundary condition."
-	case opLogical:
-		return "Add a test where only one side of the boolean expression changes the outcome."
-	case opBooleanLiterals, opReturnBoolLiterals:
-		return "Assert both boolean outcomes instead of only executing the path."
-	case opArithmeticBasic:
-		return "Add assertions for the computed numeric result and edge cases."
-	case opStringEmptyLiterals:
-		return "Add an assertion for non-empty text or exact message behavior."
-	case opNumericLiterals:
-		return "Add an assertion for numeric boundaries and configured constants."
-	case opSliceMapLenBoundary:
-		return "Add tests for empty and single-element collection boundaries."
-	case opAssignmentArithmetic:
-		return "Add assertions for cumulative updates and arithmetic assignment effects."
-	case opIncDec:
-		return "Add assertions for counter direction and loop iteration counts."
-	case opLoopControl:
-		return "Add tests for loop boundary counts and off-by-one behavior."
-	default:
+	spec, ok := operatorSpecFor(operator)
+	if !ok {
 		return "Add an assertion that observes the changed behavior."
 	}
+	return spec.Hint
+}
+
+func operatorSpecFor(operator string) (operatorSpec, bool) {
+	for _, spec := range operatorCatalog {
+		if spec.Name == operator {
+			return spec, true
+		}
+	}
+	return operatorSpec{}, false
+}
+
+func containsProfile(profiles []string, want string) bool {
+	for _, profile := range profiles {
+		if profile == want {
+			return true
+		}
+	}
+	return false
 }
 
 func description(fn, operator, original, mutated string) string {

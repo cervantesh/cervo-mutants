@@ -9,11 +9,9 @@ import (
 )
 
 func TestPoolSmokeCommandDispatches(t *testing.T) {
-	original := runPoolSmokeFn
-	defer func() { runPoolSmokeFn = original }()
-
+	app := newCLIApp()
 	called := false
-	runPoolSmokeFn = func(_ context.Context, opts pool.SmokeOptions) (pool.RunSummary[pool.SmokeResult], error) {
+	app.deps.runPoolSmoke = func(_ context.Context, opts pool.SmokeOptions) (pool.RunSummary[pool.SmokeResult], error) {
 		called = true
 		if opts.ManifestPath != "manifest.json" || opts.WorkRoot != "work" || opts.MaxMutants != 7 || opts.Workers != 3 || opts.CervoBinary != "cervomut.exe" {
 			t.Fatalf("unexpected smoke options: %+v", opts)
@@ -24,7 +22,7 @@ func TestPoolSmokeCommandDispatches(t *testing.T) {
 		return pool.RunSummary[pool.SmokeResult]{SummaryPath: "work/summary.json"}, nil
 	}
 
-	if err := run([]string{"pool", "smoke", "--manifest", "manifest.json", "--work-root", "work", "--names", "cobra,pflag", "--max-mutants", "7", "--workers", "3", "--cervomutants", "cervomut.exe"}); err != nil {
+	if err := app.run([]string{"pool", "smoke", "--manifest", "manifest.json", "--work-root", "work", "--names", "cobra,pflag", "--max-mutants", "7", "--workers", "3", "--cervomutants", "cervomut.exe"}); err != nil {
 		t.Fatalf("pool smoke returned error: %v", err)
 	}
 	if !called {
@@ -33,11 +31,9 @@ func TestPoolSmokeCommandDispatches(t *testing.T) {
 }
 
 func TestPoolCompareCommandDispatches(t *testing.T) {
-	original := runPoolCompareFn
-	defer func() { runPoolCompareFn = original }()
-
+	app := newCLIApp()
 	called := false
-	runPoolCompareFn = func(_ context.Context, opts pool.CompareOptions) (pool.RunSummary[pool.CompareResult], error) {
+	app.deps.runPoolCompare = func(_ context.Context, opts pool.CompareOptions) (pool.RunSummary[pool.CompareResult], error) {
 		called = true
 		if opts.ManifestPath != "manifest.json" || opts.WorkRoot != "work" || opts.OutputRoot != "out" || opts.CompareTargetMode != "package-root" {
 			t.Fatalf("unexpected compare options: %+v", opts)
@@ -55,7 +51,7 @@ func TestPoolCompareCommandDispatches(t *testing.T) {
 	}
 
 	output := captureStdout(t, func() {
-		if err := run([]string{"pool", "compare", "--manifest", "manifest.json", "--work-root", "work", "--output-root", "out", "--tools", "cervomut,gremlins", "--compare-target-mode", "package-root"}); err != nil {
+		if err := app.run([]string{"pool", "compare", "--manifest", "manifest.json", "--work-root", "work", "--output-root", "out", "--tools", "cervomut,gremlins", "--compare-target-mode", "package-root"}); err != nil {
 			t.Fatalf("pool compare returned error: %v", err)
 		}
 	})
@@ -74,11 +70,9 @@ func TestPoolCompareCommandDispatches(t *testing.T) {
 }
 
 func TestPoolBenchmarkCommandDispatches(t *testing.T) {
-	original := runPoolBenchmarkFn
-	defer func() { runPoolBenchmarkFn = original }()
-
+	app := newCLIApp()
 	called := false
-	runPoolBenchmarkFn = func(_ context.Context, opts pool.BenchmarkOptions) (pool.RunSummary[pool.BenchmarkResult], error) {
+	app.deps.runPoolBenchmark = func(_ context.Context, opts pool.BenchmarkOptions) (pool.RunSummary[pool.BenchmarkResult], error) {
 		called = true
 		if opts.CorpusPath != "corpus.json" || opts.WorkRoot != "work" || opts.OutputRoot != "out" || !opts.Resume || opts.CervoBinary != "cervomut.exe" {
 			t.Fatalf("unexpected benchmark options: %+v", opts)
@@ -89,7 +83,7 @@ func TestPoolBenchmarkCommandDispatches(t *testing.T) {
 		return pool.RunSummary[pool.BenchmarkResult]{SummaryPath: "out/summary.json"}, nil
 	}
 
-	if err := run([]string{"pool", "benchmark", "--corpus", "corpus.json", "--work-root", "work", "--output-root", "out", "--names", "cobra-doc,logrus", "--resume", "--cervomutants", "cervomut.exe"}); err != nil {
+	if err := app.run([]string{"pool", "benchmark", "--corpus", "corpus.json", "--work-root", "work", "--output-root", "out", "--names", "cobra-doc,logrus", "--resume", "--cervomutants", "cervomut.exe"}); err != nil {
 		t.Fatalf("pool benchmark returned error: %v", err)
 	}
 	if !called {
@@ -98,11 +92,9 @@ func TestPoolBenchmarkCommandDispatches(t *testing.T) {
 }
 
 func TestPoolCampaignCommandDispatches(t *testing.T) {
-	original := runPoolCampaignFn
-	defer func() { runPoolCampaignFn = original }()
-
+	app := newCLIApp()
 	called := false
-	runPoolCampaignFn = func(_ context.Context, opts pool.CampaignOptions) (pool.RunSummary[pool.CampaignJobResult], error) {
+	app.deps.runPoolCampaign = func(_ context.Context, opts pool.CampaignOptions) (pool.RunSummary[pool.CampaignJobResult], error) {
 		called = true
 		if opts.Path != "campaign.json" || opts.WorkRoot != "work" || opts.OutputRoot != "out" || !opts.Resume || opts.CervoBinary != "cervomut.exe" {
 			t.Fatalf("unexpected campaign options: %+v", opts)
@@ -114,7 +106,7 @@ func TestPoolCampaignCommandDispatches(t *testing.T) {
 	}
 
 	output := captureStdout(t, func() {
-		if err := run([]string{"pool", "campaign", "--file", "campaign.json", "--work-root", "work", "--output-root", "out", "--resume", "--cervomutants", "cervomut.exe", "--gremlins", "gremlins.exe", "--gomu", "gomu.exe", "--go-mutesting", "go-mutesting.exe"}); err != nil {
+		if err := app.run([]string{"pool", "campaign", "--file", "campaign.json", "--work-root", "work", "--output-root", "out", "--resume", "--cervomutants", "cervomut.exe", "--gremlins", "gremlins.exe", "--gomu", "gomu.exe", "--go-mutesting", "go-mutesting.exe"}); err != nil {
 			t.Fatalf("pool campaign returned error: %v", err)
 		}
 	})

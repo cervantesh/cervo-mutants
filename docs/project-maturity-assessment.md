@@ -1,8 +1,8 @@
 # Project Maturity Assessment
 
-Tracking issues: #208, #234
+Tracking issues: #352, #370
 
-Assessment date: 2026-06-19
+Assessment date: 2026-06-28
 
 Follow-on roadmap: [docs/maturity-roadmap.md](maturity-roadmap.md)
 
@@ -10,18 +10,16 @@ This document records a dated maturity snapshot for CervoMutants across
 product, code, and operations. It is intentionally time-bound: maturity can
 move quickly as CI, releases, public adoption, and major features change.
 
-This snapshot evaluates the current `main` branch state on 2026-06-19. At
-capture time, the latest public release was `v0.4.2` from 2026-06-19, so the
-earlier release-head lag plus the smaller hosted follow-ups were already
-packaged in the public release surface. The conclusions below therefore
-describe a repo state where `main` and the then-current public tag were
-effectively aligned for the supported install, CI, and reporting surfaces
-covered by this assessment.
+This refresh evaluates the current `main` branch state on 2026-06-28. At
+capture time, the latest public release was `v0.4.4` from 2026-06-28. Compared
+with the 2026-06-19 snapshot, this pass is a current-state alignment refresh:
+release references, open backlog references, local validation evidence, and
+repo-size counts are updated to today.
 
-Release drift note: the latest public release is now `v0.4.3` from
-2026-06-20. That tag preserves the supported-surface alignment described in
-this snapshot and adds the releasehelper and hosted-wave gating fixes that were
-validated during the real `v0.4.3` publication attempts.
+The scorecard below remains unchanged in this refresh. The underlying maturity
+story moved incrementally rather than materially: the release trail is longer,
+the active backlog is clearer, and the public surface remains aligned, but
+those changes do not justify a full rescore by themselves.
 
 ## Scale
 
@@ -42,6 +40,9 @@ validated during the real `v0.4.3` publication attempts.
 | Operational maturity | `3.7 / 5` | credible public automation and aligned release surface, still young release practice |
 | Overall maturity | `3.9 / 5` | credible public beta approaching broader external use |
 
+Scorecard note: this 2026-06-28 refresh keeps the 2026-06-19 numeric scores
+unchanged and updates the evidence narrative to current repo state.
+
 ## Executive Summary
 
 CervoMutants is no longer just a usable beta with promising local validation.
@@ -58,7 +59,8 @@ The biggest remaining gap is no longer broken public automation, and it is no
 longer a major lag between repository head and latest public release. The
 bigger remaining gaps are still direct external maintainer adoption evidence
 and release repetition over time. The repo now also has a stronger broader-
-profile released hosted sample on `v0.4.2`, so the open maturity question is
+profile released hosted sample on `v0.4.2`, while the latest public release is
+now `v0.4.4`, so the open maturity question is
 less about whether the newer review surfaces can produce bounded mixed-profile
 signal and more about repeated external use over time.
 
@@ -69,50 +71,52 @@ release discipline over time remains a real maturity question rather than a
 closed one.
 
 That keeps the project just short of a clean `4 / 5` overall maturity
-classification. The current state is best described as a credible public beta
-whose then-current public release already represented most of the hardened
-repository surface.
+classification. The current state is still best described as a credible public
+beta whose latest public release represents the supported install, CI, and
+reporting surfaces well enough to avoid a meaningful repo-head versus
+release-head gap.
 
 ## Evidence Snapshot
 
 ### Repository and release state
 
 - Public GitHub repository created on 2026-06-17.
-- Public releases present at capture time on 2026-06-19: `v0.1.0`, `v0.2.0`, `v0.3.0`,
-  `v0.4.0`, `v0.4.1`, `v0.4.2`.
-- At capture time, the latest public release was `v0.4.2` from 2026-06-19 with multi-OS assets,
+- Public releases present at capture time on 2026-06-28: `v0.1.0`, `v0.2.0`, `v0.3.0`,
+  `v0.4.0`, `v0.4.1`, `v0.4.2`, `v0.4.3`, and `v0.4.4`.
+- At capture time, the latest public release was `v0.4.4` from 2026-06-28 with multi-OS assets,
   `release-manifest.json`, and `SHA256SUMS`.
 - The broader-profile released hosted validation on `v0.4.2` showed `37`
   effective mutants, `9` survivors, `8` actionable review units, and `0`
   denominator-warning repos across four mixed repository profiles.
 - GitHub Pages is live at `https://cervantesh.github.io/cervo-mutants/`.
-- The seeded Phase 5 and Phase 6 roadmap backlog is closed.
-- The immediate post-roadmap follow-up trio `#206`, `#207`, and `#208` is
-  closed.
+- Historic roadmap trackers `#179`, `#180`, and `#181` are closed.
+- The current open repo-owned backlog is concentrated in Phase 2 hardening:
+  epic `#352`, child issues `#353`-`#364`, plus active gate-policy work in
+  `#368`.
 
 ### Codebase shape
 
-- `17` packages under `pkg/`
-- `60` product source files under `pkg/` and `cmd/`
-- `39` test files under `pkg/` and `cmd/`
-- about `14,922` lines of product code
-- about `9,654` lines of test code
-- about `10,416` lines of repo documentation in `README`, `docs/`, `site/`, and
+- `18` packages under `pkg/`
+- `85` product source files under `pkg/` and `cmd/`
+- `48` test files under `pkg/` and `cmd/`
+- about `17,254` lines of product code
+- about `11,496` lines of test code
+- about `11,003` lines of repo documentation in `README`, `docs/`, `site/`, and
   workflow files
 
-### Local validation on 2026-06-19
+### Local validation on 2026-06-28
 
 - `go vet ./...` passed
 - `go test ./...` passed
 - fresh package coverage sample:
-  - `pkg/engine`: `90.0%`
-  - `pkg/report`: `93.9%`
+  - `pkg/engine`: `90.1%`
+  - `pkg/report`: `94.1%`
   - `pkg/runner`: `97.3%`
   - `pkg/mutator`: `93.6%`
   - `pkg/config`: `94.3%`
-  - `pkg/pool`: `84.2%`
+  - `pkg/pool`: `85.0%`
 
-### Public automation state on 2026-06-19
+### Public automation state on 2026-06-28
 
 - latest `test` workflow on `main`: green
 - latest `workflow-lint` workflow on `main`: green
@@ -126,7 +130,9 @@ repository surface.
 At capture time, the latest release was effectively aligned with
 repository-head maturity for the supported public surfaces.
 
-`v0.4.2` packaged:
+The current latest release line through `v0.4.4` keeps that supported-surface
+alignment intact. Across the `v0.4.x` public line, the published surface now
+includes:
 
 - Windows-native execution hardening
 - deterministic large-repo slicing
@@ -146,8 +152,8 @@ repository-head maturity for the supported public surfaces.
 - expanded adoption guidance, operations guidance, and external-validation
   framing
 
-There is no material supported-surface gap called out in this snapshot between
-the then-current latest release and `main`. The remaining maturity limits were
+There is still no material supported-surface gap called out in this snapshot
+between the latest public release and `main`. The remaining maturity limits are
 about release repetition, external adoption depth, and continued field
 calibration, not about a missing public catch-up release.
 
@@ -235,8 +241,8 @@ areas, and much less concentrated orchestration risk.
 
 ### Score: `3.7 / 5`
 
-Operational maturity is no longer the obvious weak point. The project now has
-credible public automation and compatibility discipline, but it is still early
+Operational maturity is no longer the obvious weak point. The project still has
+credible public automation and compatibility discipline, but it remains early
 in release repetition and external adoption proof.
 
 ### What is working
@@ -254,13 +260,13 @@ in release repetition and external adoption proof.
 
 ### What is not mature enough yet
 
-- The strongest operational hardening is now packaged in `v0.4.2`, but public
-  release history is still extremely young and compressed. Six releases in
-  three days are enough to bootstrap a project, not enough to prove a stable
-  long-term release cadence.
+- The strongest operational hardening is now represented in the `v0.4.x`
+  release line, but public release history is still extremely young and
+  compressed. Eight releases in eleven days are enough to bootstrap a project,
+  not enough to prove a stable long-term release cadence.
 - Small repo-head versus release-head drift can still reopen quickly if the
-  next release cadence slips, even though the `v0.4.2` alignment materially
-  reduced that gap.
+  next release cadence slips, even though the current `v0.4.x` alignment has
+  materially reduced that gap.
 - External adoption evidence is better than before, but still too early to
   claim broad field validation across multiple independent teams.
 
@@ -288,7 +294,7 @@ in release repetition and external adoption proof.
 
 ### Immediate
 
-1. Keep release-head aligned with repo-head; the `v0.4.2` alignment should
+1. Keep release-head aligned with repo-head; the current `v0.4.x` alignment should
    become the norm, not a one-off.
 2. Refresh the public maturity narrative and install guidance whenever release
    state changes.
@@ -313,7 +319,7 @@ in release repetition and external adoption proof.
 
 ## Current Maturity Classification
 
-As of 2026-06-19, CervoMutants should be described as:
+As of 2026-06-28, CervoMutants should be described as:
 
 > a credible public beta mutation-testing toolkit with strong functional depth,
 > materially improved engineering maturity, and operational confidence that is

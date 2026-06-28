@@ -28,6 +28,9 @@ func TestRunDryRunDiscoversMutantsWithoutChangingWorkspace(t *testing.T) {
 	if result.Summary.Total == 0 {
 		t.Fatal("dry-run discovered no mutants")
 	}
+	if result.Gate.Evaluated {
+		t.Fatalf("dry-run should not evaluate gate: %+v", result.Gate)
+	}
 	if result.Mutants[0].Mutant.Description == "" {
 		t.Fatalf("mutant missing description: %+v", result.Mutants[0].Mutant)
 	}

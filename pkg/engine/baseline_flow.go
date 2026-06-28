@@ -67,7 +67,7 @@ func compareBaseline(previous, current RunResult) BaselineComparison {
 	for _, mutant := range previous.Mutants {
 		seen[mutant.MutantID] = mutant.Status
 	}
-	comparison := BaselineComparison{Enabled: true, PreviousScore: previous.Summary.Score, CurrentScore: current.Summary.Score, Regression: current.Summary.Score < previous.Summary.Score}
+	comparison := BaselineComparison{Enabled: true, Available: true, PreviousScore: previous.Summary.Score, CurrentScore: current.Summary.Score, Regression: current.Summary.Score < previous.Summary.Score}
 	for _, mutant := range current.Mutants {
 		if mutant.Status == StatusSurvived && seen[mutant.MutantID] != StatusSurvived {
 			comparison.NewSurvivors = append(comparison.NewSurvivors, mutant.MutantID)

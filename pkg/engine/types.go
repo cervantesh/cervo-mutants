@@ -207,8 +207,31 @@ type MutatorStat struct {
 	EquivalentRisk  string `json:"equivalent_risk,omitempty"`
 }
 
+type GateCheckStatus string
+
+const (
+	GateCheckDisabled GateCheckStatus = "disabled"
+	GateCheckSkipped  GateCheckStatus = "skipped"
+	GateCheckPassed   GateCheckStatus = "passed"
+	GateCheckFailed   GateCheckStatus = "failed"
+)
+
+type GateCheck struct {
+	Name    string          `json:"name"`
+	Status  GateCheckStatus `json:"status"`
+	Summary string          `json:"summary,omitempty"`
+}
+
+type GateEvaluation struct {
+	Evaluated    bool        `json:"evaluated"`
+	Passed       bool        `json:"passed"`
+	FailedChecks []string    `json:"failed_checks,omitempty"`
+	Checks       []GateCheck `json:"checks,omitempty"`
+}
+
 type BaselineComparison struct {
 	Enabled       bool     `json:"enabled"`
+	Available     bool     `json:"available,omitempty"`
 	Regression    bool     `json:"regression"`
 	NewSurvivors  []string `json:"new_survivors"`
 	PreviousScore float64  `json:"previous_score"`
@@ -270,6 +293,7 @@ type RunResult struct {
 	LastCompletedMutant string             `json:"last_completed_mutant,omitempty"`
 	Failure             *Failure           `json:"failure,omitempty"`
 	Thresholds          map[string]any     `json:"thresholds"`
+	Gate                GateEvaluation     `json:"gate"`
 	Baseline            BaselineComparison `json:"baseline"`
 	Cache               CacheStats         `json:"cache"`
 	Quarantine          QuarantineStats    `json:"quarantine"`

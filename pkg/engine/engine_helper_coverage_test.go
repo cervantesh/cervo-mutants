@@ -82,6 +82,9 @@ func TestFailureHelpersAndFailureResult(t *testing.T) {
 	if result.Baseline.Enabled != cfg.Baseline.Enabled || len(result.Mutants) != 0 {
 		t.Fatalf("FailureResult() baseline/mutants = %+v %+v", result.Baseline, result.Mutants)
 	}
+	if result.Gate.Evaluated {
+		t.Fatalf("FailureResult() should not evaluate gates: %+v", result.Gate)
+	}
 }
 
 func TestHelperCoverageBranches(t *testing.T) {

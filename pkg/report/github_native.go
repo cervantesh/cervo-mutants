@@ -177,6 +177,13 @@ func GitHubSummary(result engine.RunResult) string {
 		fmt.Fprintf(&b, "- Lane note: %s\n", lane.detail)
 		fmt.Fprintf(&b, "- Lane guidance: %s\n", lane.guidance)
 	}
+	fmt.Fprintf(&b, "- Gate: **%s**\n", gateStatusLabel(result.Gate))
+	if failed := gateChecksByStatus(result.Gate, engine.GateCheckFailed); len(failed) > 0 {
+		fmt.Fprintf(&b, "- Gate failures: %s\n", gateCheckSummaries(failed))
+	}
+	if skipped := gateChecksByStatus(result.Gate, engine.GateCheckSkipped); len(skipped) > 0 {
+		fmt.Fprintf(&b, "- Gate skips: %s\n", gateCheckSummaries(skipped))
+	}
 	if result.Baseline.Enabled {
 		fmt.Fprintf(&b, "- Baseline regression: **%t**\n", result.Baseline.Regression)
 		fmt.Fprintf(&b, "- Baseline new survivors: **%d**\n", len(result.Baseline.NewSurvivors))

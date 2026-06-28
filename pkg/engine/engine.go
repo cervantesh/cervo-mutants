@@ -77,7 +77,7 @@ func (e *Engine) Run(ctx context.Context, req RunRequest) (result RunResult, err
 		Environment:   e.environment(len(mutants)),
 		Slice:         sliceMeta,
 		Checkpoint:    e.checkpoint(mutants, "final"),
-		Thresholds:    map[string]any{"fail_under": e.cfg.CI.FailUnder},
+		Thresholds:    configuredThresholds(e.cfg),
 		Mutants:       []MutantResult{},
 		Quarantine: QuarantineStats{
 			Active:        len(quarantined),
@@ -111,12 +111,15 @@ func (e *Engine) Run(ctx context.Context, req RunRequest) (result RunResult, err
 	result.Summary.NewSurvivors = result.History.NewSurvivors
 	result.Summary.LongStandingSurvivors = result.History.LongStandingSurvivors
 	if e.cfg.Baseline.Enabled {
-		if prev, ok, err := session.loadBaseline(); err == nil && ok {
+		if prev, ok, err := session.loadBaseline(); err != nil {
+			return RunResult{}, wrapStageError("environment_error", err)
+		} else if ok {
 			result.Baseline = compareBaseline(prev, result)
 		} else {
 			result.Baseline = BaselineComparison{Enabled: true, CurrentScore: result.Summary.Score}
 		}
 	}
+	result.Gate = EvaluateGatePolicy(e.cfg, result)
 	e.recordHistoryRun(&result)
 	if err := e.deps.writeReports(e, result); err != nil {
 		return RunResult{}, wrapStageError("environment_error", err)

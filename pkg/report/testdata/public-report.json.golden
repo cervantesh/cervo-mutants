@@ -177,11 +177,56 @@
   "stopped_reason": "completed",
   "last_completed_mutant": "pkg/review.go:27:logical:abc123def456",
   "thresholds": {
+    "baseline": {
+      "enabled": true,
+      "fail_on_new_survivors": true,
+      "fail_on_regression": true
+    },
+    "fail_on_compile_error": false,
+    "fail_on_timeout": true,
     "fail_under": 75,
     "failed": false
   },
+  "gate": {
+    "evaluated": true,
+    "passed": false,
+    "failed_checks": [
+      "fail_under",
+      "baseline_regression",
+      "baseline_new_survivors",
+      "timed_out"
+    ],
+    "checks": [
+      {
+        "name": "fail_under",
+        "status": "failed",
+        "summary": "raw score 50.00% below threshold 75"
+      },
+      {
+        "name": "baseline_regression",
+        "status": "failed",
+        "summary": "current score 50.00% regressed from baseline 66.67%"
+      },
+      {
+        "name": "baseline_new_survivors",
+        "status": "failed",
+        "summary": "1 new survivors appeared relative to baseline"
+      },
+      {
+        "name": "timed_out",
+        "status": "failed",
+        "summary": "1 timed out mutants were observed"
+      },
+      {
+        "name": "compile_error",
+        "status": "disabled",
+        "summary": "compile-error gate disabled"
+      }
+    ]
+  },
   "baseline": {
     "enabled": true,
+    "available": true,
     "regression": true,
     "new_survivors": [
       "pkg/review.go:19:conditionals-boundary:123"

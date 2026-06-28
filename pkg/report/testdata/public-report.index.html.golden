@@ -105,6 +105,8 @@ Suppression audits: report_only=1 lower_priority=1 suppress=0 quarantine_require
 Lane shape: grouped review lane
 Lane note: 2 raw survivors collapsed into 1 immediate review units across 1 semantic group
 Lane guidance: review the grouped equivalent-risk family once before splitting it into multiple separate test tasks
+Gate: failed
+Gate failures: fail_under (raw score 50.00% below threshold 75); baseline_regression (current score 50.00% regressed from baseline 66.67%); baseline_new_survivors (1 new survivors appeared relative to baseline); timed_out (1 timed out mutants were observed)
 Denominator health: healthy=false generated=5 covered=4 executed=4 effective=3 score_denominator=4 killed=1 survived=2 not_covered=1 pending_budget=0 skipped_resource=0 timed_out=1 memory_killed=0 compile_error=0
 Denominator warnings: timed_out_exceeds_effective
 Equivalent-risk statistics:

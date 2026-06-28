@@ -170,6 +170,16 @@ cervomut baseline accept
 cervomut baseline promote
 ```
 
+When baseline gating is enabled, `cervomut run` now enforces it directly:
+- `baseline.fail_on_regression` fails the run only after a real baseline
+  comparison shows score regression.
+- `baseline.fail_on_new_survivors` fails the run only after a real baseline
+  comparison shows new survivors.
+- missing baseline files leave those checks in a skipped state instead of
+  failing first-run adoption.
+- invalid or unreadable baseline files fail the run as an error instead of
+  silently skipping comparison.
+
 The default `ci.fail_under` is `0`. CI should usually fail on:
 
 - baseline regression;
@@ -339,6 +349,8 @@ baseline:
   fail_on_new_survivors: true
 ci:
   fail_under: 0
+  fail_on_timeout: true
+  fail_on_compile_error: false
 quarantine:
   enabled: true
   fail_on_expired: true
@@ -352,6 +364,11 @@ ownership:
     contact: ""
   rules: []
 ```
+
+`ci.fail_under`, `ci.fail_on_timeout`, and `ci.fail_on_compile_error` are
+evaluated from the final normalized run summary after reports are written.
+`--actionable-only` only changes review views; it does not participate in gate
+decisions.
 
 Supported selection modes:
 

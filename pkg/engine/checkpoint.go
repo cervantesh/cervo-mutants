@@ -251,8 +251,12 @@ func (s *runSession) writePartialResults(results []MutantResult) {
 		Environment:   s.environment(len(results)),
 		Slice:         s.sliceMeta,
 		Checkpoint:    s.checkpointFromResults(results, "partial"),
-		Thresholds:    map[string]any{"fail_under": s.engine.cfg.CI.FailUnder, "partial": true},
-		Mutants:       append([]MutantResult{}, results...),
+		Thresholds: func() map[string]any {
+			thresholds := configuredThresholds(s.engine.cfg)
+			thresholds["partial"] = true
+			return thresholds
+		}(),
+		Mutants: append([]MutantResult{}, results...),
 	}
 	run.StoppedReason, run.LastCompletedMutant = runStopMetadata(run.Mutants)
 	s.applySurvivorRanking(run.Mutants)

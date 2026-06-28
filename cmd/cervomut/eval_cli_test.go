@@ -449,6 +449,7 @@ ci:
   fail_under: 100
 reports:
   output: ` + filepath.ToSlash(filepath.Join(dir, "threshold-out")) + `
+  formats: [summary, json, github-summary]
 limits:
   max_mutants: 1
 `
@@ -457,8 +458,24 @@ limits:
 		t.Fatal(err)
 	}
 	err := run([]string{"run", dir})
-	if err == nil || !strings.Contains(err.Error(), "threshold") {
-		t.Fatalf("run should fail threshold, got %v", err)
+	if err == nil || !strings.Contains(err.Error(), "gate failed: fail_under") {
+		t.Fatalf("run should fail gate, got %v", err)
+	}
+
+	thresholdOut := filepath.Join(dir, "threshold-out")
+	report := readRunReportForTest(t, thresholdOut)
+	if report.Gate.Passed || len(report.Gate.FailedChecks) != 1 || report.Gate.FailedChecks[0] != "fail_under" {
+		t.Fatalf("gate report = %+v", report.Gate)
+	}
+	if _, err := os.Stat(filepath.Join(thresholdOut, "summary.txt")); err != nil {
+		t.Fatalf("summary.txt missing after gate failure: %v", err)
+	}
+	summaryData, err := os.ReadFile(filepath.Join(thresholdOut, "github-summary.md"))
+	if err != nil {
+		t.Fatalf("github-summary.md missing after gate failure: %v", err)
+	}
+	if !strings.Contains(string(summaryData), "Gate: **failed**") || !strings.Contains(string(summaryData), "fail_under") {
+		t.Fatalf("github summary missing gate failure details:\n%s", string(summaryData))
 	}
 }
 

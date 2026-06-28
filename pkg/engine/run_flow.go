@@ -24,5 +24,6 @@ func (e *Engine) dryRunResult(result RunResult, mutants []Mutant) RunResult {
 	result.StoppedReason, result.LastCompletedMutant = runStopMetadata(result.Mutants)
 	e.applySurvivorRanking(result.Mutants)
 	result.Summary = summarize(result.Mutants)
+	result.Gate = GateEvaluation{Evaluated: false}
 	return result
 }

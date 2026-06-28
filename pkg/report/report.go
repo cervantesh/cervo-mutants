@@ -99,6 +99,13 @@ func Summary(result engine.RunResult) string {
 			lane.guidance,
 		)
 	}
+	fmt.Fprintf(&b, "Gate: %s\n", gateStatusLabel(result.Gate))
+	if failed := gateChecksByStatus(result.Gate, engine.GateCheckFailed); len(failed) > 0 {
+		fmt.Fprintf(&b, "Gate failures: %s\n", gateCheckSummaries(failed))
+	}
+	if skipped := gateChecksByStatus(result.Gate, engine.GateCheckSkipped); len(skipped) > 0 {
+		fmt.Fprintf(&b, "Gate skips: %s\n", gateCheckSummaries(skipped))
+	}
 	if result.Summary.DenominatorHealth.Generated > 0 || len(result.Summary.DenominatorHealth.Warnings) > 0 {
 		health := result.Summary.DenominatorHealth
 		fmt.Fprintf(&b, "Denominator health: healthy=%t generated=%d covered=%d executed=%d effective=%d score_denominator=%d killed=%d survived=%d not_covered=%d pending_budget=%d skipped_resource=%d timed_out=%d memory_killed=%d compile_error=%d\n",

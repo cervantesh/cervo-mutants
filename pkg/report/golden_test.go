@@ -151,11 +151,31 @@ func goldenReportFixture() engine.RunResult {
 			Reason:              "final",
 		},
 		Thresholds: map[string]any{
-			"fail_under": 75,
-			"failed":     false,
+			"fail_under":            75,
+			"fail_on_timeout":       true,
+			"fail_on_compile_error": false,
+			"baseline": map[string]any{
+				"enabled":               true,
+				"fail_on_regression":    true,
+				"fail_on_new_survivors": true,
+			},
+			"failed": false,
+		},
+		Gate: engine.GateEvaluation{
+			Evaluated:    true,
+			Passed:       false,
+			FailedChecks: []string{"fail_under", "baseline_regression", "baseline_new_survivors", "timed_out"},
+			Checks: []engine.GateCheck{
+				{Name: "fail_under", Status: engine.GateCheckFailed, Summary: "raw score 50.00% below threshold 75"},
+				{Name: "baseline_regression", Status: engine.GateCheckFailed, Summary: "current score 50.00% regressed from baseline 66.67%"},
+				{Name: "baseline_new_survivors", Status: engine.GateCheckFailed, Summary: "1 new survivors appeared relative to baseline"},
+				{Name: "timed_out", Status: engine.GateCheckFailed, Summary: "1 timed out mutants were observed"},
+				{Name: "compile_error", Status: engine.GateCheckDisabled, Summary: "compile-error gate disabled"},
+			},
 		},
 		Baseline: engine.BaselineComparison{
 			Enabled:       true,
+			Available:     true,
 			Regression:    true,
 			NewSurvivors:  []string{"pkg/review.go:19:conditionals-boundary:123"},
 			PreviousScore: 66.67,

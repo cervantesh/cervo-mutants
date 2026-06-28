@@ -42,7 +42,8 @@ func (app *cliApp) cmdRun(args []string) (err error) {
 		return finalizeStructuredFailure("run", args, targets, cfg, classifyStructuredFailure(err), err, stackFromError(err))
 	}
 	if err := app.deps.writeRunResult(cfg, result, opts.dryRun); err != nil {
-		if strings.Contains(err.Error(), "threshold") {
+		var gateErr *gateFailureError
+		if errors.As(err, &gateErr) {
 			return err
 		}
 		return finalizeStructuredFailure("run", args, targets, cfg, classifyStructuredFailure(err), err, stackFromError(err))
@@ -225,10 +226,38 @@ func writeRunResult(cfg config.Config, result engine.RunResult, dryRun bool) err
 	if cfg.Reports.ActionableOnly {
 		fmt.Print(report.SurvivorsWithOptions(result, report.SurvivorsOptions{ActionableOnly: true}))
 	}
-	if cfg.CI.FailUnder > 0 && int(result.Summary.Score) < cfg.CI.FailUnder {
-		return fmt.Errorf("mutation score %.2f below threshold %d", result.Summary.Score, cfg.CI.FailUnder)
+	if result.Gate.Evaluated && !result.Gate.Passed {
+		return newGateFailureError(result.Gate)
 	}
 	return nil
+}
+
+type gateFailureError struct {
+	evaluation engine.GateEvaluation
+}
+
+func newGateFailureError(evaluation engine.GateEvaluation) error {
+	return &gateFailureError{evaluation: evaluation}
+}
+
+func (e *gateFailureError) Error() string {
+	if e == nil {
+		return "gate failed"
+	}
+	details := make([]string, 0, len(e.evaluation.FailedChecks))
+	for _, failed := range e.evaluation.FailedChecks {
+		details = append(details, failed)
+		for _, check := range e.evaluation.Checks {
+			if check.Name == failed && strings.TrimSpace(check.Summary) != "" {
+				details[len(details)-1] = fmt.Sprintf("%s (%s)", failed, check.Summary)
+				break
+			}
+		}
+	}
+	if len(details) == 0 {
+		return "gate failed"
+	}
+	return fmt.Sprintf("gate failed: %s", strings.Join(details, "; "))
 }
 
 type failureDebugArtifact struct {

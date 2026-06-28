@@ -27,6 +27,16 @@ func TestJSONReportSchemaV1IncludesActionableFields(t *testing.T) {
 			NonProgressTimeouts:        1,
 			SemanticGroupStats:         map[string]int{"sort comparator boundary": 1},
 		},
+		Gate: engine.GateEvaluation{
+			Evaluated:    true,
+			Passed:       false,
+			FailedChecks: []string{"baseline_new_survivors"},
+			Checks: []engine.GateCheck{
+				{Name: "fail_under", Status: engine.GateCheckDisabled, Summary: "raw score threshold disabled"},
+				{Name: "baseline_regression", Status: engine.GateCheckPassed, Summary: "current score 0.00% did not regress from baseline 0.00%"},
+				{Name: "baseline_new_survivors", Status: engine.GateCheckFailed, Summary: "1 new survivors appeared relative to baseline"},
+			},
+		},
 		Mutants: []engine.MutantResult{{
 			MutantID:        "pkg/foo.go:10:conditionals-negation:eq-to-ne",
 			Status:          engine.StatusSurvived,
@@ -120,7 +130,7 @@ func TestJSONReportSchemaV1IncludesActionableFields(t *testing.T) {
 		t.Fatalf("schema_version = %v", decoded["schema_version"])
 	}
 	text := string(data)
-	for _, want := range []string{"environment", "go_version", "temp_root", "warnings", "slice", "slice_by", "shard_index", "shard_count", "selected_files", "max_mutants_per_package", "isolation", "checkpoint", "fingerprint", "includes_file_digests", "failure_kind", "memory_peak_bytes", "baseline", "cache", "quarantine", "expire_after", "require_owner", "require_issue", "max_renewals", "history", "unified_diff", "status_reason", "selection_reason", "coverage_source", "selected_tests", "description", "nearby_tests", "equivalent_risk", "recommendation", "compile_error_risk", "semantic_tags", "semantic_group", "group_label", "group_reason", "ownership", "owner", "team", "contact", "rule", "suggested_skip_reason", "semantic_group_size", "semantic_group_statistics", "platform_sensitive_survivors", "non_progress_timeouts", "actionable", "raw_score", "actionable_score", "true_actionable_survivors", "equivalent_risk_survivors", "semantic_group_review_units", "collapsed_semantic_duplicates", "suppression_audit", "evidence_level", "survivor_rank", "rank_score", "rank_reason", "actionability", "suggested_test_scope", "test_recommendation", "candidate_tests", "suggested_assertions", "rationale", "nearest_tests", "previous_status", "first_seen", "survivor_age_runs", "operator_historical_yield"} {
+	for _, want := range []string{"environment", "go_version", "temp_root", "warnings", "slice", "slice_by", "shard_index", "shard_count", "selected_files", "max_mutants_per_package", "isolation", "checkpoint", "fingerprint", "includes_file_digests", "failure_kind", "memory_peak_bytes", "baseline", "cache", "quarantine", "expire_after", "require_owner", "require_issue", "max_renewals", "history", "gate", "evaluated", "passed", "failed_checks", "checks", "name", "unified_diff", "status_reason", "selection_reason", "coverage_source", "selected_tests", "description", "nearby_tests", "equivalent_risk", "recommendation", "compile_error_risk", "semantic_tags", "semantic_group", "group_label", "group_reason", "ownership", "owner", "team", "contact", "rule", "suggested_skip_reason", "semantic_group_size", "semantic_group_statistics", "platform_sensitive_survivors", "non_progress_timeouts", "actionable", "raw_score", "actionable_score", "true_actionable_survivors", "equivalent_risk_survivors", "semantic_group_review_units", "collapsed_semantic_duplicates", "suppression_audit", "evidence_level", "survivor_rank", "rank_score", "rank_reason", "actionability", "suggested_test_scope", "test_recommendation", "candidate_tests", "suggested_assertions", "rationale", "nearest_tests", "previous_status", "first_seen", "survivor_age_runs", "operator_historical_yield"} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("JSON report missing %q: %s", want, text)
 		}
@@ -178,6 +188,13 @@ func TestSummaryIncludesGremlinsStyleCoverageMetricsAndMutatorStats(t *testing.T
 		},
 		Environment: engine.Environment{OS: "linux", Arch: "amd64", GoVersion: "go1.25.6", TempRoot: "/tmp/cervomut", Isolation: "overlay", Workers: 1, TestTimeout: "30s", Warnings: []string{"workspace path contains spaces"}},
 		Slice:       engine.SliceMetadata{Enabled: true, SliceBy: "package", ShardIndex: 2, ShardCount: 4, GroupCount: 12, SelectedGroups: 3, MaxFilesPerRun: 5, SelectedFiles: 5, MaxMutantsPerPackage: 10, SelectedMutants: 25},
+		Gate: engine.GateEvaluation{
+			Evaluated: true,
+			Passed:    true,
+			Checks: []engine.GateCheck{
+				{Name: "fail_under", Status: engine.GateCheckPassed, Summary: "raw score 50.00% meets threshold 40"},
+			},
+		},
 	}
 
 	text := Summary(run)
@@ -198,6 +215,7 @@ func TestSummaryIncludesGremlinsStyleCoverageMetricsAndMutatorStats(t *testing.T
 		"Lane shape: grouped review lane",
 		"Lane note: 1 raw survivors collapsed into 1 immediate review units across 1 semantic group",
 		"Lane guidance: review the grouped equivalent-risk family once before splitting it into multiple separate test tasks",
+		"Gate: passed",
 		"Denominator health: healthy=true generated=3 covered=2 executed=2 effective=2 score_denominator=2 killed=1 survived=1 not_covered=1 pending_budget=0 skipped_resource=0 timed_out=0 memory_killed=0 compile_error=0",
 		"High-risk survivors: 1",
 		"New survivors: 1",
@@ -728,8 +746,20 @@ func TestSARIFAndGitHubSummaryOutputs(t *testing.T) {
 		},
 		Baseline: engine.BaselineComparison{
 			Enabled:      true,
+			Available:    true,
 			Regression:   true,
 			NewSurvivors: []string{"m-survived"},
+		},
+		Gate: engine.GateEvaluation{
+			Evaluated:    true,
+			Passed:       false,
+			FailedChecks: []string{"baseline_regression", "baseline_new_survivors", "timed_out"},
+			Checks: []engine.GateCheck{
+				{Name: "fail_under", Status: engine.GateCheckDisabled, Summary: "raw score threshold disabled"},
+				{Name: "baseline_regression", Status: engine.GateCheckFailed, Summary: "current score 50.00% regressed from baseline 0.00%"},
+				{Name: "baseline_new_survivors", Status: engine.GateCheckFailed, Summary: "1 new survivors appeared relative to baseline"},
+				{Name: "timed_out", Status: engine.GateCheckFailed, Summary: "1 timed out mutants were observed"},
+			},
 		},
 		Mutants: []engine.MutantResult{
 			{
@@ -809,6 +839,8 @@ func TestSARIFAndGitHubSummaryOutputs(t *testing.T) {
 		"Actionable score: **66.67%**",
 		"Lane shape: **direct review lane**",
 		"Lane guidance: start with the top survivor queue and nearby-test hints before widening the target or changing policy depth",
+		"Gate: **failed**",
+		"Gate failures: baseline_regression",
 		"Baseline regression: **true**",
 		"| Rank | Mutant | Actionability | Owner route | Operator | Location | Next test | Skip guidance |",
 		"`m-survived`",

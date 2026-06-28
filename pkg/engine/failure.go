@@ -58,10 +58,13 @@ func (e *BaselineFailureError) Error() string {
 }
 
 func FailureResult(cfg config.Config, failure Failure) RunResult {
+	thresholds := configuredThresholds(cfg)
+	thresholds["failed"] = true
 	result := RunResult{
 		SchemaVersion: "1",
 		Environment:   New(cfg).environment(0),
-		Thresholds:    map[string]any{"fail_under": cfg.CI.FailUnder, "failed": true},
+		Thresholds:    thresholds,
+		Gate:          GateEvaluation{Evaluated: false},
 		Baseline:      BaselineComparison{Enabled: cfg.Baseline.Enabled},
 		Quarantine:    QuarantineStats{},
 		Cache:         CacheStats{},

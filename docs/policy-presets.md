@@ -81,7 +81,12 @@ Windows-native note:
 
 - `ci.fail_under` remains `0`; adoption is baseline-first.
 - `baseline.fail_on_regression` and `baseline.fail_on_new_survivors` remain
-  enabled.
+  enabled and are enforced during `cervomut run` when a baseline file exists.
+- Missing baseline files leave baseline checks skipped so first-run adoption
+  stays non-punitive, but invalid baseline files fail the run instead of being
+  ignored.
+- `ci.fail_on_timeout` remains enabled by default; `ci.fail_on_compile_error`
+  stays opt-in.
 - Quarantine requires owner, issue, reason, expiry, and renewal limits.
 - Suppression is stricter than quarantine: explicit `action: suppress` requires
   `evidence: confirmed` and at least one reviewer.

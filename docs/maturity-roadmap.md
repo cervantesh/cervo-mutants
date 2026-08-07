@@ -99,8 +99,7 @@ Exit signal before moving on:
   just documented behavior
 - operational trust keeps pace with feature growth
 
-### Wave D: Re-seed external validation and ecosystem expansion only after the
-previous waves hold
+### Wave D: Re-seed external validation and ecosystem expansion
 
 Phase 6 remains valid, but it should stay downstream of the first three waves.
 The future roadmap should keep external validation, broader adoption playbooks,

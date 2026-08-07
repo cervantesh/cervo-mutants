@@ -1,0 +1,52 @@
+{
+  "schema_version": "1",
+  "run_count": 1,
+  "latest": {
+    "run_at": "2026-06-17T00:00:00Z",
+    "raw_score": 50,
+    "actionable_score": 50,
+    "survived": 2,
+    "true_actionable_survivors": 1,
+    "new_survivors": 1,
+    "long_standing_survivors": 1,
+    "survivor_age_new": 1,
+    "survivor_age_aging": 0,
+    "survivor_age_long_standing": 1,
+    "timed_out": 1,
+    "non_progress_timeouts": 1,
+    "operator_useful_survivor": {
+      "conditionals-boundary": 0.5,
+      "logical": 0.2
+    }
+  },
+  "runs": [
+    {
+      "run_at": "2026-06-17T00:00:00Z",
+      "raw_score": 50,
+      "actionable_score": 50,
+      "survived": 2,
+      "true_actionable_survivors": 1,
+      "new_survivors": 1,
+      "long_standing_survivors": 1,
+      "survivor_age_new": 1,
+      "survivor_age_aging": 0,
+      "survivor_age_long_standing": 1,
+      "timed_out": 1,
+      "non_progress_timeouts": 1,
+      "operator_useful_survivor": {
+        "conditionals-boundary": 0.5,
+        "logical": 0.2
+      }
+    }
+  ],
+  "top_operator_yield": [
+    {
+      "operator": "conditionals-boundary",
+      "yield": 0.5
+    },
+    {
+      "operator": "logical",
+      "yield": 0.2
+    }
+  ]
+}

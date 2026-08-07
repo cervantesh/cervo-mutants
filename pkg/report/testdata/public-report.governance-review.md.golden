@@ -1,0 +1,54 @@
+# CervoMutants Governance Review
+
+- Active quarantine entries: **1**
+- Expired quarantine entries: **0**
+- Suggested quarantine templates: **1**
+- Suggested suppression templates: **1**
+- Quarantine requires: reason=`false` owner=`false` issue=`false`
+- Fail on expired quarantine: `false`
+- Max renewals: `0`
+
+## Quarantine Templates
+
+### `pkg/loop.go:12:inc-dec:998877665544`
+
+- Status: `timed_out`
+- Suggested action: `quarantine`
+- Guidance: policy.fail_on_expired=false
+- Guidance: policy.max_renewals=0
+- Guidance: confirm the timeout is reproducibly non-progress before activating quarantine
+
+```json
+{
+  "mutant_id": "pkg/loop.go:12:inc-dec:998877665544",
+  "reason": "reviewed-skip or quarantine if timeout confirms a non-progress loop",
+  "owner": "",
+  "issue": "",
+  "created_at": "2026-06-17T12:00:00Z",
+  "renewals": 0
+}
+```
+
+## Suppression Templates
+
+### `pkg/review.go:19:conditionals-boundary:123456789abc`
+
+- Status: `survived`
+- Suggested action: `lower-priority`
+- Guidance: evidence=suspected
+- Guidance: reviewers=1
+- Guidance: equivalent_risk=high
+
+```yaml
+- name: equivalence-audit
+  operator: conditionals-boundary
+  file: pkg/review.go
+  original: "<"
+  mutated: "<="
+  equivalent_risk: high
+  action: lower-priority
+  reason: "review once for this semantic group before treating each survivor independently"
+  evidence: suspected
+  reviewers: 1
+```
+

@@ -1,0 +1,21 @@
+<!doctype html><html><head><meta charset="utf-8"><title>cervomut history dashboard</title><style>
+body{margin:0;font-family:Segoe UI,Arial,sans-serif;background:#f3f6fb;color:#162033}
+.page{max-width:1440px;margin:0 auto;padding:24px}
+.hero{display:grid;gap:14px;margin-bottom:20px}
+.hero h1{margin:0;font-size:30px}
+.hero p{margin:0;max-width:960px;color:#44506a}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:18px}
+.card,.panel{background:#fff;border:1px solid #d9e1f2;border-radius:14px;padding:16px;box-shadow:0 4px 18px rgba(22,32,51,.05)}
+.card-label{display:block;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#61708e}
+.card-value{display:block;margin-top:8px;font-size:28px;font-weight:700}
+.grid{display:grid;grid-template-columns:2fr 1fr;gap:16px}
+.panel h2{margin:0 0 12px 0;font-size:18px}
+table{width:100%;border-collapse:collapse}
+th,td{padding:10px 8px;border-top:1px solid #e2e8f4;text-align:left;vertical-align:top}
+thead th{border-top:0;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:#61708e}
+.delta-positive{color:#176338;font-weight:700}
+.delta-negative{color:#8d261d;font-weight:700}
+.delta-neutral{color:#44506a;font-weight:700}
+.empty{color:#61708e}
+@media (max-width:1024px){.page{padding:16px}.grid{grid-template-columns:1fr}.panel{overflow:auto}}
+</style></head><body><div class="page"><section class="hero"><div><h1>cervomut history dashboard</h1><p>Historical analytics view for raw score, actionable score, survivor aging, timeout movement, and operator yield across recorded runs. This dashboard is generated from the persisted run history emitted by the engine.</p></div></section><section class="cards"><div class="card"><span class="card-label">Historical runs</span><span class="card-value">1</span></div><div class="card"><span class="card-label">Latest raw score</span><span class="card-value">50.00%</span></div><div class="card"><span class="card-label">Latest actionable score</span><span class="card-value">50.00%</span></div><div class="card"><span class="card-label">Current survivors</span><span class="card-value">2</span></div><div class="card"><span class="card-label">True actionable survivors</span><span class="card-value">1</span></div><div class="card"><span class="card-label">Long-standing survivors</span><span class="card-value">1</span></div><div class="card"><span class="card-label">Timed out</span><span class="card-value">1</span></div><div class="card"><span class="card-label">Non-progress timeouts</span><span class="card-value">1</span></div></section><section class="grid"><div class="panel"><h2>Run trend</h2><table><thead><tr><th>Run</th><th>Raw score</th><th>Actionable score</th><th>Survivors</th><th>True actionable</th><th>Age new</th><th>Age 2-4</th><th>Age 5+</th><th>Timed out</th><th>Non-progress</th></tr></thead><tbody><tr><td>2026-06-17T00:00:00Z</td><td>50.00%</td><td>50.00%</td><td>2</td><td>1</td><td>1</td><td>0</td><td>1</td><td>1</td><td>1</td></tr></tbody></table></div><div class="panel"><h2>Current deltas</h2><p class="empty">Only one historical run is available.</p><h2>Latest operator yield</h2><table><thead><tr><th>Operator</th><th>Yield</th></tr></thead><tbody><tr><td>conditionals-boundary</td><td>0.50</td></tr><tr><td>logical</td><td>0.20</td></tr></tbody></table></div></section></div></body></html>

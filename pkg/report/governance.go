@@ -74,12 +74,20 @@ type GovernanceSuppressionRule struct {
 }
 
 func GovernanceReviewJSON(result engine.RunResult) ([]byte, error) {
-	review := buildGovernanceReview(result, time.Now().UTC())
+	return governanceReviewJSONAt(result, time.Now().UTC())
+}
+
+func governanceReviewJSONAt(result engine.RunResult, now time.Time) ([]byte, error) {
+	review := buildGovernanceReview(result, now)
 	return json.MarshalIndent(review, "", "  ")
 }
 
 func GovernanceReviewMarkdown(result engine.RunResult) string {
-	review := buildGovernanceReview(result, time.Now().UTC())
+	return governanceReviewMarkdownAt(result, time.Now().UTC())
+}
+
+func governanceReviewMarkdownAt(result engine.RunResult, now time.Time) string {
+	review := buildGovernanceReview(result, now)
 	var b strings.Builder
 	b.WriteString("# CervoMutants Governance Review\n\n")
 	fmt.Fprintf(&b, "- Active quarantine entries: **%d**\n", review.ActiveQuarantineCount)

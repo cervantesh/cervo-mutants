@@ -1,0 +1,53 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-06-17T12:00:00Z",
+  "quarantine_policy": {},
+  "active_quarantine_count": 1,
+  "expired_quarantine_count": 0,
+  "quarantine_templates": [
+    {
+      "mutant_id": "pkg/loop.go:12:inc-dec:998877665544",
+      "status": "timed_out",
+      "suggested_action": "quarantine",
+      "template": {
+        "mutant_id": "pkg/loop.go:12:inc-dec:998877665544",
+        "reason": "reviewed-skip or quarantine if timeout confirms a non-progress loop",
+        "owner": "",
+        "issue": "",
+        "created_at": "2026-06-17T12:00:00Z",
+        "renewals": 0
+      },
+      "guidance": [
+        "policy.fail_on_expired=false",
+        "policy.max_renewals=0",
+        "confirm the timeout is reproducibly non-progress before activating quarantine"
+      ],
+      "suggested_json": "{\n  \"mutant_id\": \"pkg/loop.go:12:inc-dec:998877665544\",\n  \"reason\": \"reviewed-skip or quarantine if timeout confirms a non-progress loop\",\n  \"owner\": \"\",\n  \"issue\": \"\",\n  \"created_at\": \"2026-06-17T12:00:00Z\",\n  \"renewals\": 0\n}"
+    }
+  ],
+  "suppression_templates": [
+    {
+      "mutant_id": "pkg/review.go:19:conditionals-boundary:123456789abc",
+      "status": "survived",
+      "suggested_action": "lower-priority",
+      "rule": {
+        "name": "equivalence-audit",
+        "operator": "conditionals-boundary",
+        "file": "pkg/review.go",
+        "original": "\u003c",
+        "mutated": "\u003c=",
+        "equivalent_risk": "high",
+        "action": "lower-priority",
+        "reason": "review once for this semantic group before treating each survivor independently",
+        "evidence": "suspected",
+        "reviewers": 1
+      },
+      "guidance": [
+        "evidence=suspected",
+        "reviewers=1",
+        "equivalent_risk=high"
+      ],
+      "suggested_yaml": "- name: equivalence-audit\n  operator: conditionals-boundary\n  file: pkg/review.go\n  original: \"\u003c\"\n  mutated: \"\u003c=\"\n  equivalent_risk: high\n  action: lower-priority\n  reason: \"review once for this semantic group before treating each survivor independently\"\n  evidence: suspected\n  reviewers: 1"
+    }
+  ]
+}

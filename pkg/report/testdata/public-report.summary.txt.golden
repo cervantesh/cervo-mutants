@@ -1,0 +1,50 @@
+Effective mutation score: 33.33%
+Raw mutation score: 50.00%
+Generated mutants: 5
+Covered mutants: 4
+Executed mutants: 4
+Effective mutants: 3
+Score denominator: 4
+Killed: 1
+Survived: 2
+Not covered: 1
+Pending budget: 0
+Skipped resource: 0
+Quarantined: 0
+Timed out: 1
+Memory killed: 0
+Compile errors: 0
+Test efficacy: 33.33%
+Mutation coverage: 80.00%
+Actionable score: 50.00%
+Actionable survivors: 1
+True actionable survivors: 1
+Equivalent-risk survivors: 1
+Semantic review units: 1
+Collapsed semantic duplicates: 0
+High-risk survivors: 1
+New survivors: 1
+Long-standing survivors: 1
+Platform-sensitive survivors: 1
+Non-progress timeouts: 1
+Suppression audits: report_only=1 lower_priority=1 suppress=0 quarantine_required=1
+Lane shape: grouped review lane
+Lane note: 2 raw survivors collapsed into 1 immediate review units across 1 semantic group
+Lane guidance: review the grouped equivalent-risk family once before splitting it into multiple separate test tasks
+Denominator health: healthy=false generated=5 covered=4 executed=4 effective=3 score_denominator=4 killed=1 survived=2 not_covered=1 pending_budget=0 skipped_resource=0 timed_out=1 memory_killed=0 compile_error=0
+Denominator warnings: timed_out_exceeds_effective
+Equivalent-risk statistics:
+- high: 1
+- medium: 2
+Mutator statistics:
+- conditionals-boundary: total=2 killed=0 survived=2 not_covered=0 pending_budget=0 skipped_resource=0 timed_out=0 memory_killed=0 compile_error=0 recommendation=fast-ci equivalent_risk=high
+- logical: total=1 killed=1 survived=0 not_covered=0 pending_budget=0 skipped_resource=0 timed_out=0 memory_killed=0 compile_error=0 recommendation=conservative equivalent_risk=medium
+- numeric-literals: total=1 killed=0 survived=0 not_covered=1 pending_budget=0 skipped_resource=0 timed_out=0 memory_killed=0 compile_error=0 recommendation=nightly equivalent_risk=medium
+Semantic-group statistics:
+- sort comparator boundary: 2
+Slice: by=package shard=2/4 groups=12 selected_groups=3 files=2 max_files=5 max_mutants_per_package=10 selected_mutants=4
+Stopped reason: completed
+Last completed mutant: pkg/review.go:27:logical:abc123def456
+Environment: os=windows arch=amd64 go=go1.25.6 isolation=overlay workers=2 timeout=30s wsl=false onedrive=true
+Temp root: C:\Users\tester\AppData\Local\CervoMutants\tmp
+Environment warnings: workspace path contains spaces, temp root overridden away from OneDrive-backed temp

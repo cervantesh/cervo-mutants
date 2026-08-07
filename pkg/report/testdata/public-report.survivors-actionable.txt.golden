@@ -1,0 +1,3 @@
+Actionable-only view: showing 1 of 2 survivors (filtered=1 collapsed=0)
+Group sort comparator boundary (2 mutants): Boundary mutations inside sort comparator closures often collapse into one review decision.
+#1 140.0 pkg/review.go:19:conditionals-boundary:123456789abc pkg/review.go:19 conditionals-boundary < -> <= actionability=high scope=./pkg/review next_test=pkg/review_sort_test.go strategy=tighten-branch-assertions group=sort comparator boundary group_size=2 platform_sensitive=false skip=review once for this semantic group before treating each survivor independently (risk=high recommendation=fast-ci nearby_tests=2)

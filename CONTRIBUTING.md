@@ -5,6 +5,11 @@ Thanks for contributing to CervoMutants.
 This repository expects contributions to be auditable, issue-linked, and safe
 for report consumers and CI users.
 
+The project is in a maintainer pause. Contributions are welcome, but review
+times and releases are not guaranteed. Start with the dated
+[maintainer handoff](docs/maintainer-handoff.md) to distinguish shipped work
+from candidate follow-ups; do not assume a historical roadmap item is open.
+
 ## Before You Change Code
 
 1. Use an existing GitHub issue or open one before implementation starts.

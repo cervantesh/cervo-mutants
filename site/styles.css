@@ -72,6 +72,27 @@ a {
   font-size: 0.96rem;
 }
 
+.status-note {
+  margin-top: 20px;
+  padding: 14px 20px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--accent);
+  border-radius: 14px;
+  background: var(--surface-strong);
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.status-note strong {
+  color: var(--ink);
+}
+
+.status-note a {
+  color: var(--accent-strong);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .hero {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);

@@ -19,9 +19,6 @@ that the mutation is equivalent/noisy and should be governed explicitly.
 Tracking issue for the original project:  
 https://github.com/cervantesh/cervo-mutants/issues/1
 
-Current documentation refresh:  
-https://github.com/cervantesh/cervo-mutants/issues/33
-
 Project site:
 https://cervantesh.github.io/cervo-mutants/
 
@@ -31,7 +28,14 @@ Contribution guide:
 ## Current Status
 
 CervoMutants is usable as a local/CI mutation runner and as an evaluation
-platform. The project currently includes:
+platform. The latest published release as of 2026-10-23 is
+[v0.4.5](https://github.com/cervantesh/cervo-mutants/releases/tag/v0.4.5).
+The repository is in a maintainer pause: contributions remain welcome through
+GitHub issues and pull requests, but response times, new releases, and active
+feature development are not guaranteed. See the
+[maintainer handoff](docs/maintainer-handoff.md) before resuming work.
+
+The published product includes:
 
 - AST/source rewrite mutators with stable mutant IDs.
 - Temp-workdir and Go overlay isolation.
@@ -50,6 +54,12 @@ platform. The project currently includes:
 - External-tool comparison normalization for apples-to-apples studies.
 - Benchmark corpus harness for runtime, peak-memory, and mutation-throughput regression tracking.
 - Pool campaign manifests that orchestrate smoke, compare, and benchmark jobs under one resumable summary.
+
+The last recorded `main` CI run for that release line was green on 2026-08-07.
+This is historical evidence, not a claim of continuous validation during the
+pause. The supported Go/OS matrix and experimental-surface limits remain in
+[docs/go-toolchain-compatibility.md](docs/go-toolchain-compatibility.md) and
+[docs/compatibility-policy.md](docs/compatibility-policy.md).
 
 ## Install
 
@@ -703,15 +713,16 @@ Latest local Sonar pass after issue #31:
 
 ## Documentation Map
 
+- [docs/maintainer-handoff.md](docs/maintainer-handoff.md): dated pause state,
+  evidence, safe restart checklist, and contribution opportunities.
 - [docs/evaluation-framework.md](docs/evaluation-framework.md): rigorous
   evaluation framework and research basis.
 - [docs/signal-first-mutation-testing.md](docs/signal-first-mutation-testing.md):
   product framework behind CervoMutants defaults.
 - [docs/project-maturity-assessment.md](docs/project-maturity-assessment.md):
-  dated assessment of product, code, and operational maturity.
-- [docs/maturity-roadmap.md](docs/maturity-roadmap.md): 24-month
-  architecture-led roadmap for raising functional, code, and operational
-  maturity.
+  historical scorecard with a dated evidence check and reassessment gate.
+- [docs/maturity-roadmap.md](docs/maturity-roadmap.md): historical roadmap,
+  shipped work, and candidate post-pause lanes without promised dates.
 - [docs/policy-presets.md](docs/policy-presets.md): policy preset behavior.
 - [docs/sonar.md](docs/sonar.md): local and CI Sonar workflow.
 - [docs/go-toolchain-compatibility.md](docs/go-toolchain-compatibility.md):
